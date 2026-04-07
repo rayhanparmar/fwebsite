@@ -1,0 +1,96 @@
+{
+  "project_name": "Shree Mother Gold and Diamond Jewellery",
+  "domain": "B2B Jewellery Manufacturing Platform",
+  "theme": "light",
+  "archetype": "Archetype 1 (Organic & Earthy / Trust) adapted for Modern Luxury",
+  "design_philosophy": "Clean, modern, and luxury B2B design. The focus is on precision, manufacturing excellence, and high-end trust. Ample white space (negative space) highlights the premium nature of the products. Accents are strictly maintained in the provided greens to ensure brand consistency without overpowering the luxury aesthetic.",
+  "colors": {
+    "background": "#FFFFFF",
+    "surface": "#FAFAFA",
+    "surface_secondary": "#F3F4F6",
+    "primary": "#359E58",
+    "primary_hover": "#2e884c",
+    "secondary": "#4AB868",
+    "accent_subtle": "#6CC284",
+    "text_primary": "#0A0A0A",
+    "text_secondary": "#4B5563",
+    "border": "#E5E7EB",
+    "border_accent": "rgba(108, 194, 132, 0.3)"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Cormorant Garamond",
+      "weights": ["400", "500", "600"],
+      "usage": "Use for all major headings (H1, H2, H3). Apply tracking-tight for H1.",
+      "styles": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl font-medium tracking-tight text-[#0A0A0A]",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl font-medium text-[#0A0A0A]",
+        "h3": "text-xl sm:text-2xl font-medium text-[#0A0A0A]"
+      }
+    },
+    "body": {
+      "font_family": "Manrope",
+      "weights": ["300", "400", "500", "600"],
+      "usage": "Use for all body text, buttons, and UI components.",
+      "styles": {
+        "base": "text-base font-normal text-[#4B5563] leading-relaxed",
+        "small": "text-sm font-normal text-[#4B5563]",
+        "label": "text-xs font-semibold tracking-widest uppercase text-[#359E58]"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "philosophy": "Generous Spacing Philosophy. Use 2-3x more spacing than typical SaaS. Products must breathe.",
+    "section_padding": "py-24 md:py-32",
+    "container_max_width": "max-w-7xl mx-auto px-6 md:px-12",
+    "grid_strategy": {
+      "bento": "Use Mode A (Tetris Grid) for 'Why Retailers Choose Us' section with varying spans (col-span-1 to col-span-2) and generous gaps (gap-8).",
+      "catalogue": "16-category grid should be tightly packed but visually distinct. 4x4 grid on desktop (grid-cols-4), gap-6.",
+      "products": "Product listings (30 per category) use 3 or 4 columns with minimalist cards (no borders, just images and clean text below)."
+    }
+  },
+  "components_and_surfaces": {
+    "buttons": {
+      "primary": "bg-[#359E58] hover:bg-[#2e884c] text-white rounded-none px-8 py-4 font-medium transition-colors",
+      "secondary": "border border-[#359E58] text-[#359E58] hover:bg-[#FAFAFA] rounded-none px-8 py-4 font-medium transition-colors",
+      "ghost": "text-[#4B5563] hover:text-[#359E58] transition-colors bg-transparent"
+    },
+    "cards": {
+      "product": "bg-white group cursor-pointer border border-transparent hover:border-[#6CC284]/30 transition-all duration-300",
+      "bento_feature": "bg-[#FAFAFA] border border-[#E5E7EB] p-8 md:p-12 hover:border-[#6CC284]/50 transition-colors"
+    },
+    "inputs_and_forms": {
+      "style": "Minimalist. Use Shadcn components but override borders to be 1px solid #E5E7EB, ring color #4AB868, rounded-none or rounded-sm."
+    },
+    "navigation": {
+      "style": "Crystal Glass or Solid White. Must have visible navigation links on desktop, not hidden behind hamburger. Primary CTA 'Login/Register' must be prominent."
+    }
+  },
+  "motion_and_interactions": {
+    "hover_states": "Subtle image scaling (scale-105) inside overflow-hidden wrappers on product hover. Smooth background transitions for buttons.",
+    "page_load": "Fade up elements using framer-motion. Staggered entrances for catalogue grids."
+  },
+  "media": {
+    "icons": "lucide-react (Thin, elegant strokes. Set strokeWidth to 1.5 or 1)",
+    "images_urls": {
+      "brand_logo": "https://static.prod-images.emergentagent.com/jobs/9bb42aae-fb6d-46ba-ae48-310133cc4e67/images/d3447a97a2ad88023ad53d7b8929ade2615cb93dfa88099d5a8d980094b33545.png",
+      "hero_background": "https://static.prod-images.emergentagent.com/jobs/9bb42aae-fb6d-46ba-ae48-310133cc4e67/images/698ab8deb15cdb7d190448cac4df80dcd80eff7d114580c39d22f1a61f1049d4.png",
+      "catalogue_abstract_bg": "https://static.prod-images.emergentagent.com/jobs/9bb42aae-fb6d-46ba-ae48-310133cc4e67/images/2085dc3856fa7634694f5cd98df0c571c5753bf104ef3caa7de71d99362bb3c4.png",
+      "product_ring": "https://images.unsplash.com/photo-1587947330318-88fcd9055420?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwxfHxkaWFtb25kJTIwcmluZyUyMHdoaXRlJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3NzU1NjUxMDl8MA&ixlib=rb-4.1.0&q=85",
+      "product_necklace": "https://images.unsplash.com/photo-1717282924526-07a7373bb142?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwxfHxnb2xkJTIwbmVja2xhY2UlMjB3aGl0ZSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc1NTY1MTEwfDA&ixlib=rb-4.1.0&q=85",
+      "product_earring": "https://images.unsplash.com/photo-1630019925419-5fc53b4a52cf?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwxfHxkaWFtb25kJTIwZWFycmluZ3MlMjB3aGl0ZSUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzc1NTY1MTA5fDA&ixlib=rb-4.1.0&q=85",
+      "process_craftsman": "https://images.unsplash.com/photo-1705848533968-0d6bc12989f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwzfHxqZXdlbGxlcnklMjBjcmFmdHNtYW4lMjB3b3Jrc2hvcHxlbnwwfHx8fDE3NzU1NjUwOTJ8MA&ixlib=rb-4.1.0&q=85",
+      "manufacturing_process_2": "https://images.unsplash.com/photo-1762712393685-fbe773b97605?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxqZXdlbGxlcnklMjBjcmFmdHNtYW4lMjB3b3Jrc2hvcHxlbnwwfHx8fDE3NzU1NjUwOTJ8MA&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "instructions_to_main_agent": {
+    "html_structure": "Ensure semantic HTML. Use <section>, <article>, <header>, <nav>.",
+    "routing": "Setup routing for: /, /login, /register, /catalogue, /catalogue/:category, /product/:id, /cart, /customisation, /admin, /about, /contact.",
+    "components": "Heavily customize Shadcn components. Strip default border radii (make them rounded-none or rounded-sm). Change focus rings to primary green.",
+    "hero_section": "Must feature 'Your Manufacturing Partner for Precision, Speed & Customisation'. Use `hero_background` image with a max `bg-white/20` or `bg-black/30` overlay depending on text color to ensure contrast. Provide CTAs.",
+    "product_catalogue": "Build a robust grid for 16 categories. Use provided product images randomly as placeholders if needed. Create a detailed Product Listing page with filters/sidebar.",
+    "individual_product": "Include an image slider (use swiper or simple state-based gallery) and dropdowns for customisation (e.g., Gold Purity: 14k/18k, Diamond Quality: VVS/SI). Add 'Add to Enquiry Cart' CTA.",
+    "admin_panel": "Use Archetype 4 (Swiss & High-Contrast) variant for the admin panel. Tighter grids, solid borders, data-heavy layout using Shadcn Tables and Charts.",
+    "testing": "CRITICAL: All interactive elements MUST include `data-testid` attributes (e.g., `data-testid='login-submit-button'`, `data-testid='product-card-1'`)."
+  }
+}
