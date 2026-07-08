@@ -1,0 +1,64 @@
+.font-heading {
+  font-family: 'Cormorant Garamond', serif;
+}
+.font-body {
+  font-family: 'Manrope', sans-serif;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-up {
+  animation: fadeUp 0.7s ease-out forwards;
+}
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+.product-card img {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.product-card:hover img {
+  transform: scale(1.05);
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, rgba(53,158,88,0.08) 0%, rgba(255,255,255,0) 50%);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .font-heading { letter-spacing: -0.01em; }
+
+  /* Better touch targets */
+  button, a[role="button"], [data-testid*="button"], [data-testid*="btn"] {
+    min-height: 44px;
+  }
+
+  /* Safe area padding for iOS notch */
+  nav { padding-top: env(safe-area-inset-top); }
+  footer { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Floating WhatsApp button positioning */
+@media (max-width: 640px) {
+  [data-testid="floating-whatsapp"] {
+    bottom: 5rem;
+    right: 1rem;
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+}
+
+/* Hide scrollbar for tabs */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
