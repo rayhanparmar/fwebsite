@@ -338,19 +338,41 @@ async def get_enquiries(request: Request):
 @api_router.post("/upload")
 async def upload_file(request: Request, file: UploadFile = File(...)):
     user = await get_approved_user(request)
+
     ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
-    path = f"{APP_NAME}/uploads/{user['_id']}/{uuid.uuid4()}.{ext}"
+
+    filename = f"uploads/{user['_id']}/{uuid.uuid4()}.{ext}"
+
     data = await file.read()
-    result = put_object(path, data, file.content_type or "application/octet-stream")
+
+    import io
+
+    file_url = upload_to_s3(
+        io.BytesIO(data),
+        filename,
+        file.content_type or "application/octet-stream",
+    )
+
     file_doc = {
-        "id": str(uuid.uuid4()), "storage_path": result["path"],
-        "original_filename": file.filename, "content_type": file.content_type,
-        "size": result.get("size", len(data)), "user_id": user["_id"],
-        "is_deleted": False, "created_at": datetime.now(timezone.utc).isoformat()
+        "id": str(uuid.uuid4()),
+        "storage_path": file_url,
+        "original_filename": file.filename,
+        "content_type": file.content_type,
+        "size": len(data),
+        "user_id": user["_id"],
+        "is_deleted": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
     }
+
     await db.files.insert_one(file_doc)
-    logger.info(f"File uploaded: {file.filename} by {user.get('name')}")
-    return {"path": result["path"], "filename": file.filename, "size": file_doc["size"]}
+
+    logger.info(f"File uploaded to S3: {file.filename}")
+
+    return {
+        "path": file_url,
+        "filename": file.filename,
+        "size": len(data),
+    }
 
 @api_router.get("/files/{path:path}")
 async def download_file(path: str):
@@ -434,6 +456,36 @@ async def admin_get_products(request: Request, category: Optional[str] = None, p
     total = await db.products.count_documents(query)
     products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     return {"products": products, "total": total, "page": page, "pages": max(1, (total + limit - 1) // limit)}
+
+import io
+
+@api_router.post("/admin/products/upload")
+async def admin_upload_product(
+    request: Request,
+    file: UploadFile = File(...)
+):
+    await get_admin_user(request)
+
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+
+    filename = f"products/{uuid.uuid4()}.{ext}"
+
+    data = await file.read()
+
+    image_url = upload_to_s3(
+        io.BytesIO(data),
+        filename,
+        file.content_type or "application/octet-stream",
+    )
+
+    logger.info(f"Product image uploaded: {image_url}")
+
+    return {
+        "success": True,
+        "url": image_url,
+        "image": image_url,
+        "path": image_url
+    }
 
 @api_router.post("/admin/products")
 async def admin_add_product(request: Request, product: ProductCreate):
@@ -550,11 +602,7 @@ async def seed_products():
 @app.on_event("startup")
 async def startup():
     await db.users.create_index("email", unique=True)
-    try:
-        init_storage()
-        logger.info("Object storage initialized")
-    except Exception as e:
-        logger.warning(f"Storage init deferred: {e}")
+    logger.info("AWS S3 storage initialized")
     await seed_admin()
     await seed_products()
 

@@ -84,3 +84,5 @@ android-sdk/-e
 *.env
 *.env.*
 backend/.env
+.env
+backend/.env
