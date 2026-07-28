@@ -11,6 +11,8 @@ import jwt
 import uuid
 import random
 import requests as http_requests
+import boto3
+from botocore.exceptions import ClientError
 from fastapi import FastAPI, APIRouter, HTTPException, Request, UploadFile, File, Form
 from fastapi.responses import Response
 from starlette.middleware.cors import CORSMiddleware
@@ -20,43 +22,38 @@ from typing import List, Optional, Dict
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 
-# ──── OBJECT STORAGE ────
-STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
-APP_NAME = "shree-mother-b2b"
-_storage_key = None
+AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
+AWS_REGION = os.getenv("AWS_REGION")
 
-def init_storage():
-    global _storage_key
-    if _storage_key:
-        return _storage_key
-    resp = http_requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
+s3 = boto3.client(
+    "s3",
+    region_name=AWS_REGION,
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+)
 
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = http_requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120
+def upload_to_s3(file_data, filename, content_type):
+
+    s3.upload_fileobj(
+        file_data,
+        AWS_BUCKET_NAME,
+        filename,
+        ExtraArgs={
+            "ContentType": content_type
+        }
     )
-    resp.raise_for_status()
-    return resp.json()
 
-def get_object(path: str):
-    key = init_storage()
-    resp = http_requests.get(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key}, timeout=60
-    )
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+    return f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
 
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+# client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    tls=True,
+    tlsAllowInvalidCertificates=True,
+    serverSelectionTimeoutMS=30000
+)
 db = client[os.environ['DB_NAME']]
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-change-me')
@@ -451,29 +448,7 @@ async def admin_add_product(request: Request, product: ProductCreate):
     await db.products.insert_one(doc)
     return {"message": "Product added successfully"}
 
-@api_router.post("/admin/products/upload")
-async def admin_upload_product_image(request: Request, product_id: str = Form(...), category: str = Form(...), file: UploadFile = File(...)):
-    await get_admin_user(request)
-    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
-    path = f"{APP_NAME}/products/{uuid.uuid4()}.{ext}"
-    data = await file.read()
-    result = put_object(path, data, file.content_type or "application/octet-stream")
-    file_url = f"/api/files/{result['path']}"
-    existing = await db.products.find_one({"product_id": product_id})
-    if existing:
-        await db.products.update_one({"product_id": product_id}, {"$push": {"images": file_url}})
-        updated = await db.products.find_one({"product_id": product_id}, {"_id": 0})
-        return {"message": f"Image added to {product_id}", "image_url": file_url, "product": updated}
-    else:
-        cat = next((c for c in CATEGORIES if c["name"] == category), None)
-        if not cat:
-            raise HTTPException(400, "Invalid category")
-        doc = {
-            "product_id": product_id, "category": category, "category_slug": cat["slug"],
-            "images": [file_url], "rating": 5.0, "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.products.insert_one(doc)
-        return {"message": f"Product {product_id} created", "image_url": file_url, "product": {k: v for k, v in doc.items() if k != "_id"}}
+
 
 
 @api_router.put("/admin/products/{product_id}")
@@ -507,22 +482,51 @@ async def admin_get_customisations(request: Request):
     customs = await db.customisation_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"customisations": customs}
 
+
+
 # ──── SEEDING ────
 async def seed_admin():
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+
     existing = await db.users.find_one({"email": admin_email})
+
     if existing is None:
         await db.users.insert_one({
-            "email": admin_email, "password_hash": hash_password(admin_password),
-            "name": "Admin", "role": "admin", "approved": True,
+            "email": admin_email,
+            "password_hash": hash_password(admin_password),
+            "name": "Admin",
+            "role": "admin",
+            "approved": True,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
         logger.info(f"Admin seeded: {admin_email}")
+
     elif not verify_password(admin_password, existing["password_hash"]):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
+        await db.users.update_one(
+            {"email": admin_email},
+            {"$set": {"password_hash": hash_password(admin_password)}}
+        )
         logger.info("Admin password updated")
+
     
+
+
+    # ✅ SAFE MEMORY DIRECTORY FIX
+    try:
+        os.makedirs("memory", exist_ok=True)
+
+        with open("memory/test_credentials.md", "w") as f:
+            f.write(f"# Test Credentials\n\n")
+            f.write(f"## Admin\n- Email: {admin_email}\n- Password: {admin_password}\n- Role: admin\n\n")
+            f.write("## Auth Endpoints\n")
+            f.write("- POST /api/auth/register\n")
+            f.write("- POST /api/auth/login\n")
+            f.write("- GET /api/auth/me\n")
+
+    except Exception as e:
+        logger.warning(f"Memory folder skipped: {e}")
+        
 
 async def seed_products():
     count = await db.products.count_documents({})
