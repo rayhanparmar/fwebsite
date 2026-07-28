@@ -15,13 +15,13 @@ dnspython==2.8.0
 ecdsa==0.19.2
 
 email-validator==2.3.0
-fastapi==0.110.1
+
 fastuuid==0.14.0
 filelock==3.25.2
 flake8==7.3.0
 
 fastapi==0.135.3
->>>>>>> 9f41cce (Migrated product uploads to AWS S3)
+
 frozenlist==1.8.0
 h11==0.16.0
 idna==3.11
