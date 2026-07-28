@@ -1,5 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
+from fastapi import Form
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -462,9 +463,13 @@ import io
 @api_router.post("/admin/products/upload")
 async def admin_upload_product(
     request: Request,
+    product_id: str = Form(...),
+    category: str = Form(...),
     file: UploadFile = File(...)
 ):
     await get_admin_user(request)
+    logger.info(f"product_id={product_id}")
+    logger.info(f"category={category}")
 
     ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
 
@@ -473,19 +478,40 @@ async def admin_upload_product(
     data = await file.read()
 
     image_url = upload_to_s3(
-        io.BytesIO(data),
-        filename,
-        file.content_type or "application/octet-stream",
+    io.BytesIO(data),
+    filename,
+    file.content_type or "application/octet-stream",
+)
+    logger.info(f"S3 URL = {image_url}")
+    existing = await db.products.find_one({"product_id": product_id})
+
+    if existing:
+        await db.products.update_one(
+        {"product_id": product_id},
+        {
+            "$push": {"images": image_url},
+            "$set": {"category": category}
+        }
     )
+    else:
+        await db.products.insert_one({
+        "product_id": product_id,
+        "category": category,
+        "category_slug": category.lower().replace(" ", "-"),
+        "images": [image_url],
+        "rating": 5,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
 
     logger.info(f"Product image uploaded: {image_url}")
 
     return {
-        "success": True,
-        "url": image_url,
-        "image": image_url,
-        "path": image_url
-    }
+    "success": True,
+    "message": "Product uploaded successfully",
+    "url": image_url,
+    "image": image_url,
+    "path": image_url
+}
 
 @api_router.post("/admin/products")
 async def admin_add_product(request: Request, product: ProductCreate):
