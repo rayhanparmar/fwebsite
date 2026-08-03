@@ -385,10 +385,13 @@ export default function AdminDashboard() {
 
     {whatsappOrders.map((order) => (
 
-      <div
-        key={order.orderId}
-        className="border border-[#E5E7EB] bg-white p-5 rounded-sm"
-      >
+<div
+key={order.orderId}
+onClick={() =>
+    window.location.href = `/admin/whatsapp-orders/${order.orderId}`
+}
+className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all"
+>
 
         <div className="flex justify-between items-center mb-3">
 
