@@ -13,6 +13,7 @@ import ProductDetailPage from "@/pages/ProductDetailPage";
 import CartPage from "@/pages/CartPage";
 import CustomisationPage from "@/pages/CustomisationPage";
 import AdminDashboard from "@/pages/AdminDashboard";
+import WhatsappOrderDetailsPage from "@/pages/WhatsappOrderDetailsPage";
 import AboutPage from "@/pages/AboutPage";
 import ContactPage from "@/pages/ContactPage";
 import FloatingWhatsApp from "@/components/FloatingWhatsApp";
@@ -37,6 +38,14 @@ function App() {
               <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
               <Route path="/customisation" element={<ProtectedRoute><CustomisationPage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+              <Route
+  path="/admin/whatsapp-orders/:orderId"
+  element={
+    <ProtectedRoute adminOnly>
+      <WhatsappOrderDetailsPage />
+    </ProtectedRoute>
+  }
+/>
             </Routes>
           </main>
           <Footer />
