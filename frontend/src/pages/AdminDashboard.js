@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [customisations, setCustomisations] = useState([]);
+  const [whatsappOrders, setWhatsappOrders] = useState([]);
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -39,6 +40,14 @@ export default function AdminDashboard() {
   }, [api, productCategory, productPage]);
   const loadEnquiries = useCallback(() => { api.get("/admin/enquiries").then(r => setEnquiries(r.data.enquiries)).catch(() => {}); }, [api]);
   const loadCustomisations = useCallback(() => { api.get("/admin/customisations").then(r => setCustomisations(r.data.customisations)).catch(() => {}); }, [api]);
+  const loadWhatsappOrders = useCallback(() => {
+    api
+      .get("/admin/whatsapp-orders")
+      .then((r) => setWhatsappOrders(r.data.orders))
+      .catch(() => {
+        toast.error("Failed to load WhatsApp orders");
+      });
+  }, [api]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
@@ -124,6 +133,14 @@ export default function AdminDashboard() {
               <Palette className="w-4 h-4" />Customisations
             </TabsTrigger>
           </TabsList>
+          <TabsTrigger
+  value="whatsapp"
+  onClick={loadWhatsappOrders}
+  className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
+>
+  <MessageSquare className="w-4 h-4" />
+  WhatsApp Orders
+</TabsTrigger>
 
           {/* Overview */}
           <TabsContent value="overview">
@@ -361,6 +378,76 @@ export default function AdminDashboard() {
               {customisations.length === 0 && <p className="text-[#4B5563] text-sm py-8 text-center font-body">No customisation requests yet</p>}
             </div>
           </TabsContent>
+          <TabsContent value="whatsapp">
+  <div className="space-y-4">
+
+    {whatsappOrders.map((order) => (
+
+      <div
+        key={order.orderId}
+        className="border border-[#E5E7EB] bg-white p-5 rounded-sm"
+      >
+
+        <div className="flex justify-between items-center mb-3">
+
+          <h3 className="font-semibold text-lg">
+            {order.orderId}
+          </h3>
+
+          <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
+            {order.status}
+          </span>
+
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+
+          <div>
+            <strong>Customer</strong><br />
+            {order.customer_name}
+          </div>
+
+          <div>
+            <strong>Product</strong><br />
+            {order.product_category}
+          </div>
+
+          <div>
+            <strong>Metal</strong><br />
+            {order.metal}
+          </div>
+
+          <div>
+            <strong>Due Date</strong><br />
+            {order.due_date}
+          </div>
+
+          <div>
+            <strong>Weight</strong><br />
+            {order.approx_weight}
+          </div>
+
+          <div>
+            <strong>Priority</strong><br />
+            {order.priority}
+          </div>
+
+        </div>
+
+      </div>
+
+    ))}
+
+    {whatsappOrders.length === 0 && (
+
+      <p className="text-center text-gray-500 py-8">
+        No WhatsApp Orders Yet
+      </p>
+
+    )}
+
+  </div>
+</TabsContent>
         </Tabs>
       </div>
     </div>
