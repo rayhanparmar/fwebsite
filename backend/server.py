@@ -576,6 +576,27 @@ async def admin_get_whatsapp_orders(request: Request):
     }
 
 
+@api_router.get("/admin/whatsapp-orders/{order_id}")
+async def admin_get_whatsapp_order(
+    order_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    order = await whatsapp_orders.find_one(
+    {"orderId": order_id},
+    {"_id": 0}
+)
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    return order
+
+
 
 # ──── SEEDING ────
 async def seed_admin():
