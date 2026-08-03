@@ -132,15 +132,17 @@ export default function AdminDashboard() {
             <TabsTrigger value="customisations" onClick={loadCustomisations} className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0" data-testid="admin-customisations-tab">
               <Palette className="w-4 h-4" />Customisations
             </TabsTrigger>
-          </TabsList>
-          <TabsTrigger
-  value="whatsapp"
-  onClick={loadWhatsappOrders}
-  className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
+            <TabsTrigger
+    value="whatsapp"
+    onClick={loadWhatsappOrders}
+    className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
 >
-  <MessageSquare className="w-4 h-4" />
-  WhatsApp Orders
+    <MessageSquare className="w-4 h-4" />
+    WhatsApp Orders
 </TabsTrigger>
+
+          </TabsList>
+          
 
           {/* Overview */}
           <TabsContent value="overview">
