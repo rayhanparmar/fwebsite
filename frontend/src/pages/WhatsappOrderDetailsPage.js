@@ -15,8 +15,8 @@ export default function WhatsappOrderDetailsPage() {
 
   async function loadOrder() {
     try {
-      const res = await api.get(`/admin/whatsapp-orders/${orderId}`);
-      setOrder(res.data.order);
+        const res = await api.get(`/admin/whatsapp-orders/${orderId}`);
+        setOrder(res.data);
     } catch (err) {
       console.error(err);
     } finally {
