@@ -56,6 +56,8 @@ client = AsyncIOMotorClient(
     serverSelectionTimeoutMS=30000
 )
 db = client[os.environ['DB_NAME']]
+whatsapp_db = client["whatsapp_orders"]
+whatsapp_orders = whatsapp_db["orders"]
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-change-me')
 JWT_ALGORITHM = "HS256"
@@ -559,6 +561,19 @@ async def admin_get_customisations(request: Request):
     await get_admin_user(request)
     customs = await db.customisation_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"customisations": customs}
+
+@api_router.get("/admin/whatsapp-orders")
+async def admin_get_whatsapp_orders(request: Request):
+    await get_admin_user(request)
+
+    orders = await whatsapp_orders.find(
+        {},
+        {"_id": 0}
+    ).sort("createdAt", -1).to_list(1000)
+
+    return {
+        "orders": orders
+    }
 
 
 
