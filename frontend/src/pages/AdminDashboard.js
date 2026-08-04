@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChar
 const CATEGORIES = ["Bali","Bangle","Kada","Bracelet","Chains","Cufflinks","Earrings","Hath Pan","Maang Tikka","Mangal Sutra","Necklace","Nose Pin","Pendant","Rings","Tops","Watchbelts"];
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { api } = useAuth();
   const [stats, setStats] = useState(null);
   const [retailers, setRetailers] = useState([]);
@@ -18,6 +20,10 @@ export default function AdminDashboard() {
   const [enquiries, setEnquiries] = useState([]);
   const [customisations, setCustomisations] = useState([]);
   const [whatsappOrders, setWhatsappOrders] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+const [filteredOrders, setFilteredOrders] = useState([]);
+const [statusFilter, setStatusFilter] = useState("All");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -48,6 +54,43 @@ export default function AdminDashboard() {
         toast.error("Failed to load WhatsApp orders");
       });
   }, [api]);
+
+
+  useEffect(() => {
+
+    let filtered = whatsappOrders;
+
+    // Search Filter
+    if (searchTerm.trim()) {
+
+        const search = searchTerm.toLowerCase();
+
+        filtered = filtered.filter((order) =>
+
+            order.orderId?.toLowerCase().includes(search) ||
+
+            order.customer_name?.toLowerCase().includes(search) ||
+
+            order.product_category?.toLowerCase().includes(search) ||
+
+            order.status?.toLowerCase().includes(search)
+
+        );
+
+    }
+
+    // Status Filter
+    if (statusFilter !== "All") {
+
+        filtered = filtered.filter(
+            (order) => order.status === statusFilter
+        );
+
+    }
+
+    setFilteredOrders(filtered);
+
+}, [searchTerm, statusFilter, whatsappOrders]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
@@ -381,14 +424,150 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
           <TabsContent value="whatsapp">
-  <div className="space-y-4">
+          <div className="space-y-4">
 
-    {whatsappOrders.map((order) => (
+<div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+
+<div
+    onClick={() => setStatusFilter("All")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "All"
+            ? "bg-green-100 border-green-600"
+            : "bg-white"
+    }`}
+>
+        <p className="text-xs text-gray-500">Total</p>
+        <h2 className="text-3xl font-bold">
+            {whatsappOrders.length}
+        </h2>
+    </div>
+
+    <div
+    onClick={() => setStatusFilter("Pending")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "Pending"
+            ? "bg-yellow-200 border-yellow-600"
+            : "bg-yellow-50"
+    }`}
+>
+        <p className="text-xs text-gray-500">Pending</p>
+        <h2 className="text-3xl font-bold text-yellow-700">
+            {
+                whatsappOrders.filter(
+                    o => o.status === "Pending"
+                ).length
+            }
+        </h2>
+    </div>
+
+    <div
+    onClick={() => setStatusFilter("QC")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "QC"
+            ? "bg-blue-200 border-blue-600"
+            : "bg-blue-50"
+    }`}
+>
+        <p className="text-xs text-gray-500">QC</p>
+        <h2 className="text-3xl font-bold text-blue-700">
+            {
+                whatsappOrders.filter(
+                    o => o.status === "QC"
+                ).length
+            }
+        </h2>
+    </div>
+
+    <div
+    onClick={() => setStatusFilter("In Production")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "In Production"
+            ? "bg-purple-200 border-purple-600"
+            : "bg-purple-50"
+    }`}
+>
+        <p className="text-xs text-gray-500">
+            Production
+        </p>
+        <h2 className="text-3xl font-bold text-purple-700">
+            {
+                whatsappOrders.filter(
+                    o => o.status === "In Production"
+                ).length
+            }
+        </h2>
+    </div>
+
+    <div
+    onClick={() => setStatusFilter("Delivered")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "Delivered"
+            ? "bg-green-200 border-green-600"
+            : "bg-green-50"
+    }`}
+>
+        <p className="text-xs text-gray-500">
+            Delivered
+        </p>
+        <h2 className="text-3xl font-bold text-green-700">
+            {
+                whatsappOrders.filter(
+                    o => o.status === "Delivered"
+                ).length
+            }
+        </h2>
+    </div>
+
+    <div className="bg-red-50 border rounded-lg p-4 text-center">
+        <p className="text-xs text-gray-500">
+            Urgent
+        </p>
+        <h2 className="text-3xl font-bold text-red-700">
+            {
+                whatsappOrders.filter(
+                    o => o.priority === "Urgent"
+                ).length
+            }
+        </h2>
+    </div>
+
+</div>
+
+<div className="flex flex-col md:flex-row gap-4 mb-4">
+
+<Input
+    placeholder="Search by Order ID, Customer, Product or Status..."
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    className="flex-1"
+/>
+
+<select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="border rounded-md px-4 py-2 bg-white"
+>
+    <option value="All">All Status</option>
+    <option value="Pending">Pending</option>
+    <option value="Approved">Approved</option>
+    <option value="Assigned">Assigned</option>
+    <option value="In Production">In Production</option>
+    <option value="Polishing">Polishing</option>
+    <option value="Stone Setting">Stone Setting</option>
+    <option value="QC">QC</option>
+    <option value="Ready">Ready</option>
+    <option value="Delivered">Delivered</option>
+    <option value="Rejected">Rejected</option>
+</select>
+
+</div>
+
+{filteredOrders.map((order) => (
 
 <div
 key={order.orderId}
 onClick={() =>
-    window.location.href = `/admin/whatsapp-orders/${order.orderId}`
+  navigate(`/admin/whatsapp-orders/${order.orderId}`)
 }
 className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all"
 >
@@ -399,9 +578,37 @@ className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:
             {order.orderId}
           </h3>
 
-          <span className="text-sm bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
-            {order.status}
-          </span>
+          <span
+    className={`text-sm px-3 py-1 rounded font-medium ${
+        order.status === "Pending"
+            ? "bg-yellow-100 text-yellow-800"
+
+        : order.status === "Approved"
+            ? "bg-green-100 text-green-800"
+
+        : order.status === "Assigned"
+            ? "bg-orange-100 text-orange-800"
+
+        : order.status === "In Production"
+            ? "bg-purple-100 text-purple-800"
+
+        : order.status === "QC"
+            ? "bg-blue-100 text-blue-800"
+
+        : order.status === "Ready"
+            ? "bg-emerald-100 text-emerald-800"
+
+        : order.status === "Delivered"
+            ? "bg-green-200 text-green-900"
+
+        : order.status === "Rejected"
+            ? "bg-red-100 text-red-800"
+
+        : "bg-gray-100 text-gray-800"
+    }`}
+>
+    {order.status}
+</span>
 
         </div>
 
@@ -433,8 +640,29 @@ className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:
           </div>
 
           <div>
-            <strong>Priority</strong><br />
-            {order.priority}
+          <strong>Priority</strong>
+
+<br />
+
+<span
+    className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+        order.priority === "Low"
+            ? "bg-green-100 text-green-800"
+
+        : order.priority === "Normal"
+            ? "bg-blue-100 text-blue-800"
+
+        : order.priority === "High"
+            ? "bg-orange-100 text-orange-800"
+
+        : order.priority === "Urgent"
+            ? "bg-red-100 text-red-800"
+
+        : "bg-gray-100 text-gray-700"
+    }`}
+>
+    {order.priority || "Normal"}
+</span>
           </div>
 
         </div>
@@ -443,13 +671,11 @@ className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:
 
     ))}
 
-    {whatsappOrders.length === 0 && (
-
-      <p className="text-center text-gray-500 py-8">
-        No WhatsApp Orders Yet
-      </p>
-
-    )}
+{filteredOrders.length === 0 && (
+    <div className="text-center py-10 text-gray-500">
+        No matching WhatsApp orders found.
+    </div>
+)}
 
   </div>
 </TabsContent>
