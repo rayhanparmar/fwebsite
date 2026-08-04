@@ -602,6 +602,36 @@ async def admin_get_whatsapp_order(
 
     return order
 
+@api_router.put("/admin/whatsapp-orders/{order_id}")
+async def update_whatsapp_order(
+    order_id: str,
+    request: Request,
+    data: dict
+):
+    await get_admin_user(request)
+
+    result = await whatsapp_orders.update_one(
+        {"orderId": order_id},
+        {
+            "$set": {
+                "status": data.get("status"),
+                "priority": data.get("priority"),
+                "assignedTo": data.get("assignedTo"),
+                "adminNotes": data.get("adminNotes"),
+            }
+        }
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = await whatsapp_orders.find_one(
+        {"orderId": order_id},
+        {"_id": 0}
+    )
+
+    return order
+
 
 @api_router.put("/admin/whatsapp-orders/{order_id}")
 async def admin_update_whatsapp_order(

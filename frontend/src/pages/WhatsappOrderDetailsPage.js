@@ -27,11 +27,12 @@ export default function WhatsappOrderDetailsPage() {
   const { api } = useAuth();
 
   const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("");
-  const [priority, setPriority] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
-  const [adminNotes, setAdminNotes] = useState("");
+const [loading, setLoading] = useState(true);
+
+const [status, setStatus] = useState("");
+const [priority, setPriority] = useState("");
+const [assignedTo, setAssignedTo] = useState("");
+const [adminNotes, setAdminNotes] = useState("");
 
   useEffect(() => {
     loadOrder();
@@ -504,10 +505,10 @@ type="video/mp4"
             </label>
 
             <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="w-full border rounded-lg p-3"
-            >
+    value={priority}
+    onChange={(e) => setPriority(e.target.value)}
+    className="w-full border rounded-lg p-3"
+>
 
                 <option>Low</option>
                 <option>Normal</option>
@@ -527,12 +528,12 @@ type="video/mp4"
             </label>
 
             <input
-                type="text"
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                placeholder="Craftsman / Employee Name"
-                className="w-full border rounded-lg p-3"
-            />
+    type="text"
+    value={assignedTo}
+    onChange={(e) => setAssignedTo(e.target.value)}
+    placeholder="Craftsman / Employee Name"
+    className="w-full border rounded-lg p-3"
+/>
 
         </div>
 
@@ -545,12 +546,12 @@ type="video/mp4"
             </label>
 
             <textarea
-                rows={5}
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Only visible to admin..."
-                className="w-full border rounded-lg p-3"
-            />
+    value={adminNotes}
+    onChange={(e) => setAdminNotes(e.target.value)}
+    placeholder="Only visible to admin..."
+    rows={5}
+    className="w-full border rounded-lg p-3"
+/>
 
         </div>
 
