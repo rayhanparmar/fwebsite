@@ -207,6 +207,12 @@ class ProductUpdate(BaseModel):
     images: Optional[List[str]] = None
     rating: Optional[float] = None
 
+class WhatsAppOrderUpdate(BaseModel):
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    assignedTo: Optional[str] = None
+    admin_notes: Optional[str] = None
+
 # ──── AUTH ENDPOINTS ────
 @api_router.post("/auth/register")
 async def register(req: RegisterRequest):
@@ -595,6 +601,46 @@ async def admin_get_whatsapp_order(
         )
 
     return order
+
+
+@api_router.put("/admin/whatsapp-orders/{order_id}")
+async def admin_update_whatsapp_order(
+    order_id: str,
+    update: WhatsAppOrderUpdate,
+    request: Request
+):
+    await get_admin_user(request)
+
+    update_data = {
+        key: value
+        for key, value in update.model_dump().items()
+        if value is not None
+    }
+
+    if not update_data:
+        raise HTTPException(
+            status_code=400,
+            detail="No data to update."
+        )
+
+    update_data["updatedAt"] = datetime.now(timezone.utc)
+
+    result = await whatsapp_orders.update_one(
+        {"orderId": order_id},
+        {
+            "$set": update_data
+        }
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found."
+        )
+
+    return {
+        "message": "Order updated successfully."
+    }
 
 
 
