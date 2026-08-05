@@ -853,6 +853,25 @@ async def whatsapp_flow_endpoint(request: Request):
 
         action = data.get("action")
 
+        if action == "ping":
+
+            response = {
+                "version": "3.0",
+                 "data": {
+                    "status": "active"
+                }
+            }
+            
+        elif action == "INIT":
+
+            response = {
+                "version": "3.0",
+                "screen": "JEWELLERY_ORDER",
+                "data": {}
+             }
+
+        
+
         if action == "INIT":
 
             response = {
