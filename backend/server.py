@@ -2,6 +2,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import Form
 from whatsapp_service import send_flow, send_text_message
+from flow_crypto import decrypt_request, encrypt_response
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -22,6 +23,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
+
 
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 AWS_REGION = os.getenv("AWS_REGION")
@@ -828,3 +830,66 @@ async def whatsapp_webhook(request: Request):
         print(e)
 
         return {"success": False}
+    
+
+@app.post("/whatsapp/flow")
+async def whatsapp_flow_endpoint(request: Request):
+
+    body = await request.json()
+
+    print("========== ENCRYPTED FLOW ==========")
+    print(body)
+    print("====================================")
+
+    try:
+        data, aes_key, iv = decrypt_request(body)
+
+        print("Decrypted request:")
+        print(data)
+
+        action = data.get("action")
+
+        if action == "INIT":
+
+            response = {
+                "version": "3.0",
+                "screen": "JEWELLERY_ORDER",
+                "data": {}
+            }
+
+        elif action == "BACK":
+
+            response = {
+                "version": "3.0",
+                "screen": data.get("screen"),
+                "data": {}
+            }
+
+        elif action == "data_exchange":
+
+            response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {}
+            }
+
+        else:
+
+            response = {
+                "version": "3.0",
+                "screen": "SUCCESS",
+                "data": {}
+            }
+
+        encrypted = encrypt_response(response, aes_key, iv)
+
+        return Response(
+    content=encrypted,
+    media_type="text/plain"
+)
+
+    except Exception as e:
+
+        print("FLOW ERROR:", e)
+
+        return {"error": str(e)}
