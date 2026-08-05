@@ -3,7 +3,8 @@ import requests
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN")
 PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-FLOW_ID = os.getenv("FLOW_ID")
+FLOW_ID = os.getenv("WHATSAPP_FLOW_ID")
+print("FLOW_ID =", FLOW_ID)
 
 
 def send_text_message(to, message):
