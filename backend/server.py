@@ -63,6 +63,7 @@ JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-change-me')
 JWT_ALGORITHM = "HS256"
 
 app = FastAPI()
+print("VERIFY_TOKEN =", os.getenv("VERIFY_TOKEN"))
 api_router = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
