@@ -547,17 +547,16 @@ const [statusFilter, setStatusFilter] = useState("All");
     onChange={(e) => setStatusFilter(e.target.value)}
     className="border rounded-md px-4 py-2 bg-white"
 >
-    <option value="All">All Status</option>
-    <option value="Pending">Pending</option>
-    <option value="Approved">Approved</option>
-    <option value="Assigned">Assigned</option>
-    <option value="In Production">In Production</option>
-    <option value="Polishing">Polishing</option>
-    <option value="Stone Setting">Stone Setting</option>
-    <option value="QC">QC</option>
-    <option value="Ready">Ready</option>
-    <option value="Delivered">Delivered</option>
-    <option value="Rejected">Rejected</option>
+<option value="Pending">Pending</option>
+<option value="Approved">Approved</option>
+<option value="Assigned">Assigned</option>
+<option value="In Production">In Production</option>
+<option value="Stone Setting">Stone Setting</option>
+<option value="Polishing">Polishing</option>
+<option value="QC">QC</option>
+<option value="Ready">Ready</option>
+<option value="Delivered">Delivered</option>
+<option value="Rejected">Rejected</option>
 </select>
 
 </div>

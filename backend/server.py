@@ -1,7 +1,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import Form
-
+from whatsapp_service import send_flow, send_text_message
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -15,7 +15,7 @@ import requests as http_requests
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import FastAPI, APIRouter, HTTPException, Request, UploadFile, File, Form
-from fastapi.responses import Response
+from fastapi.responses import Response, PlainTextResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
@@ -757,3 +757,73 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown():
     client.close()
+
+@app.on_event("shutdown")
+async def shutdown():
+    client.close()
+
+
+@app.get("/webhook")
+async def verify_webhook(request: Request):
+
+    mode = request.query_params.get("hub.mode")
+    token = request.query_params.get("hub.verify_token")
+    challenge = request.query_params.get("hub.challenge")
+
+    if (
+        mode == "subscribe"
+        and token == os.getenv("VERIFY_TOKEN")
+    ):
+        print("✅ Webhook Verified")
+        return PlainTextResponse(content=challenge)
+
+    return PlainTextResponse(
+        content="Verification Failed",
+        status_code=403
+    )
+
+
+@app.post("/webhook")
+async def whatsapp_webhook(request: Request):
+
+    body = await request.json()
+
+    print("========== NEW WEBHOOK ==========")
+    print(body)
+    print("=================================")
+
+    try:
+
+        message = (
+            body.get("entry", [{}])[0]
+            .get("changes", [{}])[0]
+            .get("value", {})
+            .get("messages", [{}])[0]
+        )
+
+        if message:
+
+            print("Message Type:", message.get("type"))
+
+            if message.get("type") == "text":
+
+                text = (
+                    message.get("text", {})
+                    .get("body", "")
+                    .lower()
+                    .strip()
+                )
+
+                print("Message:", text)
+
+                if text == "hi":
+
+                    send_flow(message["from"])
+
+        return {"success": True}
+
+    except Exception as e:
+
+        print(e)
+
+        return {"success": False}
