@@ -921,3 +921,11 @@ async def whatsapp_flow_endpoint(request: Request):
             content=encrypted,
             media_type="text/plain"
         )
+    
+    except Exception as e:
+        import traceback
+
+        print("FLOW ERROR")
+        traceback.print_exc()
+
+        return {"error": str(e)}
