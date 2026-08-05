@@ -842,7 +842,11 @@ async def whatsapp_flow_endpoint(request: Request):
     print("====================================")
 
     try:
+        print("STEP 1")
+
         data, aes_key, iv = decrypt_request(body)
+
+        print("STEP 2")
 
         print("Decrypted request:")
         print(data)
@@ -887,9 +891,13 @@ async def whatsapp_flow_endpoint(request: Request):
     content=encrypted,
     media_type="text/plain"
 )
+    
+    
 
     except Exception as e:
+        import traceback
 
-        print("FLOW ERROR:", e)
+        print("FLOW ERROR")
+        traceback.print_exc()
 
         return {"error": str(e)}

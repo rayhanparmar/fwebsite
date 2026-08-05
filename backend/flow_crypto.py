@@ -3,6 +3,7 @@ import base64
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
+from Crypto.Hash import SHA256
 
 from pathlib import Path
 
@@ -21,14 +22,20 @@ def decrypt_request(body):
     encrypted_aes_key = base64.b64decode(body["encrypted_aes_key"])
     iv = base64.b64decode(body["initial_vector"])
 
-    # Decrypt AES key using RSA
-    cipher_rsa = PKCS1_OAEP.new(PRIVATE_KEY)
+    # RSA decrypt AES key
+    cipher_rsa = PKCS1_OAEP.new(
+    PRIVATE_KEY,
+    hashAlgo=SHA256
+)
     aes_key = cipher_rsa.decrypt(encrypted_aes_key)
 
-    # Decrypt payload using AES-GCM
+    # Split ciphertext and authentication tag
+    ciphertext = encrypted_flow_data[:-16]
+    tag = encrypted_flow_data[-16:]
+
     cipher = AES.new(aes_key, AES.MODE_GCM, nonce=iv)
 
-    decrypted = cipher.decrypt(encrypted_flow_data[:-16])
+    decrypted = cipher.decrypt_and_verify(ciphertext, tag)
 
     return json.loads(decrypted.decode()), aes_key, iv
 
