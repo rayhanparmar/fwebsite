@@ -43,7 +43,10 @@ def decrypt_request(body):
 def encrypt_response(response, aes_key, iv):
     response_bytes = json.dumps(response).encode()
 
-    cipher = AES.new(aes_key, AES.MODE_GCM, nonce=iv)
+    # Flip every bit of the IV (Meta requirement)
+    response_iv = bytes([b ^ 0xFF for b in iv])
+
+    cipher = AES.new(aes_key, AES.MODE_GCM, nonce=response_iv)
 
     encrypted_data, tag = cipher.encrypt_and_digest(response_bytes)
 
