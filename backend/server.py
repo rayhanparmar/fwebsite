@@ -869,10 +869,20 @@ async def whatsapp_flow_endpoint(request: Request):
                 "screen": "JEWELLERY_ORDER",
                 "data": {}
              }
+            
 
-        
+            action = data.get("action")
 
-        if action == "INIT":
+        if action == "ping":
+
+            response = {
+                "version": "3.0",
+                "data": {
+                    "status": "active"
+                }
+            }
+
+        elif action == "INIT":
 
             response = {
                 "version": "3.0",
@@ -900,23 +910,14 @@ async def whatsapp_flow_endpoint(request: Request):
 
             response = {
                 "version": "3.0",
-                "screen": "SUCCESS",
-                "data": {}
+                "data": {
+                    "status": "active"
+                }
             }
 
         encrypted = encrypt_response(response, aes_key, iv)
 
         return Response(
-    content=encrypted,
-    media_type="text/plain"
-)
-    
-    
-
-    except Exception as e:
-        import traceback
-
-        print("FLOW ERROR")
-        traceback.print_exc()
-
-        return {"error": str(e)}
+            content=encrypted,
+            media_type="text/plain"
+        )
