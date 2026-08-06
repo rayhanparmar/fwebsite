@@ -23,7 +23,10 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
-from cloudinary_service import upload_whatsapp_image
+from cloudinary_service import (
+    upload_whatsapp_image,
+    upload_whatsapp_video,
+)
 
 
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -822,6 +825,51 @@ async def whatsapp_webhook(request: Request):
         if message:
 
             print("Message Type:", message.get("type"))
+
+            # ==========================
+            # VIDEO MESSAGE
+            # ==========================
+
+            if message.get("type") == "video":
+
+                print("========== VIDEO RECEIVED ==========")
+
+                sender = message["from"]
+
+                if sender not in pending_video_uploads:
+                    send_text_message(
+                        sender,
+                        "No pending order found for this video."
+                    )
+                    return {"success": True}
+
+                order_id = pending_video_uploads[sender]
+
+                video_id = message["video"]["id"]
+
+                print("Uploading video:", video_id)
+
+                uploaded = upload_whatsapp_video(video_id)
+
+                print(uploaded["secure_url"])
+
+                await whatsapp_orders.update_one(
+                    {"orderId": order_id},
+                    {
+                        "$set": {
+                            "reference_video": uploaded["secure_url"]
+                        }
+                    }
+                )
+
+                del pending_video_uploads[sender]
+
+                send_text_message(
+                    sender,
+                    "✅ Reference video received successfully."
+                )
+
+                return {"success": True}
 
             if message.get("type") == "text":
 

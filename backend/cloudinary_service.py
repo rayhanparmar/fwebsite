@@ -82,3 +82,45 @@ def upload_whatsapp_image(media_id):
     print("======================================")
 
     return result
+
+def upload_whatsapp_video(media_id):
+
+    print("========== CLOUDINARY VIDEO ==========")
+    print("Media ID:", media_id)
+
+    media_url = get_media_url(media_id)
+
+    print("Media URL:", media_url)
+
+    response = requests.get(
+        media_url,
+        headers={
+            "Authorization": f"Bearer {os.getenv('WHATSAPP_ACCESS_TOKEN')}"
+        }
+    )
+
+    print("Downloaded from Meta:", response.status_code)
+
+    response.raise_for_status()
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp:
+
+        temp.write(response.content)
+
+        temp_path = temp.name
+
+    print("Temporary file:", temp_path)
+
+    result = cloudinary.uploader.upload(
+        temp_path,
+        folder="orders/videos",
+        resource_type="video"
+    )
+
+    os.remove(temp_path)
+
+    print("Cloudinary Video Upload Success")
+    print(result["secure_url"])
+    print("====================================")
+
+    return result
