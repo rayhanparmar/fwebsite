@@ -811,24 +811,44 @@ async def whatsapp_webhook(request: Request):
             if message.get("type") == "text":
 
                 text = (
-                    message.get("text", {})
-                    .get("body", "")
-                    .lower()
-                    .strip()
-                )
+            message.get("text", {})
+            .get("body", "")
+            .lower()
+            .strip()
+        )
 
                 print("Message:", text)
 
                 if text == "hi":
-
                     send_flow(message["from"])
+                    
+            elif (
+                message.get("type") == "interactive"
+                and message["interactive"].get("type") == "nfm_reply"
+    ):
+
+                import json
+
+                form_data = json.loads(
+                message["interactive"]["nfm_reply"]["response_json"]
+        )
+
+        print("========== FORM DATA ==========")
+
+        for key, value in form_data.items():
+            print(f"{key}: {value}")
+
+        print("===============================")       
+                
+
+               
+
+        # we'll add MongoDB code here next
 
         return {"success": True}
 
     except Exception as e:
-
         print(e)
-
         return {"success": False}
     
 
