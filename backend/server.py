@@ -939,33 +939,51 @@ async def whatsapp_webhook(request: Request):
                         datetime.utcnow() + timedelta(minutes=10)
                     )
 
+                    timer = threading.Timer(
+                        VIDEO_TIMEOUT,
+                        video_upload_timeout,
+                        args=[sender]
+                    )
+
+                    timer.start()
+                    video_upload_timers[sender] = timer
+
+                    # # START TIMER
+                    # timer = threading.Timer(
+                    #     VIDEO_TIMEOUT,
+                    #     video_upload_timeout,
+                    #     args=[sender]
+                    # )
+
+                    # timer.start()
+                    # video_upload_timers[sender] = timer
+
                     send_text_message(
                         sender,
                         """🎥 Great!
 
             Please upload ONE reference video.
-
             Maximum size: 40 MB.
 
             You have 10 minutes."""
-                )
+                    )
 
-                return {"success": True}
+                    return {"success": True}
 
                 # Customer doesn't want to upload video
-            if text == "no":
+                if text == "no":
 
-                timer = video_upload_timers.pop(sender, None)  
+                    timer = video_upload_timers.pop(sender, None)  
 
-                if timer:
-                    timer.cancel()
-                pending_video_uploads.pop(sender, None)
+                    if timer:
+                        timer.cancel()
+                    pending_video_uploads.pop(sender, None)
                 
-                video_waiting_users.pop(sender, None)
+                    video_waiting_users.pop(sender, None)
                 
-                send_text_message(
-                    sender,
-                    """✅ Thank you!
+                    send_text_message(
+                        sender,
+                        """✅ Thank you!
 
             Your order has been submitted successfully.
 
