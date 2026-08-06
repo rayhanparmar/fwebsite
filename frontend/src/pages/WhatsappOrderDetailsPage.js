@@ -332,7 +332,7 @@ className="w-full h-52 object-cover rounded-lg border transition duration-200 ho
         Reference Video
     </h2>
 
-    {order.reference_video?.url ? (
+    {order.reference_video ? (
 
 <video
 controls
