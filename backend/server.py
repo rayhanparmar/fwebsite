@@ -843,7 +843,15 @@ async def whatsapp_webhook(request: Request):
 
                
 
-        # we'll add MongoDB code here next
+        order = form_data.copy()
+        order["orderId"] = str(uuid.uuid4())
+        order["status"] = "New"
+        order["priority"] = "Normal"
+        order["assignedTo"] = ""
+        order["adminNotes"] = ""
+        order["createdAt"] = datetime.utcnow()
+
+        await whatsapp_orders.insert_one(order)
 
         return {"success": True}
 
