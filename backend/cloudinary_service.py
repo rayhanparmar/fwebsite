@@ -10,6 +10,10 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET"),
 )
 
+print("Cloud Name =", os.getenv("CLOUDINARY_CLOUD_NAME"))
+print("API Key =", os.getenv("CLOUDINARY_API_KEY"))
+print("API Secret =", os.getenv("CLOUDINARY_API_SECRET"))
+
 
 def get_media_url(media_id):
 
@@ -29,7 +33,12 @@ def get_media_url(media_id):
 
 def upload_whatsapp_image(media_id):
 
+    print("========== CLOUDINARY IMAGE ==========")
+    print("Media ID:", media_id)
+
     media_url = get_media_url(media_id)
+
+    print("Media URL received")
 
     response = requests.get(
         media_url,
@@ -38,19 +47,26 @@ def upload_whatsapp_image(media_id):
         }
     )
 
+    print("Downloaded from Meta:", response.status_code)
+
     response.raise_for_status()
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-
         temp.write(response.content)
-
         temp_path = temp.name
+
+    print("Temporary file:", temp_path)
 
     result = cloudinary.uploader.upload(
         temp_path,
         folder="orders/images"
     )
 
+    print("Cloudinary Upload Success")
+    print(result)
+
     os.remove(temp_path)
+
+    print("======================================")
 
     return result
