@@ -70,6 +70,10 @@ JWT_ALGORITHM = "HS256"
 
 pending_video_uploads = {}
 
+video_waiting_users = {}
+
+VIDEO_TIMEOUT = 600
+
 app = FastAPI()
 print("VERIFY_TOKEN =", os.getenv("VERIFY_TOKEN"))
 api_router = APIRouter(prefix="/api")
@@ -880,10 +884,60 @@ async def whatsapp_webhook(request: Request):
                     .strip()
                 )
 
+                sender = message["from"]
+
                 print("Message:", text)
 
+                # Start Flow
                 if text == "hi":
-                    send_flow(message["from"])
+                    send_flow(sender)
+                    return {"success": True}
+
+                # Customer wants to upload video
+                if text == "yes":
+
+                    if sender not in pending_video_uploads:
+                        send_text_message(
+                            sender,
+                            "No recent order found."
+                        )
+                        return {"success": True}
+
+                    from datetime import datetime, timedelta
+
+                    video_waiting_users[sender] = (
+                        datetime.utcnow() + timedelta(minutes=10)
+                    )
+
+                    send_text_message(
+                        sender,
+                        """🎥 Great!
+
+            Please upload ONE reference video.
+
+            Maximum size: 40 MB.
+
+            You have 10 minutes."""
+                )
+
+                return {"success": True}
+
+                # Customer doesn't want to upload video
+            if text == "no":
+
+                    pending_video_uploads.pop(sender, None)
+                    video_waiting_users.pop(sender, None)
+
+                    send_text_message(
+                        sender,
+                        """✅ Thank you!
+
+            Your order has been submitted successfully.
+
+            Our team will contact you if any clarification is required."""
+                    )
+
+                    return {"success": True}
 
             elif (
                 message.get("type") == "interactive"
@@ -933,17 +987,24 @@ async def whatsapp_webhook(request: Request):
                 count = await whatsapp_orders.count_documents({})
                 print("TOTAL ORDERS:", count)
 
-                # Remember this customer's latest order so the next video can be attached
                 pending_video_uploads[message["from"]] = order["orderId"]
-
-                print("About to send confirmation message...")
-
-                response = send_text_message(
+                # Remember this customer's latest order so the next video can be attached
+                send_text_message(
                     message["from"],
-                    "✅ Your order has been received successfully.\n\nIf you'd like to upload a reference video, simply send it in your next message. If not, you can ignore this message."
+                    f"""✅ Thank you for your order!
+
+                Your Order ID: {order["orderId"]}
+
+                Would you like to upload a reference video?
+
+                Reply with:
+
+                YES
+                or
+                NO"""
                 )
 
-                print("Send message response:", response)
+                # print("Send message response:", response)
 
         return {"success": True}
 
