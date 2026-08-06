@@ -37,6 +37,7 @@ def upload_whatsapp_image(media_id):
     print("Media ID:", media_id)
 
     media_url = get_media_url(media_id)
+    print("Media URL:", media_url)
 
     print("Media URL received")
 
@@ -46,6 +47,8 @@ def upload_whatsapp_image(media_id):
             "Authorization": f"Bearer {os.getenv('WHATSAPP_ACCESS_TOKEN')}"
         }
     )
+
+    print("Meta Download Status:", response.status_code)
 
     print("Downloaded from Meta:", response.status_code)
 
@@ -57,10 +60,19 @@ def upload_whatsapp_image(media_id):
 
     print("Temporary file:", temp_path)
 
-    result = cloudinary.uploader.upload(
+    try:
+        result = cloudinary.uploader.upload(
         temp_path,
         folder="orders/images"
-    )
+        )
+
+        print("Cloudinary Upload Success")
+        print(result["secure_url"])
+
+    except Exception as e:
+        print("Cloudinary Upload Failed")
+        print(e)
+        raise
 
     print("Cloudinary Upload Success")
     print(result)
