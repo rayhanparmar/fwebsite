@@ -797,12 +797,24 @@ async def whatsapp_webhook(request: Request):
 
     try:
 
-        message = (
+
+        value = (
             body.get("entry", [{}])[0]
             .get("changes", [{}])[0]
             .get("value", {})
-            .get("messages", [{}])[0]
         )
+
+        print("VALUE KEYS:", list(value.keys()))
+        print(value)
+
+        messages = value.get("messages", [])
+
+        print("MESSAGES:", messages)
+
+        if not messages:
+            return {"success": True}
+
+        message = messages[0]
 
         if message:
 
