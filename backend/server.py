@@ -936,11 +936,14 @@ async def whatsapp_webhook(request: Request):
                 # Remember this customer's latest order so the next video can be attached
                 pending_video_uploads[message["from"]] = order["orderId"]
 
-                # Ask if they want to upload a reference video
-                send_text_message(
+                print("About to send confirmation message...")
+
+                response = send_text_message(
                     message["from"],
                     "✅ Your order has been received successfully.\n\nIf you'd like to upload a reference video, simply send it in your next message. If not, you can ignore this message."
                 )
+
+                print("Send message response:", response)
 
         return {"success": True}
 
