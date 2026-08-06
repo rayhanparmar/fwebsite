@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
+from cloudinary_service import upload_whatsapp_image
 
 
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
@@ -852,7 +853,19 @@ async def whatsapp_webhook(request: Request):
 
                 print("===============================")
 
+
+                cloudinary_images = []
+
+                for image in form_data.get("design_images", []):
+
+                    print("Uploading:", image["id"])
+
+                    uploaded = upload_whatsapp_image(image["id"])
+
+                    cloudinary_images.append(uploaded["secure_url"])
+
                 order = form_data.copy()
+                order["design_images"] = cloudinary_images
                 order["orderId"] = str(uuid.uuid4())
                 order["status"] = "New"
                 order["priority"] = "Normal"
