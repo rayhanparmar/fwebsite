@@ -11,6 +11,7 @@ import logging
 import bcrypt
 import jwt
 import uuid
+import threading
 import random
 import requests as http_requests
 import boto3
@@ -71,8 +72,29 @@ JWT_ALGORITHM = "HS256"
 pending_video_uploads = {}
 
 video_waiting_users = {}
+video_upload_timers = {}
 
 VIDEO_TIMEOUT = 600
+
+def video_upload_timeout(sender):
+
+    if sender not in video_waiting_users:
+        return
+
+    pending_video_uploads.pop(sender, None)
+    video_waiting_users.pop(sender, None)
+    video_upload_timers.pop(sender, None)
+
+    send_text_message(
+        sender,
+        """⌛ Video upload time expired.
+
+Your order has been submitted successfully without a reference video.
+
+Thank you!"""
+    )
+
+    print(f"Video upload timed out for {sender}")
 
 app = FastAPI()
 print("VERIFY_TOKEN =", os.getenv("VERIFY_TOKEN"))
@@ -868,6 +890,14 @@ async def whatsapp_webhook(request: Request):
 
                 del pending_video_uploads[sender]
 
+                timer = video_upload_timers.pop(sender, None)
+
+                if timer:
+                    timer.cancel()
+
+                video_waiting_users.pop(sender, None)
+                pending_video_uploads.pop(sender, None)
+
                 send_text_message(
                     sender,
                     "✅ Reference video received successfully."
@@ -925,19 +955,30 @@ async def whatsapp_webhook(request: Request):
                 # Customer doesn't want to upload video
             if text == "no":
 
-                    pending_video_uploads.pop(sender, None)
-                    video_waiting_users.pop(sender, None)
+                timer = video_upload_timers.pop(sender, None)  
 
-                    send_text_message(
-                        sender,
-                        """✅ Thank you!
+                if timer:
+                    timer.cancel()
+                pending_video_uploads.pop(sender, None)
+                
+                video_waiting_users.pop(sender, None)
+                
+                send_text_message(
+                    sender,
+                    """✅ Thank you!
 
             Your order has been submitted successfully.
 
             Our team will contact you if any clarification is required."""
-                    )
+                )
 
-                    return {"success": True}
+                return {"success": True}
+                    
+
+                    
+                    
+
+                
 
             elif (
                 message.get("type") == "interactive"
