@@ -211,13 +211,13 @@ Design Images
 
 <a
 key={index}
-href={image.url}
+href={typeof image === "string" ? image : image.url}
 target="_blank"
 rel="noreferrer"
 >
 
 <img
-src={image.url}
+src={typeof image === "string" ? image : image.url}
 alt={`Design ${index + 1}`}
 className="w-full h-52 object-cover rounded-lg border transition duration-200 hover:scale-105 hover:shadow-lg"
 />
@@ -340,7 +340,11 @@ className="w-full max-h-[500px] rounded-lg border"
 >
 
 <source
-src={order.reference_video.url}
+src={
+    typeof order.reference_video === "string"
+    ? order.reference_video
+    : order.reference_video?.url
+    }
 type="video/mp4"
 />
             Your browser does not support video.
