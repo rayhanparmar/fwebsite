@@ -860,7 +860,15 @@ async def whatsapp_webhook(request: Request):
                 order["adminNotes"] = ""
                 order["createdAt"] = datetime.utcnow()
 
-                await whatsapp_orders.insert_one(order)
+                print("BEFORE INSERT")
+
+                result = await whatsapp_orders.insert_one(order)
+
+                print("AFTER INSERT")
+                print(result.inserted_id)
+
+                count = await whatsapp_orders.count_documents({})
+                print("TOTAL ORDERS:", count)
 
         return {"success": True}
 
