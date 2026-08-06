@@ -933,7 +933,7 @@ async def whatsapp_webhook(request: Request):
                         )
                         return {"success": True}
 
-                    from datetime import datetime, timedelta
+                    # from datetime import datetime, timedelta
 
                     video_waiting_users[sender] = (
                         datetime.utcnow() + timedelta(minutes=10)
