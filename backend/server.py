@@ -811,47 +811,44 @@ async def whatsapp_webhook(request: Request):
             if message.get("type") == "text":
 
                 text = (
-            message.get("text", {})
-            .get("body", "")
-            .lower()
-            .strip()
-        )
+                    message.get("text", {})
+                    .get("body", "")
+                    .lower()
+                    .strip()
+                )
 
                 print("Message:", text)
 
                 if text == "hi":
                     send_flow(message["from"])
-                    
+
             elif (
                 message.get("type") == "interactive"
                 and message["interactive"].get("type") == "nfm_reply"
-    ):
+            ):
 
                 import json
 
                 form_data = json.loads(
-                message["interactive"]["nfm_reply"]["response_json"]
-        )
+                    message["interactive"]["nfm_reply"]["response_json"]
+                )
 
-        print("========== FORM DATA ==========")
+                print("========== FORM DATA ==========")
 
-        for key, value in form_data.items():
-            print(f"{key}: {value}")
+                for key, value in form_data.items():
+                    print(f"{key}: {value}")
 
-        print("===============================")       
-                
+                print("===============================")
 
-               
+                order = form_data.copy()
+                order["orderId"] = str(uuid.uuid4())
+                order["status"] = "New"
+                order["priority"] = "Normal"
+                order["assignedTo"] = ""
+                order["adminNotes"] = ""
+                order["createdAt"] = datetime.utcnow()
 
-        order = form_data.copy()
-        order["orderId"] = str(uuid.uuid4())
-        order["status"] = "New"
-        order["priority"] = "Normal"
-        order["assignedTo"] = ""
-        order["adminNotes"] = ""
-        order["createdAt"] = datetime.utcnow()
-
-        await whatsapp_orders.insert_one(order)
+                await whatsapp_orders.insert_one(order)
 
         return {"success": True}
 
