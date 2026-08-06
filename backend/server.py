@@ -65,6 +65,8 @@ whatsapp_orders = whatsapp_db["orders"]
 JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-change-me')
 JWT_ALGORITHM = "HS256"
 
+pending_video_uploads = {}
+
 app = FastAPI()
 print("VERIFY_TOKEN =", os.getenv("VERIFY_TOKEN"))
 api_router = APIRouter(prefix="/api")
@@ -882,6 +884,15 @@ async def whatsapp_webhook(request: Request):
 
                 count = await whatsapp_orders.count_documents({})
                 print("TOTAL ORDERS:", count)
+
+                # Remember this customer's latest order so the next video can be attached
+                pending_video_uploads[message["from"]] = order["orderId"]
+
+                # Ask if they want to upload a reference video
+                send_text_message(
+                    message["from"],
+                    "✅ Your order has been received successfully.\n\nIf you'd like to upload a reference video, simply send it in your next message. If not, you can ignore this message."
+                )
 
         return {"success": True}
 
