@@ -626,7 +626,7 @@ const [showExcelMenu, setShowExcelMenu] = useState(false);
     }}
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
-    📆 Today's Orders
+📆 Today's Orders
 </button>
 
             <button
@@ -636,10 +636,14 @@ const [showExcelMenu, setShowExcelMenu] = useState(false);
             </button>
 
             <button
-                className="w-full text-left px-4 py-3 hover:bg-gray-100"
-            >
-                📆 Today's Orders
-            </button>
+    onClick={() => {
+        alert("Orders by Date - Coming Next");
+        setShowExcelMenu(false);
+    }}
+    className="w-full text-left px-4 py-3 hover:bg-gray-100"
+>
+    📅 Orders by Date
+</button>
 
         </div>
     )}
