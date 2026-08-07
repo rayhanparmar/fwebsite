@@ -25,6 +25,8 @@ export default function AdminDashboard() {
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
+const [selectedExcelDate, setSelectedExcelDate] = useState("");
+const [downloadByDate, setDownloadByDate] = useState(false);
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -572,6 +574,45 @@ const [showExcelMenu, setShowExcelMenu] = useState(false);
 
 <div className="relative">
 
+<input
+    id="excel-date-picker"
+    type="date"
+    value={selectedExcelDate}
+    onChange={async (e) => {
+        const date = e.target.value;
+        setSelectedExcelDate(date);
+
+        if (!date) return;
+
+        try {
+            const response = await api.get(
+                `/admin/whatsapp-orders/excel/date/${date}`,
+                {
+                    responseType: "blob",
+                }
+            );
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Orders_${date}.xlsx`;
+
+            document.body.appendChild(link);
+            link.click();
+
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success("Excel downloaded successfully");
+        } catch (err) {
+            console.error(err);
+            toast.error("Unable to download orders.");
+        }
+    }}
+    style={{ display: "none" }}
+/>
+
     <button
         onClick={() => setShowExcelMenu(!showExcelMenu)}
         className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md"
@@ -624,6 +665,8 @@ const [showExcelMenu, setShowExcelMenu] = useState(false);
 
         }
     }}
+
+
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
 📆 Today's Orders
@@ -637,9 +680,14 @@ const [showExcelMenu, setShowExcelMenu] = useState(false);
 
             <button
     onClick={() => {
-        alert("Orders by Date - Coming Next");
-        setShowExcelMenu(false);
-    }}
+      setDownloadByDate(true);
+  
+      setTimeout(() => {
+          document.getElementById("excel-date-picker")?.showPicker();
+      }, 100);
+  
+      setShowExcelMenu(false);
+  }}
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
     📅 Orders by Date
