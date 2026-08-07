@@ -592,19 +592,15 @@ const [statusFilter, setStatusFilter] = useState("All");
 
 <div
     key={order.orderId}
-    className="border border-[#E5E7EB] bg-white p-5 rounded-sm hover:border-[#359E58] hover:shadow-md transition-all relative"
+    onClick={() => navigate(`/admin/whatsapp-orders/${order.orderId}`)}
+    className="border border-[#E5E7EB] bg-white p-5 rounded-sm hover:border-[#359E58] hover:shadow-md transition-all relative cursor-pointer"
 >
 
 <div className="flex justify-between items-start mb-3">
 
 <div>
 
-    <h3
-        className="font-semibold text-lg cursor-pointer hover:text-green-600"
-        onClick={() =>
-            navigate(`/admin/whatsapp-orders/${order.orderId}`)
-        }
-    >
+<h3 className="font-semibold text-lg hover:text-green-600">
         {order.orderId}
     </h3>
 
