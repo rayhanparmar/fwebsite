@@ -4,6 +4,10 @@ from fastapi import Form
 from whatsapp_service import send_flow, send_text_message
 from flow_crypto import decrypt_request, encrypt_response
 from cloudinary.uploader import destroy
+from io import BytesIO
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -651,6 +655,65 @@ async def admin_get_whatsapp_order(
         )
 
     return order
+
+@api_router.get("/admin/whatsapp-orders/{order_id}/excel")
+async def download_whatsapp_order_excel(
+    order_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    order = await whatsapp_orders.find_one(
+        {"orderId": order_id},
+        {"_id": 0}
+    )
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    # Create workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Order Details"
+
+    # Header
+    ws["A1"] = "Field"
+    ws["B1"] = "Value"
+
+    ws["A1"].font = Font(bold=True)
+    ws["B1"].font = Font(bold=True)
+
+    # Fields to exclude
+    excluded_fields = {
+        "design_images",
+        "reference_video",
+        "flow_token"
+    }
+
+    row = 2
+
+    for key, value in order.items():
+        if key in excluded_fields:
+            continue
+
+        ws.cell(row=row, column=1).value = key.replace("_", " ").title()
+        ws.cell(row=row, column=2).value = str(value) if value is not None else ""
+        row += 1
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f'attachment; filename="{order_id}.xlsx"'
+        },
+    )
 
 # @api_router.put("/admin/whatsapp-orders/{order_id}")
 # async def update_whatsapp_order(

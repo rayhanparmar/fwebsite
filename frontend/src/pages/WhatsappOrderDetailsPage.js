@@ -85,6 +85,39 @@ setAdminNotes(res.data.admin_notes || "");
 
 };
 
+
+const downloadExcel = async () => {
+    try {
+        const response = await api.get(
+            `/admin/whatsapp-orders/${orderId}/excel`,
+            {
+                responseType: "blob",
+            }
+        );
+
+        const url = window.URL.createObjectURL(
+            new Blob([response.data])
+        );
+
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.setAttribute("download", `${orderId}.xlsx`);
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error(err);
+        alert("Unable to download Excel.");
+    }
+};
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto p-10">
@@ -561,16 +594,23 @@ type="video/mp4"
 
     </div>
 
-    <div className="mt-8">
+    <div className="mt-8 flex gap-4">
 
-        <button
-            onClick={saveChanges}
-            className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition"
-        >
-            Save Changes
-        </button>
+    <button
+        onClick={saveChanges}
+        className="bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition"
+    >
+        Save Changes
+    </button>
 
-    </div>
+    <button
+        onClick={downloadExcel}
+        className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition"
+    >
+        Download Excel
+    </button>
+
+</div>
 
 </div>
 
