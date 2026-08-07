@@ -714,7 +714,65 @@ async def download_whatsapp_order_excel(
             "Content-Disposition": f'attachment; filename="{order_id}.xlsx"'
         },
     )
+@api_router.get("/admin/whatsapp-orders/excel/today")
+async def download_today_orders_excel(request: Request):
+    await get_admin_user(request)
 
+    from datetime import datetime
+
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    orders = await whatsapp_orders.find(
+        {"order_date": today},
+        {"_id": 0}
+    ).to_list(None)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Today's Orders"
+
+    excluded_fields = {
+        "design_images",
+        "reference_video",
+        "flow_token"
+    }
+
+    if orders:
+
+        headers = [
+            key
+            for key in orders[0].keys()
+            if key not in excluded_fields
+        ]
+
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col)
+            cell.value = header.replace("_", " ").title()
+            cell.font = Font(bold=True)
+
+        for row_index, order in enumerate(orders, start=2):
+
+            for col, header in enumerate(headers, start=1):
+
+                ws.cell(
+                    row=row_index,
+                    column=col
+                ).value = str(order.get(header, ""))
+
+    output = BytesIO()
+
+    wb.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            f'attachment; filename="Today_Orders_{today}.xlsx"'
+        },
+    )
 # @api_router.put("/admin/whatsapp-orders/{order_id}")
 # async def update_whatsapp_order(
 #     order_id: str,

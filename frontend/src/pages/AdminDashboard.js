@@ -24,6 +24,7 @@ export default function AdminDashboard() {
 
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
+const [showExcelMenu, setShowExcelMenu] = useState(false);
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -569,21 +570,98 @@ const [statusFilter, setStatusFilter] = useState("All");
     className="flex-1"
 />
 
+<div className="relative">
+
+    <button
+        onClick={() => setShowExcelMenu(!showExcelMenu)}
+        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-md"
+    >
+        Download Excel
+    </button>
+
+    {showExcelMenu && (
+        <div className="absolute right-0 mt-2 w-64 bg-white border rounded-lg shadow-lg z-50">
+
+<button
+    onClick={async () => {
+        try {
+
+            const response = await api.get(
+                "/admin/whatsapp-orders/excel/today",
+                {
+                    responseType: "blob",
+                }
+            );
+
+            const url = window.URL.createObjectURL(
+                new Blob([response.data])
+            );
+
+            const link = document.createElement("a");
+
+            link.href = url;
+
+            link.setAttribute(
+                "download",
+                "Today_Orders.xlsx"
+            );
+
+            document.body.appendChild(link);
+
+            link.click();
+
+            link.remove();
+
+            window.URL.revokeObjectURL(url);
+
+            setShowExcelMenu(false);
+
+        } catch (err) {
+
+            console.error(err);
+
+            toast.error("Unable to download today's orders.");
+
+        }
+    }}
+    className="w-full text-left px-4 py-3 hover:bg-gray-100"
+>
+    📆 Today's Orders
+</button>
+
+            <button
+                className="w-full text-left px-4 py-3 hover:bg-gray-100"
+            >
+                👤 Orders by Customer
+            </button>
+
+            <button
+                className="w-full text-left px-4 py-3 hover:bg-gray-100"
+            >
+                📆 Today's Orders
+            </button>
+
+        </div>
+    )}
+
+</div>
+
 <select
     value={statusFilter}
     onChange={(e) => setStatusFilter(e.target.value)}
     className="border rounded-md px-4 py-2 bg-white"
 >
-<option value="Pending">Pending</option>
-<option value="Approved">Approved</option>
-<option value="Assigned">Assigned</option>
-<option value="In Production">In Production</option>
-<option value="Stone Setting">Stone Setting</option>
-<option value="Polishing">Polishing</option>
-<option value="QC">QC</option>
-<option value="Ready">Ready</option>
-<option value="Delivered">Delivered</option>
-<option value="Rejected">Rejected</option>
+    <option value="All">All</option>
+    <option value="Pending">Pending</option>
+    <option value="Approved">Approved</option>
+    <option value="Assigned">Assigned</option>
+    <option value="In Production">In Production</option>
+    <option value="Stone Setting">Stone Setting</option>
+    <option value="Polishing">Polishing</option>
+    <option value="QC">QC</option>
+    <option value="Ready">Ready</option>
+    <option value="Delivered">Delivered</option>
+    <option value="Rejected">Rejected</option>
 </select>
 
 </div>
