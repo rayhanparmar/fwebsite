@@ -954,9 +954,7 @@ async def whatsapp_webhook(request: Request):
 
                 uploaded = upload_whatsapp_video(video_id)
 
-                print(uploaded["secure_url"])
-
-                await whatsapp_orders.update_one(
+                result = await whatsapp_orders.update_one(
                     {"orderId": order_id},
                     {
                         "$set": {
@@ -964,6 +962,19 @@ async def whatsapp_webhook(request: Request):
                         }
                     }
                 )
+
+                print("ORDER ID:", order_id)
+                print("VIDEO URL:", uploaded["secure_url"])
+                print("MATCHED:", result.matched_count)
+                print("MODIFIED:", result.modified_count)
+
+                doc = await whatsapp_orders.find_one(
+                    {"orderId": order_id},
+                    {"_id": 0}
+                )
+
+                print("UPDATED DOC:")
+                print(doc)
 
                 del pending_video_uploads[sender]
 
