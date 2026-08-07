@@ -747,7 +747,10 @@ async def admin_delete_whatsapp_order(
         try:
 
             public_id = image.split("/upload/")[1]
+            public_id = public_id.split("/", 1)[1]
             public_id = public_id.rsplit(".", 1)[0]
+
+            print("Deleting Cloudinary image:", public_id)
 
             destroy(public_id)
 
@@ -760,7 +763,10 @@ async def admin_delete_whatsapp_order(
         try:
 
             public_id = order["reference_video"].split("/upload/")[1]
+            public_id = public_id.split("/", 1)[1]
             public_id = public_id.rsplit(".", 1)[0]
+
+            print("Deleting Cloudinary video:", public_id)
 
             destroy(
                 public_id,
