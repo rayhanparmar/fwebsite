@@ -29,6 +29,10 @@ const [selectedExcelDate, setSelectedExcelDate] = useState("");
 const [downloadByDate, setDownloadByDate] = useState(false);
 const [customerExcelName, setCustomerExcelName] = useState("");
 const [showCustomerDialog, setShowCustomerDialog] = useState(false);
+const [customerDateMode, setCustomerDateMode] = useState(false);
+const [showDateCustomerDialog, setShowDateCustomerDialog] = useState(false);
+const [filterCustomerName, setFilterCustomerName] = useState("");
+const [filterOrderDate, setFilterOrderDate] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -39,6 +43,7 @@ const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
+
 
   const loadStats = useCallback(() => { api.get("/admin/stats").then(r => setStats(r.data)).catch(() => {}); }, [api]);
   const loadRetailers = useCallback(() => {
@@ -183,6 +188,72 @@ const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   };
 
   return (
+    <>
+  {showDateCustomerDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl w-[420px] p-6">
+    
+                <h2 className="text-xl font-semibold mb-5">
+                    Download Orders by Date & Customer
+                </h2>
+    
+                <div className="space-y-4">
+    
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Customer Name
+                        </label>
+    
+                        <input
+                            type="text"
+                            value={filterCustomerName}
+                            onChange={(e) => setFilterCustomerName(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2"
+                        />
+                    </div>
+    
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            Order Date
+                        </label>
+    
+                        <input
+                            type="date"
+                            value={filterOrderDate}
+                            onChange={(e) => setFilterOrderDate(e.target.value)}
+                            className="w-full border rounded-lg px-3 py-2"
+                        />
+                    </div>
+    
+                    <div className="flex justify-end gap-3 pt-4">
+    
+                        <button
+                            onClick={() => {
+                                setShowDateCustomerDialog(false);
+                                setFilterCustomerName("");
+                                setFilterOrderDate("");
+                            }}
+                            className="px-4 py-2 border rounded-lg"
+                        >
+                            Cancel
+                        </button>
+    
+                        <button
+                            className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                        >
+                            Download
+                        </button>
+    
+                    </div>
+    
+                </div>
+    
+            </div>
+        </div>
+        
+    )}
+    
+    
     <div data-testid="admin-dashboard" className="py-8 sm:py-12 md:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
         <div className="mb-8">
@@ -678,8 +749,25 @@ const [showCustomerDialog, setShowCustomerDialog] = useState(false);
     onClick={async () => {
 
       const customer = prompt("Enter Customer Name");
-  
-      if (!customer) return;
+
+if (!customer) return;
+
+const downloadAll = window.confirm(
+    "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
+);
+
+if (!downloadAll) {
+
+    setCustomerExcelName(customer);
+
+    setCustomerDateMode(true);
+
+    setTimeout(() => {
+        document.getElementById("excel-date-picker")?.showPicker();
+    }, 100);
+
+    return;
+}
   
       try {
   
@@ -739,6 +827,16 @@ const [showCustomerDialog, setShowCustomerDialog] = useState(false);
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
     📅 Orders by Date
+</button>
+
+<button
+    onClick={() => {
+        setShowDateCustomerDialog(true);
+        setShowExcelMenu(false);
+    }}
+    className="w-full text-left px-4 py-3 hover:bg-gray-100"
+>
+    📅👤 Orders by Date & Customer
 </button>
 
         </div>
@@ -891,8 +989,11 @@ const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 
   </div>
 </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
+</Tabs>
+</div>
+</div>
+
+</>
+
+);
 }
