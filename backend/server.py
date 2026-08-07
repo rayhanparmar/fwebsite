@@ -65,6 +65,7 @@ client = AsyncIOMotorClient(
 db = client[os.environ['DB_NAME']]
 whatsapp_db = client["whatsapp_orders"]
 whatsapp_orders = whatsapp_db["orders"]
+counters = whatsapp_db["counters"]
 
 JWT_SECRET = os.environ.get('JWT_SECRET', 'fallback-secret-change-me')
 JWT_ALGORITHM = "HS256"
@@ -76,6 +77,19 @@ video_upload_timers = {}
 
 VIDEO_TIMEOUT = 600
 
+
+async def get_next_order_id():
+
+    result = await counters.find_one_and_update(
+        {"_id": "order_counter"},
+        {"$inc": {"sequence": 1}},
+        upsert=True,
+        return_document=True
+    )
+
+    sequence = result["sequence"]
+
+    return f"ORD-{sequence:06d}"
 def video_upload_timeout(sender):
 
     if sender not in video_waiting_users:
@@ -637,35 +651,35 @@ async def admin_get_whatsapp_order(
 
     return order
 
-@api_router.put("/admin/whatsapp-orders/{order_id}")
-async def update_whatsapp_order(
-    order_id: str,
-    request: Request,
-    data: dict
-):
-    await get_admin_user(request)
+# @api_router.put("/admin/whatsapp-orders/{order_id}")
+# async def update_whatsapp_order(
+#     order_id: str,
+#     request: Request,
+#     data: dict
+# ):
+#     await get_admin_user(request)
 
-    result = await whatsapp_orders.update_one(
-        {"orderId": order_id},
-        {
-            "$set": {
-                "status": data.get("status"),
-                "priority": data.get("priority"),
-                "assignedTo": data.get("assignedTo"),
-                "adminNotes": data.get("adminNotes"),
-            }
-        }
-    )
+#     result = await whatsapp_orders.update_one(
+#         {"orderId": order_id},
+#         {
+#             "$set": {
+#                 "status": data.get("status"),
+#                 "priority": data.get("priority"),
+#                 "assignedTo": data.get("assignedTo"),
+#                 "adminNotes": data.get("adminNotes"),
+#             }
+#         }
+#     )
 
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Order not found")
+#     if result.matched_count == 0:
+#         raise HTTPException(status_code=404, detail="Order not found")
 
-    order = await whatsapp_orders.find_one(
-        {"orderId": order_id},
-        {"_id": 0}
-    )
+#     order = await whatsapp_orders.find_one(
+#         {"orderId": order_id},
+#         {"_id": 0}
+#     )
 
-    return order
+#     return order
 
 
 @api_router.put("/admin/whatsapp-orders/{order_id}")
@@ -1029,7 +1043,7 @@ async def whatsapp_webhook(request: Request):
 
                 order = form_data.copy()
                 order["design_images"] = cloudinary_images
-                order["orderId"] = str(uuid.uuid4())
+                order["orderId"] = await get_next_order_id()
                 order["status"] = "New"
                 order["priority"] = "Normal"
                 order["assignedTo"] = ""
