@@ -111,6 +111,33 @@ const [statusFilter, setStatusFilter] = useState("All");
     catch { toast.error("Failed to delete"); }
   };
 
+  const deleteWhatsappOrder = async (orderId) => {
+
+    const confirmDelete = window.confirm(
+        "Are you sure you want to permanently delete this order?\n\nThis will delete:\n\n• MongoDB record\n• Cloudinary images\n• Cloudinary videos\n\nThis action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+
+        await api.delete(`/admin/whatsapp-orders/${orderId}`);
+
+        toast.success("Order deleted successfully");
+
+        loadWhatsappOrders();
+        loadStats();
+
+    } catch (err) {
+
+        toast.error(
+            err.response?.data?.detail || "Failed to delete order"
+        );
+
+    }
+
+};
+
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -564,52 +591,64 @@ const [statusFilter, setStatusFilter] = useState("All");
 {filteredOrders.map((order) => (
 
 <div
-key={order.orderId}
-onClick={() =>
-  navigate(`/admin/whatsapp-orders/${order.orderId}`)
-}
-className="border border-[#E5E7EB] bg-white p-5 rounded-sm cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all"
+    key={order.orderId}
+    className="border border-[#E5E7EB] bg-white p-5 rounded-sm hover:border-[#359E58] hover:shadow-md transition-all relative"
 >
 
-        <div className="flex justify-between items-center mb-3">
+<div className="flex justify-between items-start mb-3">
 
-          <h3 className="font-semibold text-lg">
-            {order.orderId}
-          </h3>
+<div>
 
-          <span
-    className={`text-sm px-3 py-1 rounded font-medium ${
-        order.status === "Pending"
-            ? "bg-yellow-100 text-yellow-800"
+    <h3
+        className="font-semibold text-lg cursor-pointer hover:text-green-600"
+        onClick={() =>
+            navigate(`/admin/whatsapp-orders/${order.orderId}`)
+        }
+    >
+        {order.orderId}
+    </h3>
 
-        : order.status === "Approved"
-            ? "bg-green-100 text-green-800"
+</div>
 
-        : order.status === "Assigned"
-            ? "bg-orange-100 text-orange-800"
+<div className="flex items-center gap-3">
 
-        : order.status === "In Production"
-            ? "bg-purple-100 text-purple-800"
+    <button
+        onClick={(e) => {
+            e.stopPropagation();
+            deleteWhatsappOrder(order.orderId);
+        }}
+        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+    >
+        Delete
+    </button>
 
-        : order.status === "QC"
-            ? "bg-blue-100 text-blue-800"
+    <span
+        className={`text-sm px-3 py-1 rounded font-medium ${
+            order.status === "Pending"
+                ? "bg-yellow-100 text-yellow-800"
+            : order.status === "Approved"
+                ? "bg-green-100 text-green-800"
+            : order.status === "Assigned"
+                ? "bg-orange-100 text-orange-800"
+            : order.status === "In Production"
+                ? "bg-purple-100 text-purple-800"
+            : order.status === "QC"
+                ? "bg-blue-100 text-blue-800"
+            : order.status === "Ready"
+                ? "bg-emerald-100 text-emerald-800"
+            : order.status === "Delivered"
+                ? "bg-green-200 text-green-900"
+            : order.status === "Rejected"
+                ? "bg-red-100 text-red-800"
+            : "bg-gray-100 text-gray-800"
+        }`}
+    >
+        {order.status}
+    </span>
 
-        : order.status === "Ready"
-            ? "bg-emerald-100 text-emerald-800"
+</div>
 
-        : order.status === "Delivered"
-            ? "bg-green-200 text-green-900"
-
-        : order.status === "Rejected"
-            ? "bg-red-100 text-red-800"
-
-        : "bg-gray-100 text-gray-800"
-    }`}
->
-    {order.status}
-</span>
-
-        </div>
+</div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
 

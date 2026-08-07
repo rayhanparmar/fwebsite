@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from fastapi import Form
 from whatsapp_service import send_flow, send_text_message
 from flow_crypto import decrypt_request, encrypt_response
+from cloudinary.uploader import destroy
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
@@ -719,6 +720,62 @@ async def admin_update_whatsapp_order(
 
     return {
         "message": "Order updated successfully."
+    }
+
+from cloudinary.uploader import destroy
+
+@api_router.delete("/admin/whatsapp-orders/{order_id}")
+async def admin_delete_whatsapp_order(
+    order_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    order = await whatsapp_orders.find_one(
+        {"orderId": order_id}
+    )
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found"
+        )
+
+    # Delete design images
+    for image in order.get("design_images", []):
+
+        try:
+
+            public_id = image.split("/upload/")[1]
+            public_id = public_id.rsplit(".", 1)[0]
+
+            destroy(public_id)
+
+        except Exception as e:
+            print("Image delete failed:", e)
+
+    # Delete reference video
+    if order.get("reference_video"):
+
+        try:
+
+            public_id = order["reference_video"].split("/upload/")[1]
+            public_id = public_id.rsplit(".", 1)[0]
+
+            destroy(
+                public_id,
+                resource_type="video"
+            )
+
+        except Exception as e:
+            print("Video delete failed:", e)
+
+    await whatsapp_orders.delete_one(
+        {"orderId": order_id}
+    )
+
+    return {
+        "success": True
     }
 
 
