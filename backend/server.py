@@ -895,6 +895,73 @@ async def download_orders_by_customer(
             f'attachment; filename="{customer_name}_Orders.xlsx"'
         },
     )
+
+
+@api_router.get("/admin/whatsapp-orders/excel/customer-date")
+async def download_orders_by_customer_and_date(
+    customer_name: str,
+    order_date: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    orders = await whatsapp_orders.find(
+        {
+            "customer_name": {
+                "$regex": f"^{customer_name}$",
+                "$options": "i"
+            },
+            "order_date": order_date
+        },
+        {"_id": 0}
+    ).to_list(length=None)
+
+    if not orders:
+        raise HTTPException(
+            status_code=404,
+            detail="No matching orders found."
+        )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = customer_name[:31]
+
+    excluded_fields = {
+        "design_images",
+        "reference_video",
+        "flow_token"
+    }
+
+    headers = [
+        key
+        for key in orders[0].keys()
+        if key not in excluded_fields
+    ]
+
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header.replace("_", " ").title()
+        cell.font = Font(bold=True)
+
+    for row_index, order in enumerate(orders, start=2):
+        for col, header in enumerate(headers, start=1):
+            ws.cell(
+                row=row_index,
+                column=col
+            ).value = str(order.get(header, ""))
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            f'attachment; filename="{customer_name}_{order_date}.xlsx"'
+        },
+    )
 # @api_router.put("/admin/whatsapp-orders/{order_id}")
 # async def update_whatsapp_order(
 #     order_id: str,

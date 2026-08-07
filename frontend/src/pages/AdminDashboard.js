@@ -187,6 +187,40 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
     setShowAddProduct(false);
   };
 
+
+  const downloadCustomerDateOrders = async () => {
+    try {
+      const response = await api.get(
+        `/admin/whatsapp-orders/excel/customer-date?customer_name=${encodeURIComponent(filterCustomerName)}&order_date=${filterOrderDate}`,
+        {
+          responseType: "blob",
+        }
+      );
+  
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+  
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "Orders.xlsx";
+  
+      document.body.appendChild(link);
+      link.click();
+  
+      link.remove();
+      window.URL.revokeObjectURL(url);
+  
+      setShowDateCustomerDialog(false);
+      setFilterCustomerName("");
+      setFilterOrderDate("");
+  
+      toast.success("Excel downloaded successfully");
+  
+    } catch (err) {
+      console.error(err);
+      toast.error("No matching orders found.");
+    }
+  };
+
   return (
     <>
   {showDateCustomerDialog && (
@@ -239,10 +273,11 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
                         </button>
     
                         <button
-                            className="bg-green-600 text-white px-5 py-2 rounded-lg"
-                        >
-                            Download
-                        </button>
+    onClick={downloadCustomerDateOrders}
+    className="bg-green-600 text-white px-5 py-2 rounded-lg"
+>
+    Download
+</button>
     
                     </div>
     
