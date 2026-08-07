@@ -27,6 +27,8 @@ const [statusFilter, setStatusFilter] = useState("All");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
 const [selectedExcelDate, setSelectedExcelDate] = useState("");
 const [downloadByDate, setDownloadByDate] = useState(false);
+const [customerExcelName, setCustomerExcelName] = useState("");
+const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -672,11 +674,57 @@ const [downloadByDate, setDownloadByDate] = useState(false);
 📆 Today's Orders
 </button>
 
-            <button
-                className="w-full text-left px-4 py-3 hover:bg-gray-100"
-            >
-                👤 Orders by Customer
-            </button>
+<button
+    onClick={async () => {
+
+      const customer = prompt("Enter Customer Name");
+  
+      if (!customer) return;
+  
+      try {
+  
+          const response = await api.get(
+              `/admin/whatsapp-orders/excel/customer/${encodeURIComponent(customer)}`,
+              {
+                  responseType: "blob",
+              }
+          );
+  
+          const url = window.URL.createObjectURL(
+              new Blob([response.data])
+          );
+  
+          const link = document.createElement("a");
+  
+          link.href = url;
+  
+          link.download = `${customer}_Orders.xlsx`;
+  
+          document.body.appendChild(link);
+  
+          link.click();
+  
+          link.remove();
+  
+          window.URL.revokeObjectURL(url);
+  
+          setShowExcelMenu(false);
+  
+          toast.success("Excel downloaded successfully");
+  
+      } catch (err) {
+  
+          console.error(err);
+  
+          toast.error("No orders found for this customer.");
+  
+      }
+  
+  }}
+    className="w-full text-left px-4 py-3 hover:bg-gray-100"
+>
+    👤 Orders by Customer
+</button>
 
             <button
     onClick={() => {
