@@ -103,15 +103,15 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
     setFilteredOrders(filtered);
 
 
-    api.get("/admin/whatsapp-orders/customers")
-  .then(res => {
-    if (res.data.success) {
-      setCustomers(res.data.customers);
-    }
-  })
-  .catch(err => {
-    console.error("Failed to load customers:", err);
-  });
+    const uniqueCustomers = [
+      ...new Set(
+        whatsappOrders
+          .map((order) => order.customer_name)
+          .filter(Boolean)
+      ),
+    ];
+    
+    setCustomers(uniqueCustomers);
 
 }, [searchTerm, statusFilter, whatsappOrders, api]);
 
@@ -236,7 +236,133 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
   return (
     <>
-  {showDateCustomerDialog && (
+  
+      {showCustomerDialog && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-xl shadow-xl w-[420px] p-6">
+  
+            <h2 className="text-xl font-semibold mb-5">
+              Download Orders by Customer
+            </h2>
+  
+            <div className="space-y-4">
+  
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Customer Name
+                </label>
+  
+                <select
+                  value={selectedCustomer}
+                  onChange={(e) => setSelectedCustomer(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="">
+                    Select Customer
+                  </option>
+  
+                  {customers.map((customer, index) => (
+                    <option key={index} value={customer}>
+                      {customer}
+                    </option>
+                  ))}
+                </select>
+              </div>
+  
+              <div className="flex justify-end gap-3 pt-4">
+  
+                <button
+                  onClick={() => {
+                    setShowCustomerDialog(false);
+                    setSelectedCustomer("");
+                  }}
+                  className="px-4 py-2 border rounded-lg"
+                >
+                  Cancel
+                </button>
+  
+                <button
+                  onClick={async () => {
+  
+                    if (!selectedCustomer) {
+                      toast.error("Please select a customer");
+                      return;
+                    }
+  
+                    const downloadAll = window.confirm(
+                      "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
+                    );
+  
+                    if (!downloadAll) {
+  
+                      setCustomerExcelName(selectedCustomer);
+                      setCustomerDateMode(true);
+                      setShowCustomerDialog(false);
+  
+                      setTimeout(() => {
+                        document
+                          .getElementById("excel-date-picker")
+                          ?.showPicker();
+                      }, 100);
+  
+                      return;
+                    }
+  
+                    try {
+  
+                      const response = await api.get(
+                        `/admin/whatsapp-orders/excel/customer/${encodeURIComponent(
+                          selectedCustomer
+                        )}`,
+                        {
+                          responseType: "blob",
+                        }
+                      );
+  
+                      const url = window.URL.createObjectURL(
+                        new Blob([response.data])
+                      );
+  
+                      const link = document.createElement("a");
+  
+                      link.href = url;
+                      link.download = `${selectedCustomer}_Orders.xlsx`;
+  
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+  
+                      window.URL.revokeObjectURL(url);
+  
+                      setShowCustomerDialog(false);
+                      setSelectedCustomer("");
+  
+                      toast.success("Excel downloaded successfully");
+  
+                    } catch (err) {
+  
+                      console.error(err);
+  
+                      toast.error(
+                        "No orders found for this customer."
+                      );
+                    }
+  
+                  }}
+                  className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                >
+                  Continue
+                </button>
+  
+              </div>
+  
+            </div>
+  
+          </div>
+        </div>
+      )}
+  
+      {showDateCustomerDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl w-[420px] p-6">
     
@@ -801,7 +927,7 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 </button>
 
 
-{/* 👇 ADD THIS DROPDOWN */}
+{/* 👇 ADD THIS DROPDOWN
 <select
   value={selectedCustomer}
   onChange={(e) => setSelectedCustomer(e.target.value)}
@@ -813,70 +939,18 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
       {c}
     </option>
   ))}
-</select>
+</select> */}
 
 
 <button
-    onClick={async () => {
-
-      if (!selectedCustomer) {
-        alert("Please select a customer");
-        return;
-      }
-    
-      const downloadAll = window.confirm(
-        "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
-      );
-    
-      if (!downloadAll) {
-        setCustomerExcelName(selectedCustomer);
-    
-        setCustomerDateMode(true);
-    
-        setTimeout(() => {
-          document.getElementById("excel-date-picker")?.showPicker();
-        }, 100);
-    
-        return;
-      }
-    
-      try {
-        const response = await api.get(
-          `/admin/whatsapp-orders/excel/customer/${encodeURIComponent(selectedCustomer)}`,
-          {
-            responseType: "blob",
-          }
-        );
-    
-        const url = window.URL.createObjectURL(
-          new Blob([response.data])
-        );
-    
-        const link = document.createElement("a");
-    
-        link.href = url;
-        link.download = `${selectedCustomer}_Orders.xlsx`;
-    
-        document.body.appendChild(link);
-    
-        link.click();
-    
-        link.remove();
-    
-        window.URL.revokeObjectURL(url);
-    
-        setShowExcelMenu(false);
-    
-        toast.success("Excel downloaded successfully");
-    
-      } catch (err) {
-        console.error(err);
-        toast.error("No orders found for this customer.");
-      }
-    }}
-    className="w-full text-left px-4 py-3 hover:bg-gray-100"
+  onClick={() => {
+    setSelectedCustomer("");
+    setShowCustomerDialog(true);
+    setShowExcelMenu(false);
+  }}
+  className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
-    👤 Orders by Customer
+  👤 Orders by Customer
 </button>
 
 <button
