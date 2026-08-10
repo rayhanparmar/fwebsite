@@ -233,7 +233,7 @@ Jewellery Details
 <div className="border rounded-xl p-6 mt-6">
 
 <h2 className="text-xl font-semibold mb-5">
-Design Images
+Reference Images
 </h2>
 
 {order.design_images?.length > 0 ? (
