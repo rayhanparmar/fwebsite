@@ -645,25 +645,42 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
         Customer Name
     </label>
 
-    <select
-        multiple
-        value={selectedDateCustomers}
-        onChange={(e) => {
-            const values = Array.from(
-                e.target.selectedOptions,
-                (option) => option.value
-            );
+    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+    {customers.length === 0 ? (
+        <div className="text-sm text-gray-500">
+            No customers found
+        </div>
+    ) : (
+        customers.map((customer) => (
+            <label
+                key={customer}
+                className="flex items-center gap-3 py-2 cursor-pointer"
+            >
+                <input
+                    type="checkbox"
+                    checked={selectedDateCustomers.includes(customer)}
+                    onChange={(e) => {
+                        if (e.target.checked) {
+                            setSelectedDateCustomers((prev) => [
+                                ...prev,
+                                customer,
+                            ]);
+                        } else {
+                            setSelectedDateCustomers((prev) =>
+                                prev.filter((name) => name !== customer)
+                            );
+                        }
+                    }}
+                    className="w-4 h-4"
+                />
 
-            setSelectedDateCustomers(values);
-        }}
-        className="w-full border rounded-lg px-3 py-2 min-h-[120px]"
-    >
-        {customers.map((customer, index) => (
-            <option key={index} value={customer}>
-                {customer}
-            </option>
-        ))}
-    </select>
+                <span className="text-sm">
+                    {customer}
+                </span>
+            </label>
+        ))
+    )}
+</div>
 
     <p className="text-xs text-gray-500 mt-1">
         Hold Command (⌘) and click to select multiple customers.
