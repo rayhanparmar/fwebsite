@@ -43,6 +43,8 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomer, setSelectedCustomer] = useState("");
 
 
   const loadStats = useCallback(() => { api.get("/admin/stats").then(r => setStats(r.data)).catch(() => {}); }, [api]);
@@ -100,7 +102,18 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
     setFilteredOrders(filtered);
 
-}, [searchTerm, statusFilter, whatsappOrders]);
+
+    api.get("/admin/whatsapp-orders/customers")
+  .then(res => {
+    if (res.data.success) {
+      setCustomers(res.data.customers);
+    }
+  })
+  .catch(err => {
+    console.error("Failed to load customers:", err);
+  });
+
+}, [searchTerm, statusFilter, whatsappOrders, api]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
@@ -694,7 +707,9 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
         try {
             const response = await api.get(
-                `/admin/whatsapp-orders/excel/date/${date}`,
+              customerDateMode
+              ? `/admin/whatsapp-orders/excel/customer-date?customer_name=${encodeURIComponent(customerExcelName)}&order_date=${date}`
+              : `/admin/whatsapp-orders/excel/date/${date}`,
                 {
                     responseType: "blob",
                 }
@@ -704,13 +719,18 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
             const link = document.createElement("a");
             link.href = url;
-            link.download = `Orders_${date}.xlsx`;
+            link.download = customerDateMode
+    ? `${customerExcelName}_Orders_${date}.xlsx`
+    : `Orders_${date}.xlsx`;
 
             document.body.appendChild(link);
             link.click();
 
             link.remove();
             window.URL.revokeObjectURL(url);
+
+            setCustomerDateMode(false);
+            setCustomerExcelName("");
 
             toast.success("Excel downloaded successfully");
         } catch (err) {
@@ -780,77 +800,90 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 📆 Today's Orders
 </button>
 
+
+{/* 👇 ADD THIS DROPDOWN */}
+<select
+  value={selectedCustomer}
+  onChange={(e) => setSelectedCustomer(e.target.value)}
+  className="border px-3 py-2 rounded w-full mb-2"
+>
+  <option value="">Select Customer</option>
+  {customers.map((c, i) => (
+    <option key={i} value={c}>
+      {c}
+    </option>
+  ))}
+</select>
+
+
 <button
     onClick={async () => {
 
-      const customer = prompt("Enter Customer Name");
-
-if (!customer) return;
-
-const downloadAll = window.confirm(
-    "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
-);
-
-if (!downloadAll) {
-
-    setCustomerExcelName(customer);
-
-    setCustomerDateMode(true);
-
-    setTimeout(() => {
-        document.getElementById("excel-date-picker")?.showPicker();
-    }, 100);
-
-    return;
-}
-  
-      try {
-  
-          const response = await api.get(
-              `/admin/whatsapp-orders/excel/customer/${encodeURIComponent(customer)}`,
-              {
-                  responseType: "blob",
-              }
-          );
-  
-          const url = window.URL.createObjectURL(
-              new Blob([response.data])
-          );
-  
-          const link = document.createElement("a");
-  
-          link.href = url;
-  
-          link.download = `${customer}_Orders.xlsx`;
-  
-          document.body.appendChild(link);
-  
-          link.click();
-  
-          link.remove();
-  
-          window.URL.revokeObjectURL(url);
-  
-          setShowExcelMenu(false);
-  
-          toast.success("Excel downloaded successfully");
-  
-      } catch (err) {
-  
-          console.error(err);
-  
-          toast.error("No orders found for this customer.");
-  
+      if (!selectedCustomer) {
+        alert("Please select a customer");
+        return;
       }
-  
-  }}
+    
+      const downloadAll = window.confirm(
+        "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
+      );
+    
+      if (!downloadAll) {
+        setCustomerExcelName(selectedCustomer);
+    
+        setCustomerDateMode(true);
+    
+        setTimeout(() => {
+          document.getElementById("excel-date-picker")?.showPicker();
+        }, 100);
+    
+        return;
+      }
+    
+      try {
+        const response = await api.get(
+          `/admin/whatsapp-orders/excel/customer/${encodeURIComponent(selectedCustomer)}`,
+          {
+            responseType: "blob",
+          }
+        );
+    
+        const url = window.URL.createObjectURL(
+          new Blob([response.data])
+        );
+    
+        const link = document.createElement("a");
+    
+        link.href = url;
+        link.download = `${selectedCustomer}_Orders.xlsx`;
+    
+        document.body.appendChild(link);
+    
+        link.click();
+    
+        link.remove();
+    
+        window.URL.revokeObjectURL(url);
+    
+        setShowExcelMenu(false);
+    
+        toast.success("Excel downloaded successfully");
+    
+      } catch (err) {
+        console.error(err);
+        toast.error("No orders found for this customer.");
+      }
+    }}
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
     👤 Orders by Customer
 </button>
 
-            <button
+<button
     onClick={() => {
+      setCustomerDateMode(false);
+      setCustomerExcelName("");
+
       setDownloadByDate(true);
   
       setTimeout(() => {
