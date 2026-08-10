@@ -1030,6 +1030,132 @@ async def download_orders_by_date_range(
         },
     )
 
+@api_router.get("/admin/whatsapp-orders/excel/customers-date")
+async def download_orders_by_customers_and_date(
+    request: Request,
+    customer_names: List[str],
+    order_date: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    await get_admin_user(request)
+
+    # Validate customers
+    if not customer_names:
+        raise HTTPException(
+            status_code=400,
+            detail="Please select at least one customer."
+        )
+
+    # Validate date selection
+    if order_date:
+        date_query = {
+            "order_date": order_date
+        }
+
+    elif from_date and to_date:
+        if from_date > to_date:
+            raise HTTPException(
+                status_code=400,
+                detail="From date cannot be after To date."
+            )
+
+        date_query = {
+            "order_date": {
+                "$gte": from_date,
+                "$lte": to_date
+            }
+        }
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Please select a date or a date range."
+        )
+
+    # Match selected customers
+    customer_query = {
+        "$or": [
+            {
+                "customer_name": {
+                    "$regex": f"^{customer}$",
+                    "$options": "i"
+                }
+            }
+            for customer in customer_names
+        ]
+    }
+
+    query = {
+        "$and": [
+            customer_query,
+            date_query
+        ]
+    }
+
+    orders = await whatsapp_orders.find(
+        query,
+        {"_id": 0}
+    ).sort(
+        "order_date", 1
+    ).to_list(length=None)
+
+    if not orders:
+        raise HTTPException(
+            status_code=404,
+            detail="No matching orders found."
+        )
+
+    # Create Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orders"
+
+    excluded_fields = {
+        "design_images",
+        "reference_video",
+        "flow_token"
+    }
+
+    headers = [
+        key
+        for key in orders[0].keys()
+        if key not in excluded_fields
+    ]
+
+    # Header row
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header.replace("_", " ").title()
+        cell.font = Font(bold=True)
+
+    # Order rows
+    for row_index, order in enumerate(orders, start=2):
+        for col, header in enumerate(headers, start=1):
+            ws.cell(
+                row=row_index,
+                column=col
+            ).value = str(order.get(header, ""))
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    # Filename
+    if order_date:
+        filename = f"Orders_{order_date}.xlsx"
+    else:
+        filename = f"Orders_{from_date}_to_{to_date}.xlsx"
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            f'attachment; filename="{filename}"'
+        },
+    )
+
 
 # ===============================
 # GET ALL CUSTOMER NAMES (NEW API)

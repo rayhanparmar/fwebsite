@@ -36,8 +36,11 @@ const [customerExcelName, setCustomerExcelName] = useState("");
 const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 const [customerDateMode, setCustomerDateMode] = useState(false);
 const [showDateCustomerDialog, setShowDateCustomerDialog] = useState(false);
-const [filterCustomerName, setFilterCustomerName] = useState("");
-const [filterOrderDate, setFilterOrderDate] = useState("");
+const [selectedDateCustomers, setSelectedDateCustomers] = useState([]);
+const [dateCustomerSelectionMode, setDateCustomerSelectionMode] = useState("single");
+const [dateCustomerSingleDate, setDateCustomerSingleDate] = useState("");
+const [dateCustomerFromDate, setDateCustomerFromDate] = useState("");
+const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -207,37 +210,93 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
 
   const downloadCustomerDateOrders = async () => {
-    try {
-      const response = await api.get(
-        `/admin/whatsapp-orders/excel/customer-date?customer_name=${encodeURIComponent(filterCustomerName)}&order_date=${filterOrderDate}`,
-        {
-          responseType: "blob",
-        }
-      );
-  
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-  
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "Orders.xlsx";
-  
-      document.body.appendChild(link);
-      link.click();
-  
-      link.remove();
-      window.URL.revokeObjectURL(url);
-  
-      setShowDateCustomerDialog(false);
-      setFilterCustomerName("");
-      setFilterOrderDate("");
-  
-      toast.success("Excel downloaded successfully");
-  
-    } catch (err) {
-      console.error(err);
-      toast.error("No matching orders found.");
+    if (selectedDateCustomers.length === 0) {
+        toast.error("Please select at least one customer");
+        return;
     }
-  };
+
+    if (dateSelectionMode === "single" && !singleOrderDate) {
+        toast.error("Please select a date");
+        return;
+    }
+
+    if (
+        dateSelectionMode === "range" &&
+        (!fromOrderDate || !toOrderDate)
+    ) {
+        toast.error("Please select both From and To dates");
+        return;
+    }
+
+    if (
+        dateSelectionMode === "range" &&
+        fromOrderDate > toOrderDate
+    ) {
+        toast.error("From date cannot be after To date");
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams();
+
+        selectedDateCustomers.forEach((customer) => {
+            params.append("customer_names", customer);
+        });
+
+        if (dateSelectionMode === "single") {
+            params.append("order_date", singleOrderDate);
+        } else {
+            params.append("from_date", fromOrderDate);
+            params.append("to_date", toOrderDate);
+        }
+
+        const response = await api.get(
+            `/admin/whatsapp-orders/excel/customers-date?${params.toString()}`,
+            {
+                responseType: "blob",
+            }
+        );
+
+        const url = window.URL.createObjectURL(
+            new Blob([response.data])
+        );
+
+        const link = document.createElement("a");
+
+        link.href = url;
+
+        link.download =
+            dateSelectionMode === "single"
+                ? `Orders_${singleOrderDate}.xlsx`
+                : `Orders_${fromOrderDate}_to_${toOrderDate}.xlsx`;
+
+        document.body.appendChild(link);
+
+        link.click();
+
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+
+        setShowDateCustomerDialog(false);
+
+        setSelectedDateCustomers([]);
+        setDateSelectionMode("single");
+        setSingleOrderDate("");
+        setFromOrderDate("");
+        setToOrderDate("");
+
+        toast.success("Excel downloaded successfully");
+
+    } catch (err) {
+        console.error(err);
+
+        toast.error(
+            err.response?.data?.detail ||
+            "No matching orders found."
+        );
+    }
+};
 
   const downloadOrdersByDate = async () => {
     if (dateSelectionMode === "single") {
@@ -581,39 +640,113 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
     
                 <div className="space-y-4">
     
-                    <div>
-                        <label className="block text-sm font-medium mb-1">
-                            Customer Name
-                        </label>
+                <div>
+    <label className="block text-sm font-medium mb-1">
+        Customer Name
+    </label>
+
+    <select
+        multiple
+        value={selectedDateCustomers}
+        onChange={(e) => {
+            const values = Array.from(
+                e.target.selectedOptions,
+                (option) => option.value
+            );
+
+            setSelectedDateCustomers(values);
+        }}
+        className="w-full border rounded-lg px-3 py-2 min-h-[120px]"
+    >
+        {customers.map((customer, index) => (
+            <option key={index} value={customer}>
+                {customer}
+            </option>
+        ))}
+    </select>
+
+    <p className="text-xs text-gray-500 mt-1">
+        Hold Command (⌘) and click to select multiple customers.
+    </p>
+</div>
     
-                        <input
-                            type="text"
-                            value={filterCustomerName}
-                            onChange={(e) => setFilterCustomerName(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2"
-                        />
-                    </div>
-    
-                    <div>
-                        <label className="block text-sm font-medium mb-1">
-                            Order Date
-                        </label>
-    
-                        <input
-                            type="date"
-                            value={filterOrderDate}
-                            onChange={(e) => setFilterOrderDate(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2"
-                        />
-                    </div>
+<div>
+    <label className="block text-sm font-medium mb-2">
+        Order Date
+    </label>
+
+    <div className="flex gap-4 mb-3">
+        <label className="flex items-center gap-2">
+            <input
+                type="radio"
+                name="dateMode"
+                value="single"
+                checked={dateSelectionMode === "single"}
+                onChange={() => setDateSelectionMode("single")}
+            />
+            Particular Date
+        </label>
+
+        <label className="flex items-center gap-2">
+            <input
+                type="radio"
+                name="dateMode"
+                value="range"
+                checked={dateSelectionMode === "range"}
+                onChange={() => setDateSelectionMode("range")}
+            />
+            From & To
+        </label>
+    </div>
+
+    {dateSelectionMode === "single" ? (
+        <input
+            type="date"
+            value={singleOrderDate}
+            onChange={(e) => setSingleOrderDate(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2"
+        />
+    ) : (
+        <div className="grid grid-cols-2 gap-3">
+            <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                    From Date
+                </label>
+
+                <input
+                    type="date"
+                    value={fromOrderDate}
+                    onChange={(e) => setFromOrderDate(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2"
+                />
+            </div>
+
+            <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                    To Date
+                </label>
+
+                <input
+                    type="date"
+                    value={toOrderDate}
+                    onChange={(e) => setToOrderDate(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2"
+                />
+            </div>
+        </div>
+    )}
+</div>
     
                     <div className="flex justify-end gap-3 pt-4">
     
                         <button
                             onClick={() => {
-                                setShowDateCustomerDialog(false);
-                                setFilterCustomerName("");
-                                setFilterOrderDate("");
+                              setShowDateCustomerDialog(false);
+                              setSelectedDateCustomers([]);
+                              setDateSelectionMode("single");
+                              setSingleOrderDate("");
+                              setFromOrderDate("");
+                              setToOrderDate("");
                             }}
                             className="px-4 py-2 border rounded-lg"
                         >
