@@ -962,6 +962,29 @@ async def download_orders_by_customer_and_date(
             f'attachment; filename="{customer_name}_{order_date}.xlsx"'
         },
     )
+
+
+# ===============================
+# GET ALL CUSTOMER NAMES (NEW API)
+# ===============================
+
+@app.get("/admin/whatsapp-orders/customers")
+async def get_all_customers():
+    try:
+        customers = await whatsapp_orders.distinct("customer_name")
+        customers = [c for c in customers if c]
+
+        return {
+            "success": True,
+            "customers": customers
+        }
+
+    except Exception as e:
+        print("Error fetching customers:", str(e))
+        return {
+            "success": False,
+            "customers": []
+        }
 # @api_router.put("/admin/whatsapp-orders/{order_id}")
 # async def update_whatsapp_order(
 #     order_id: str,
