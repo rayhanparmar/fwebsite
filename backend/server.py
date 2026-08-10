@@ -963,6 +963,73 @@ async def download_orders_by_customer_and_date(
         },
     )
 
+@api_router.get("/admin/whatsapp-orders/excel/date-range")
+async def download_orders_by_date_range(
+    from_date: str,
+    to_date: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    orders = await whatsapp_orders.find(
+        {
+            "order_date": {
+                "$gte": from_date,
+                "$lte": to_date
+            }
+        },
+        {"_id": 0}
+    ).sort("order_date", 1).to_list(length=None)
+
+    if not orders:
+        raise HTTPException(
+            status_code=404,
+            detail="No orders found for the selected date range."
+        )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orders"
+
+    excluded_fields = {
+        "design_images",
+        "reference_video",
+        "flow_token"
+    }
+
+    headers = [
+        key
+        for key in orders[0].keys()
+        if key not in excluded_fields
+    ]
+
+    # Header row
+    for col, header in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col)
+        cell.value = header.replace("_", " ").title()
+        cell.font = Font(bold=True)
+
+    # Order rows
+    for row_index, order in enumerate(orders, start=2):
+        for col, header in enumerate(headers, start=1):
+            ws.cell(
+                row=row_index,
+                column=col
+            ).value = str(order.get(header, ""))
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition":
+            f'attachment; filename="Orders_{from_date}_to_{to_date}.xlsx"'
+        },
+    )
+
 
 # ===============================
 # GET ALL CUSTOMER NAMES (NEW API)

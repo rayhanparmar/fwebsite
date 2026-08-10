@@ -27,6 +27,11 @@ const [statusFilter, setStatusFilter] = useState("All");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
 const [selectedExcelDate, setSelectedExcelDate] = useState("");
 const [downloadByDate, setDownloadByDate] = useState(false);
+const [showDateDialog, setShowDateDialog] = useState(false);
+const [dateSelectionMode, setDateSelectionMode] = useState("single");
+const [singleOrderDate, setSingleOrderDate] = useState("");
+const [fromOrderDate, setFromOrderDate] = useState("");
+const [toOrderDate, setToOrderDate] = useState("");
 const [customerExcelName, setCustomerExcelName] = useState("");
 const [showCustomerDialog, setShowCustomerDialog] = useState(false);
 const [customerDateMode, setCustomerDateMode] = useState(false);
@@ -234,6 +239,91 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
     }
   };
 
+  const downloadOrdersByDate = async () => {
+    if (dateSelectionMode === "single") {
+        if (!singleOrderDate) {
+            toast.error("Please select a date");
+            return;
+        }
+
+        try {
+            const response = await api.get(
+                `/admin/whatsapp-orders/excel/date/${singleOrderDate}`,
+                {
+                    responseType: "blob",
+                }
+            );
+
+            const url = window.URL.createObjectURL(
+                new Blob([response.data])
+            );
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `Orders_${singleOrderDate}.xlsx`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.URL.revokeObjectURL(url);
+
+            setShowDateDialog(false);
+            setSingleOrderDate("");
+
+            toast.success("Excel downloaded successfully");
+        } catch (err) {
+            console.error(err);
+            toast.error("Unable to download orders for this date.");
+        }
+
+        return;
+    }
+
+    // From & To date
+    if (!fromOrderDate || !toOrderDate) {
+        toast.error("Please select both From and To dates");
+        return;
+    }
+
+    if (fromOrderDate > toOrderDate) {
+        toast.error("From date cannot be after To date");
+        return;
+    }
+
+    try {
+        const response = await api.get(
+            `/admin/whatsapp-orders/excel/date-range?from_date=${fromOrderDate}&to_date=${toOrderDate}`,
+            {
+                responseType: "blob",
+            }
+        );
+
+        const url = window.URL.createObjectURL(
+            new Blob([response.data])
+        );
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Orders_${fromOrderDate}_to_${toOrderDate}.xlsx`;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        window.URL.revokeObjectURL(url);
+
+        setShowDateDialog(false);
+        setFromOrderDate("");
+        setToOrderDate("");
+
+        toast.success("Excel downloaded successfully");
+    } catch (err) {
+        console.error(err);
+        toast.error("Unable to download orders for this date range.");
+    }
+};
+
   return (
     <>
   
@@ -361,6 +451,125 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
           </div>
         </div>
       )}
+
+
+{showDateDialog && (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]">
+        <div className="bg-white rounded-xl shadow-xl w-[420px] p-6">
+
+            <h2 className="text-xl font-semibold mb-5">
+                Download Orders by Date
+            </h2>
+
+            {/* Selection Type */}
+            <div className="flex gap-3 mb-5">
+
+                <button
+                    onClick={() => setDateSelectionMode("single")}
+                    className={`flex-1 px-4 py-2 rounded-lg border ${
+                        dateSelectionMode === "single"
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-white text-gray-700"
+                    }`}
+                >
+                    Particular Date
+                </button>
+
+                <button
+                    onClick={() => setDateSelectionMode("range")}
+                    className={`flex-1 px-4 py-2 rounded-lg border ${
+                        dateSelectionMode === "range"
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-white text-gray-700"
+                    }`}
+                >
+                    From & To Date
+                </button>
+
+            </div>
+
+            {/* Particular Date */}
+            {dateSelectionMode === "single" && (
+                <div>
+                    <label className="block text-sm font-medium mb-1">
+                        Select Date
+                    </label>
+
+                    <input
+                        type="date"
+                        value={singleOrderDate}
+                        onChange={(e) =>
+                            setSingleOrderDate(e.target.value)
+                        }
+                        className="w-full border rounded-lg px-3 py-2"
+                    />
+                </div>
+            )}
+
+            {/* Date Range */}
+            {dateSelectionMode === "range" && (
+                <div className="space-y-4">
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            From Date
+                        </label>
+
+                        <input
+                            type="date"
+                            value={fromOrderDate}
+                            onChange={(e) =>
+                                setFromOrderDate(e.target.value)
+                            }
+                            className="w-full border rounded-lg px-3 py-2"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium mb-1">
+                            To Date
+                        </label>
+
+                        <input
+                            type="date"
+                            value={toOrderDate}
+                            onChange={(e) =>
+                                setToOrderDate(e.target.value)
+                            }
+                            className="w-full border rounded-lg px-3 py-2"
+                        />
+                    </div>
+
+                </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-3 pt-6">
+
+                <button
+                    onClick={() => {
+                        setShowDateDialog(false);
+                        setSingleOrderDate("");
+                        setFromOrderDate("");
+                        setToOrderDate("");
+                    }}
+                    className="px-4 py-2 border rounded-lg"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    onClick={downloadOrdersByDate}
+                    className="bg-green-600 text-white px-5 py-2 rounded-lg"
+                >
+                    Continue
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+)}
   
       {showDateCustomerDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -955,17 +1164,13 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
 
 <button
     onClick={() => {
-      setCustomerDateMode(false);
-      setCustomerExcelName("");
-
-      setDownloadByDate(true);
-  
-      setTimeout(() => {
-          document.getElementById("excel-date-picker")?.showPicker();
-      }, 100);
-  
-      setShowExcelMenu(false);
-  }}
+        setDateSelectionMode("single");
+        setSingleOrderDate("");
+        setFromOrderDate("");
+        setToOrderDate("");
+        setShowDateDialog(true);
+        setShowExcelMenu(false);
+    }}
     className="w-full text-left px-4 py-3 hover:bg-gray-100"
 >
     📅 Orders by Date
