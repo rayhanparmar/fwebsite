@@ -193,6 +193,20 @@ Customer Information
 
 <p><b>Reference:</b> {order.party_reference_order_id}</p>
 
+{order.reference_link && (
+  <p>
+    <b>Reference Link:</b>{" "}
+    <a
+      href={order.reference_link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 underline"
+    >
+      Open Link
+    </a>
+  </p>
+)}
+
 </div>
 
 </div>
