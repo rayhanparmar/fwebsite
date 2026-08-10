@@ -1075,23 +1075,15 @@ async def download_orders_by_customers_and_date(
 
     # Match selected customers
     customer_query = {
-        "$or": [
-            {
-                "customer_name": {
-                    "$regex": f"^{customer}$",
-                    "$options": "i"
-                }
-            }
-            for customer in customer_names
-        ]
+    "customer_name": {
+        "$in": customer_names
     }
+}
 
     query = {
-        "$and": [
-            customer_query,
-            date_query
-        ]
-    }
+        **customer_query,
+        **date_query
+    }   
 
     orders = await whatsapp_orders.find(
         query,
