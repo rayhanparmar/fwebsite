@@ -289,24 +289,24 @@ const [filterOrderDate, setFilterOrderDate] = useState("");
                       return;
                     }
   
-                    const downloadAll = window.confirm(
-                      "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
-                    );
+                    // const downloadAll = window.confirm(
+                    //   "Press OK to download ALL orders.\n\nPress Cancel to choose a specific date."
+                    // );
   
-                    if (!downloadAll) {
+                    // if (!downloadAll) {
   
-                      setCustomerExcelName(selectedCustomer);
-                      setCustomerDateMode(true);
-                      setShowCustomerDialog(false);
+                    //   setCustomerExcelName(selectedCustomer);
+                    //   setCustomerDateMode(true);
+                    //   setShowCustomerDialog(false);
   
-                      setTimeout(() => {
-                        document
-                          .getElementById("excel-date-picker")
-                          ?.showPicker();
-                      }, 100);
+                    //   setTimeout(() => {
+                    //     document
+                    //       .getElementById("excel-date-picker")
+                    //       ?.showPicker();
+                    //   }, 100);
   
-                      return;
-                    }
+                    //   return;
+                    // }
   
                     try {
   
