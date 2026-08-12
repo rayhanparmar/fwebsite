@@ -27,26 +27,27 @@ export default function Navbar() {
       <div className="w-full px-4 md:px-8 h-20 flex items-center">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-3 shrink-0"
+  className="flex items-center gap-2 sm:gap-3 shrink-0 lg:w-[480px]"
   data-testid="nav-logo"
 >
-  <img
-    src={LOGO}
-    alt="Shree Mother Gold & Diamond Jewellery"
-    className="h-7 w-7 sm:h-20 sm:w-20 object-contain flex-shrink-0"
-  />
+<img
+  src={LOGO}
+  alt="Shree Mother Gold & Diamond Jewellery"
+  className="h-8 w-8 sm:h-14 sm:w-14 object-contain flex-shrink-0"
+/>
 
-  <span
-    className="
-      font-heading
-      text-[14px]
-      sm:text-2xl
-      font-semibold
-      text-[#0A0A0A]
-      whitespace-nowrap
-      leading-none
-    "
-  >
+<span
+  className="
+    font-heading
+    text-[14px]
+    sm:text-2xl
+    font-semibold
+    text-[#0A0A0A]
+    whitespace-nowrap
+    leading-none
+    lg:pr-4
+  "
+>
     ROOH By Shree Mother Gold And Diamond Jewellery
   </span>
 </Link>
