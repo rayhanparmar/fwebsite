@@ -1,6 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
-from fastapi import Form
+from fastapi import Form, Query
 from whatsapp_service import send_flow, send_text_message
 from flow_crypto import decrypt_request, encrypt_response
 from cloudinary.uploader import destroy
@@ -14,6 +14,7 @@ load_dotenv(ROOT_DIR / '.env')
 import os
 import logging
 import bcrypt
+import re
 import jwt
 import uuid
 import threading
@@ -1033,7 +1034,7 @@ async def download_orders_by_date_range(
 @api_router.get("/admin/whatsapp-orders/excel/customers-date")
 async def download_orders_by_customers_and_date(
     request: Request,
-    customer_names: List[str],
+    customer_names: List[str] = Query(...),
     order_date: Optional[str] = None,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
@@ -1041,6 +1042,27 @@ async def download_orders_by_customers_and_date(
     await get_admin_user(request)
 
     # Validate customers
+    if not customer_names:
+        raise HTTPException(
+            status_code=400,
+            detail="Please select at least one customer."
+        )
+
+    # Clean customer names
+    cleaned_customer_names = []
+
+    for name in customer_names:
+        if not name:
+            continue
+
+        for customer in name.split(","):
+            customer = customer.strip()
+
+            if customer:
+                cleaned_customer_names.append(customer)
+
+    customer_names = list(dict.fromkeys(cleaned_customer_names))
+
     if not customer_names:
         raise HTTPException(
             status_code=400,
@@ -1075,16 +1097,24 @@ async def download_orders_by_customers_and_date(
 
     # Match selected customers
     customer_query = {
-    "customer_name": {
-        "$in": customer_names
+        "$or": [
+            {
+                "customer_name": {
+                    "$regex": f"^\\s*{re.escape(name)}\\s*$",
+                    "$options": "i"
+                }
+            }
+            for name in customer_names
+        ]
     }
-}
 
+    # Combine customer + date filters
     query = {
         **customer_query,
         **date_query
-    }   
+    }
 
+    # Get matching orders
     orders = await whatsapp_orders.find(
         query,
         {"_id": 0}
@@ -1129,6 +1159,7 @@ async def download_orders_by_customers_and_date(
                 column=col
             ).value = str(order.get(header, ""))
 
+    # Create Excel file
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -1143,9 +1174,8 @@ async def download_orders_by_customers_and_date(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition":
-            f'attachment; filename="{filename}"'
-        },
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
     )
 
 
