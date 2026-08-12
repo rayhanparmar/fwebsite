@@ -33,7 +33,7 @@ export default function Navbar() {
 <img
   src={LOGO}
   alt="Shree Mother Gold & Diamond Jewellery"
-  className="h-9 w-9 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-125"
+  className="h-9 w-9 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.4]"
 />
 
 <span
