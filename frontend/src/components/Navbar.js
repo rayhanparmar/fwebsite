@@ -27,19 +27,19 @@ export default function Navbar() {
       <div className="w-full px-4 md:px-8 h-20 flex items-center">
       <Link
   to="/"
-  className="flex items-center gap-3 sm:gap-4 shrink-0 lg:w-[500px]"
+  className="flex items-center gap-2 sm:gap-4 shrink-0 lg:w-[500px]"
   data-testid="nav-logo"
 >
 <img
   src={LOGO}
   alt="Shree Mother Gold & Diamond Jewellery"
-  className="h-7 w-7 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.4]"
+  className="h-9 w-9 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.35]"
 />
 
 <span
   className="
     font-heading
-    text-[14px]
+    text-[13px]
     sm:text-xl
     font-semibold
     text-[#0A0A0A]
