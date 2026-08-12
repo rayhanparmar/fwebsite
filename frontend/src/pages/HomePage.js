@@ -78,7 +78,7 @@ export default function HomePage() {
   </span>
 </h1>
             <p className="text-sm sm:text-base md:text-lg text-[#4B5563] leading-relaxed mb-8 sm:mb-10 max-w-xl animate-fade-up stagger-2 font-body">
-            We manufacture premium custom jewellery in gold, diamond, and platinum for retailers and luxury brands worldwide — specialising in finely crafted rings, necklaces, bracelets, pendants, and bespoke pieces with exceptional detailing, precision production, and superior finishing standards.
+            We manufacture premium custom jewellery in gold, diamond, and platinum for retailers and luxury brands worldwide.
             </p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 animate-fade-up stagger-3">
               {!user && (
