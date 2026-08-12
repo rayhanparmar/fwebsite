@@ -48,7 +48,7 @@ export default function Navbar() {
     lg:pr-4
   "
 >
-    ROOH By Shree Mother Gold And Diamond Jewellery
+    Rooh By Shree Mother Gold And Diamond Jewellery
   </span>
 </Link>
 
