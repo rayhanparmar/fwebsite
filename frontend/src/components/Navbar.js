@@ -52,7 +52,7 @@ export default function Navbar() {
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-6 xl:gap-8 flex-shrink-0 mx-4">
+<div className="hidden lg:flex items-center gap-6 xl:gap-8 absolute left-1/2 -translate-x-1/2">
           {navLinks.filter(l => l.show).map(l => (
             <Link key={l.to} to={l.to} data-testid={`nav-${l.label.toLowerCase()}-link`}
               className="text-[#4B5563] hover:text-[#359E58] transition-colors text-sm font-medium tracking-wide">
