@@ -1,3 +1,141 @@
+// import { Link, useNavigate } from "react-router-dom";
+// import { useAuth } from "@/contexts/AuthContext";
+// import { Button } from "@/components/ui/button";
+// import { ShoppingCart, Menu, X, LogOut, Shield } from "lucide-react";
+// import { useState } from "react";
+
+// const LOGO = "/shreemothergold_logo.png";
+
+// export default function Navbar() {
+//   const { user, logout } = useAuth();
+//   const navigate = useNavigate();
+//   const [open, setOpen] = useState(false);
+//   const isApproved = user?.approved || user?.role === "admin";
+
+//   const handleLogout = () => { logout(); navigate("/"); setOpen(false); };
+
+//   const navLinks = [
+//     { to: "/", label: "Home", show: true },
+//     { to: "/about", label: "About", show: true },
+//     { to: "/catalogue", label: "Catalogue", show: isApproved },
+//     { to: "/customisation", label: "Customisation", show: isApproved },
+//     { to: "/contact", label: "Contact", show: true },
+//   ];
+
+//   return (
+//     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
+//       <div className="w-full px-4 md:px-8 h-20 flex items-center">
+//       <Link
+//   to="/"
+//   className="flex items-center gap-2 sm:gap-4 min-w-0 w-full lg:w-auto lg:max-w-[42vw] shrink"
+//   data-testid="nav-logo"
+// >
+// <img
+//   src={LOGO}
+//   alt="Shree Mother Gold & Diamond Jewellery"
+//   className="h-11 w-11 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.55]"
+// />
+
+// <span
+//   className="
+//   font-heading
+//   text-[13px]
+//   sm:text-xl
+//   lg:text-base
+//   xl:text-xl
+//   font-semibold
+//   text-[#0A0A0A]
+//   whitespace-nowrap
+//   leading-none
+//   lg:pr-4
+// "
+// >
+//     Rooh By Shree Mother Gold And Diamond Jewellery
+//   </span>
+// </Link>
+
+// <div className="hidden lg:flex items-center gap-2 xl:gap-6 2xl:gap-8 absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+//   {navLinks.filter(l => l.show).map(l => (
+//     <Link
+//       key={l.to}
+//       to={l.to}
+//       data-testid={`nav-${l.label.toLowerCase()}-link`}
+//       className="text-[#4B5563] hover:text-[#359E58] transition-colors text-xs xl:text-sm font-medium tracking-wide"
+//     >
+//       {l.label}
+//     </Link>
+//   ))}
+// </div>
+
+// <div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0 max-w-[30vw]">
+//           {user ? (
+//             <>
+//               {isApproved && (
+//                 <Link to="/cart" data-testid="nav-cart-link">
+//                   <Button variant="ghost" size="icon"><ShoppingCart className="w-5 h-5" strokeWidth={1.5} /></Button>
+//                 </Link>
+//               )}
+//               {user.role === "admin" && (
+//                 <Link to="/admin" data-testid="nav-admin-link">
+//                   <Button variant="ghost" size="sm" className="gap-2 text-[#359E58]">
+//                     <Shield className="w-4 h-4" strokeWidth={1.5} />Admin
+//                   </Button>
+//                 </Link>
+//               )}
+//               <span className="text-sm text-[#4B5563] font-medium">{user.name}</span>
+//               <Button onClick={handleLogout} variant="ghost" size="icon" data-testid="nav-logout-button">
+//                 <LogOut className="w-5 h-5" strokeWidth={1.5} />
+//               </Button>
+//             </>
+//           ) : (
+//             <>
+//               <Link to="/login"><Button variant="ghost" className="text-[#4B5563]" data-testid="nav-login-button">Login</Button></Link>
+//               <Link to="/register">
+//                 <Button className="bg-[#359E58] hover:bg-[#2e884c] text-white rounded-sm px-6" data-testid="nav-register-button">
+//                   Apply as Retailer
+//                 </Button>
+//               </Link>
+//             </>
+//           )}
+//         </div>
+
+//         <button
+//   onClick={() => setOpen(!open)}
+//   className="lg:hidden ml-auto p-2"
+//   data-testid="nav-mobile-toggle"
+// >
+//           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+//         </button>
+//       </div>
+
+//       {open && (
+//         <div className="lg:hidden bg-white border-t px-4 py-3 space-y-1 animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto">
+//           {navLinks.filter(l => l.show).map(l => (
+//             <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
+//               className="block py-3 px-2 text-[#4B5563] hover:text-[#359E58] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">{l.label}</Link>
+//           ))}
+//           {user ? (
+//             <>
+//               {isApproved && <Link to="/cart" onClick={() => setOpen(false)} className="block py-3 px-2 text-[#4B5563] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">Cart</Link>}
+//               {user.role === "admin" && <Link to="/admin" onClick={() => setOpen(false)} className="block py-3 px-2 text-[#359E58] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">Admin Panel</Link>}
+//               <div className="border-t border-gray-100 mt-2 pt-2">
+//                 <button onClick={handleLogout} className="block w-full text-left py-3 px-2 text-red-500 text-sm font-medium rounded-sm">Logout ({user.name})</button>
+//               </div>
+//             </>
+//           ) : (
+//             <div className="flex flex-col gap-2 pt-3 border-t border-gray-100 mt-2">
+//               <Link to="/login" onClick={() => setOpen(false)}><Button variant="outline" className="w-full rounded-sm">Login</Button></Link>
+//               <Link to="/register" onClick={() => setOpen(false)}>
+//                 <Button className="w-full bg-[#359E58] hover:bg-[#2e884c] text-white rounded-sm">Apply as Retailer</Button>
+//               </Link>
+//             </div>
+//           )}
+//         </div>
+//       )}
+//     </nav>
+//   );
+// } 
+
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,9 +148,14 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
   const isApproved = user?.approved || user?.role === "admin";
 
-  const handleLogout = () => { logout(); navigate("/"); setOpen(false); };
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setOpen(false);
+  };
 
   const navLinks = [
     { to: "/", label: "Home", show: true },
@@ -23,75 +166,177 @@ export default function Navbar() {
   ];
 
   return (
-    <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 flex items-center">
-      <Link
-  to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full lg:w-auto lg:max-w-[42vw] shrink"
-  data-testid="nav-logo"
->
-<img
-  src={LOGO}
-  alt="Shree Mother Gold & Diamond Jewellery"
-  className="h-11 w-11 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.55]"
-/>
+    <nav className="relative w-full bg-white border-b border-gray-100 z-50">
+      {/* DESKTOP / MAIN NAVBAR */}
+      <div
+        className="
+          relative
+          w-full
+          min-h-[72px]
+          px-4 sm:px-6 lg:px-8
+          flex items-center
+        "
+      >
+        {/* LEFT - LOGO + COMPANY NAME */}
+        <Link
+          to="/"
+          data-testid="nav-logo"
+          className="
+            flex items-center gap-2 sm:gap-4
+            min-w-0
+            shrink
+            lg:max-w-[34%]
+            xl:max-w-[36%]
+          "
+        >
+          <span
+            className="
+              font-heading
+              text-[13px]
+              sm:text-xl
+              lg:text-base
+              xl:text-xl
+              font-semibold
+              text-[#0A0A0A]
+              whitespace-nowrap
+              leading-none
+            "
+          >
+            Rooh By Shree Mother Gold And Diamond Jewellery
+          </span>
+        </Link>
 
-<span
-  className="
-  font-heading
-  text-[13px]
-  sm:text-xl
-  lg:text-base
-  xl:text-xl
-  font-semibold
-  text-[#0A0A0A]
-  whitespace-nowrap
-  leading-none
-  lg:pr-4
-"
->
-    Rooh By Shree Mother Gold And Diamond Jewellery
-  </span>
-</Link>
+        {/* CENTER - NAVIGATION */}
+        <div
+          className="
+            hidden lg:flex
+            absolute
+            left-1/2
+            top-1/2
+            -translate-x-1/2
+            -translate-y-1/2
+            items-center
+            gap-4
+            xl:gap-7
+            2xl:gap-8
+            whitespace-nowrap
+          "
+        >
+          {navLinks
+            .filter((link) => link.show)
+            .map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                data-testid={`nav-${link.label.toLowerCase()}-link`}
+                className="
+                  text-[#4B5563]
+                  hover:text-[#359E58]
+                  transition-colors
+                  text-sm
+                  font-medium
+                  tracking-wide
+                "
+              >
+                {link.label}
+              </Link>
+            ))}
+        </div>
 
-<div className="hidden lg:flex items-center gap-2 xl:gap-6 2xl:gap-8 absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
-  {navLinks.filter(l => l.show).map(l => (
-    <Link
-      key={l.to}
-      to={l.to}
-      data-testid={`nav-${l.label.toLowerCase()}-link`}
-      className="text-[#4B5563] hover:text-[#359E58] transition-colors text-xs xl:text-sm font-medium tracking-wide"
-    >
-      {l.label}
-    </Link>
-  ))}
-</div>
-
-<div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0 max-w-[30vw]">
+        {/* RIGHT - USER CONTROLS */}
+        <div
+          className="
+            hidden lg:flex
+            items-center
+            gap-1
+            xl:gap-2
+            ml-auto
+            shrink-0
+            justify-end
+          "
+        >
           {user ? (
             <>
+              {/* CART */}
               {isApproved && (
                 <Link to="/cart" data-testid="nav-cart-link">
-                  <Button variant="ghost" size="icon"><ShoppingCart className="w-5 h-5" strokeWidth={1.5} /></Button>
-                </Link>
-              )}
-              {user.role === "admin" && (
-                <Link to="/admin" data-testid="nav-admin-link">
-                  <Button variant="ghost" size="sm" className="gap-2 text-[#359E58]">
-                    <Shield className="w-4 h-4" strokeWidth={1.5} />Admin
+                  <Button variant="ghost" size="icon">
+                    <ShoppingCart
+                      className="w-5 h-5"
+                      strokeWidth={1.5}
+                    />
                   </Button>
                 </Link>
               )}
-              <span className="text-sm text-[#4B5563] font-medium">{user.name}</span>
-              <Button onClick={handleLogout} variant="ghost" size="icon" data-testid="nav-logout-button">
-                <LogOut className="w-5 h-5" strokeWidth={1.5} />
+
+              {/* ADMIN */}
+              {user.role === "admin" && (
+                <Link to="/admin" data-testid="nav-admin-link">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-[#359E58]"
+                  >
+                    <Shield
+                      className="w-4 h-4"
+                      strokeWidth={1.5}
+                    />
+                    Admin
+                  </Button>
+                </Link>
+              )}
+
+              {/* USER NAME */}
+              <span
+                className="
+                  text-sm
+                  text-[#4B5563]
+                  font-medium
+                  max-w-[100px]
+                  truncate
+                "
+              >
+                {user.name}
+              </span>
+
+              {/* LOGOUT */}
+              <Button
+                onClick={handleLogout}
+                variant="ghost"
+                size="icon"
+                data-testid="nav-logout-button"
+              >
+                <LogOut
+                  className="w-5 h-5"
+                  strokeWidth={1.5}
+                />
               </Button>
             </>
           ) : (
             <>
-              <Link to="/login"><Button variant="ghost" className="text-[#4B5563]" data-testid="nav-login-button">Login</Button></Link>
+              {/* LOGIN */}
+              <Link to="/login">
+                <Button
+                  variant="ghost"
+                  className="text-[#4B5563]"
+                  data-testid="nav-login-button"
+                >
+                  Login
+                </Button>
+              </Link>
+
+              {/* REGISTER */}
               <Link to="/register">
-                <Button className="bg-[#359E58] hover:bg-[#2e884c] text-white rounded-sm px-6" data-testid="nav-register-button">
+                <Button
+                  className="
+                    bg-[#359E58]
+                    hover:bg-[#2e884c]
+                    text-white
+                    rounded-sm
+                    px-6
+                  "
+                  data-testid="nav-register-button"
+                >
                   Apply as Retailer
                 </Button>
               </Link>
@@ -99,34 +344,147 @@ export default function Navbar() {
           )}
         </div>
 
+        {/* MOBILE MENU BUTTON */}
         <button
-  onClick={() => setOpen(!open)}
-  className="lg:hidden ml-auto p-2"
-  data-testid="nav-mobile-toggle"
->
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          onClick={() => setOpen(!open)}
+          className="lg:hidden ml-auto p-2"
+          data-testid="nav-mobile-toggle"
+          aria-label="Toggle menu"
+        >
+          {open ? (
+            <X className="w-6 h-6" />
+          ) : (
+            <Menu className="w-6 h-6" />
+          )}
         </button>
       </div>
 
+      {/* MOBILE MENU */}
       {open && (
-        <div className="lg:hidden bg-white border-t px-4 py-3 space-y-1 animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto">
-          {navLinks.filter(l => l.show).map(l => (
-            <Link key={l.to} to={l.to} onClick={() => setOpen(false)}
-              className="block py-3 px-2 text-[#4B5563] hover:text-[#359E58] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">{l.label}</Link>
-          ))}
+        <div
+          className="
+            lg:hidden
+            bg-white
+            border-t
+            px-4
+            py-3
+            space-y-1
+            animate-fade-in
+            max-h-[calc(100vh-4rem)]
+            overflow-y-auto
+          "
+        >
+          {navLinks
+            .filter((link) => link.show)
+            .map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                onClick={() => setOpen(false)}
+                className="
+                  block
+                  py-3
+                  px-2
+                  text-[#4B5563]
+                  hover:text-[#359E58]
+                  hover:bg-[#FAFAFA]
+                  text-sm
+                  font-medium
+                  rounded-sm
+                "
+              >
+                {link.label}
+              </Link>
+            ))}
+
           {user ? (
             <>
-              {isApproved && <Link to="/cart" onClick={() => setOpen(false)} className="block py-3 px-2 text-[#4B5563] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">Cart</Link>}
-              {user.role === "admin" && <Link to="/admin" onClick={() => setOpen(false)} className="block py-3 px-2 text-[#359E58] hover:bg-[#FAFAFA] text-sm font-medium rounded-sm">Admin Panel</Link>}
+              {isApproved && (
+                <Link
+                  to="/cart"
+                  onClick={() => setOpen(false)}
+                  className="
+                    block
+                    py-3
+                    px-2
+                    text-[#4B5563]
+                    hover:bg-[#FAFAFA]
+                    text-sm
+                    font-medium
+                    rounded-sm
+                  "
+                >
+                  Cart
+                </Link>
+              )}
+
+              {user.role === "admin" && (
+                <Link
+                  to="/admin"
+                  onClick={() => setOpen(false)}
+                  className="
+                    block
+                    py-3
+                    px-2
+                    text-[#359E58]
+                    hover:bg-[#FAFAFA]
+                    text-sm
+                    font-medium
+                    rounded-sm
+                  "
+                >
+                  Admin Panel
+                </Link>
+              )}
+
               <div className="border-t border-gray-100 mt-2 pt-2">
-                <button onClick={handleLogout} className="block w-full text-left py-3 px-2 text-red-500 text-sm font-medium rounded-sm">Logout ({user.name})</button>
+                <button
+                  onClick={handleLogout}
+                  className="
+                    block
+                    w-full
+                    text-left
+                    py-3
+                    px-2
+                    text-red-500
+                    text-sm
+                    font-medium
+                    rounded-sm
+                  "
+                >
+                  Logout ({user.name})
+                </button>
               </div>
             </>
           ) : (
             <div className="flex flex-col gap-2 pt-3 border-t border-gray-100 mt-2">
-              <Link to="/login" onClick={() => setOpen(false)}><Button variant="outline" className="w-full rounded-sm">Login</Button></Link>
-              <Link to="/register" onClick={() => setOpen(false)}>
-                <Button className="w-full bg-[#359E58] hover:bg-[#2e884c] text-white rounded-sm">Apply as Retailer</Button>
+              <Link
+                to="/login"
+                onClick={() => setOpen(false)}
+              >
+                <Button
+                  variant="outline"
+                  className="w-full rounded-sm"
+                >
+                  Login
+                </Button>
+              </Link>
+
+              <Link
+                to="/register"
+                onClick={() => setOpen(false)}
+              >
+                <Button
+                  className="
+                    w-full
+                    bg-[#359E58]
+                    hover:bg-[#2e884c]
+                    text-white
+                    rounded-sm
+                  "
+                >
+                  Apply as Retailer
+                </Button>
               </Link>
             </div>
           )}
@@ -134,4 +492,4 @@ export default function Navbar() {
       )}
     </nav>
   );
-} 
+}
