@@ -27,7 +27,7 @@ export default function Navbar() {
       <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-max shrink-0"
+  className="flex items-center gap-1 sm:gap-4 min-w-max shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -41,7 +41,7 @@ export default function Navbar() {
   font-heading
 text-[13px]
 sm:text-xl
-lg:text-[13px]
+lg:text-[12px]
 xl:text-xl
 font-semibold
 text-[#0A0A0A]
@@ -53,13 +53,13 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap min-w-0 absolute left-1/2 -translate-x-1/2">
+<div className="hidden lg:flex items-center justify-center gap-1 xl:gap-5 2xl:gap-7 px-2 xl:px-4 whitespace-nowrap min-w-0 absolute left-1/2 -translate-x-1/2">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
       to={l.to}
       data-testid={`nav-${l.label.toLowerCase()}-link`}
-      className="text-[#4B5563] hover:text-[#359E58] transition-colors text-xs xl:text-sm font-medium tracking-wide"
+      className="text-[#4B5563] hover:text-[#359E58] transition-colors text-[11px] xl:text-sm font-medium tracking-wide"
     >
       {l.label}
     </Link>
