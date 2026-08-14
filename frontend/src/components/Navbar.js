@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Menu, X, LogOut, Shield } from "lucide-react";
@@ -24,38 +24,38 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(400px,1.1fr)_auto_minmax(190px,0.55fr)] xl:grid-cols-[minmax(460px,1.1fr)_auto_minmax(220px,0.55fr)] items-center gap-4">
+      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(430px,1fr)_auto_minmax(220px,1fr)] items-center gap-4">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-0 shrink-0"
+  className="flex items-center gap-1 sm:gap-4 min-w-0 shrink-0"
   data-testid="nav-logo"
 >
 <img
   src={LOGO}
   alt="Shree Mother Gold & Diamond Jewellery"
-  className="h-11 w-11 sm:h-16 sm:w-16 object-contain flex-shrink-0"
+  className="h-11 w-11 sm:h-16 sm:w-16 object-contain flex-shrink-0 scale-[1.55]"
 />
 
 <span
   className="
   font-heading
-  text-[13px]
-  sm:text-xl
-  lg:text-[13px]
-  xl:text-[15px]
-  2xl:text-[17px]
-  font-semibold
-  text-[#0A0A0A]
-  whitespace-nowrap
-  leading-none
-  flex-shrink-0
+text-[13px]
+sm:text-xl
+lg:text-[12px]
+xl:text-[15px]
+2xl:text-[15px]
+font-semibold
+text-[#0A0A0A]
+whitespace-nowrap
+leading-none
+shrink-0
 "
 >
     Rooh By Shree Mother Gold And Diamond Jewellery
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-3 xl:gap-5 2xl:gap-6 px-2 whitespace-nowrap min-w-max">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-4 2xl:gap-6 px-3 whitespace-nowrap min-w-max">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
@@ -68,7 +68,7 @@ export default function Navbar() {
   ))}
 </div>
 
-<div className="hidden lg:flex items-center justify-end gap-1 xl:gap-2 min-w-0">
+<div className="hidden lg:flex items-center justify-end gap-1 xl:gap-2 min-w-0 overflow-hidden">
           {user ? (
             <>
               {isApproved && (
