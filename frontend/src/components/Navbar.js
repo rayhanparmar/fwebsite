@@ -40,7 +40,7 @@ export default function Navbar() {
   className="
   font-heading
   text-[13px]
-  sm:text-xl
+  sm:text-xl lg:text-lg xl:text-xl
   font-semibold
   text-[#0A0A0A]
   whitespace-nowrap
@@ -52,7 +52,7 @@ export default function Navbar() {
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center gap-6 xl:gap-8 absolute left-1/2 -translate-x-1/2">
+<div className="hidden lg:flex items-center gap-3 xl:gap-6 2xl:gap-8 absolute left-1/2 -translate-x-1/2">
           {navLinks.filter(l => l.show).map(l => (
             <Link key={l.to} to={l.to} data-testid={`nav-${l.label.toLowerCase()}-link`}
               className="text-[#4B5563] hover:text-[#359E58] transition-colors text-sm font-medium tracking-wide">
@@ -61,7 +61,7 @@ export default function Navbar() {
           ))}
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 xl:gap-3 ml-auto flex-shrink-0">
+        <div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0">
           {user ? (
             <>
               {isApproved && (
