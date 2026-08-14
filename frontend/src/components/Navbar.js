@@ -24,10 +24,10 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
+      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full max-w-full shrink-0"
+  className="flex items-center gap-2 sm:gap-4 min-w-max shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -53,7 +53,7 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap min-w-0">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
