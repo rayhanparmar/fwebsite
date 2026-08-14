@@ -24,10 +24,10 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
+      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4">
       <Link
   to="/"
-  className="flex items-center gap-1 sm:gap-4 min-w-0 shrink-0"
+  className="flex items-center gap-1 sm:gap-4 min-w-0 shrink-0 overflow-hidden"
   data-testid="nav-logo"
 >
 <img
@@ -39,21 +39,24 @@ export default function Navbar() {
 <span
   className="
   font-heading
-text-[13px]
-sm:text-xl
-lg:text-[12px]
-xl:text-xl
-font-semibold
-text-[#0A0A0A]
-whitespace-nowrap
-leading-none
+  text-[13px]
+  sm:text-xl
+  lg:text-[12px]
+  xl:text-xl
+  font-semibold
+  text-[#0A0A0A]
+  whitespace-nowrap
+  leading-none
+  min-w-0
+  overflow-hidden
+  text-ellipsis
 "
 >
     Rooh By Shree Mother Gold And Diamond Jewellery
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-3 whitespace-nowrap min-w-max">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-4 2xl:gap-6 px-3 whitespace-nowrap min-w-max">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
@@ -66,7 +69,7 @@ leading-none
   ))}
 </div>
 
-<div className="hidden lg:flex items-center justify-end gap-1 xl:gap-2 min-w-0">
+<div className="hidden lg:flex items-center justify-end gap-1 xl:gap-2 min-w-0 overflow-hidden">
           {user ? (
             <>
               {isApproved && (
