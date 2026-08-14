@@ -48,7 +48,7 @@ const stats = [
   { value: "50+", label: "Years Experience" },
   { value: "500+", label: "Retailer Partners" },
   { value: "10K+", label: "Designs Created" },
-  { value: "24h", label: "CAD Turnaround" },
+  { value: "24h-48h", label: "CAD Turnaround" },
 ];
 
 export default function HomePage() {
@@ -68,7 +68,7 @@ export default function HomePage() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          const targets = [50, 500, 10000, 24];
+          const targets = [50, 500, 10000, 48];
           const duration = 2000;
           const startTime = Date.now();
   
@@ -251,7 +251,7 @@ export default function HomePage() {
             {stats.map((s, i) => (
               <div key={i} className="text-center" data-testid={`stat-${i}`}>
                 <div className="text-4xl sm:text-5xl font-serif font-semibold text-[#359E58] mb-2">
-  {i === 0 ? `${count[i]}+` : i === 1 ? `${count[i]}+` : i === 2 ? `${count[i] >= 1000 ? `${Math.floor(count[i] / 1000)}K` : count[i]}+` : `${count[i]}h`}
+                {i === 0 ? `${count[i]}+` : i === 1 ? `${count[i]}+` : i === 2 ? `${count[i] >= 1000 ? `${Math.floor(count[i] / 1000)}K` : count[i]}+` : "24h-48h"}
 </div>
                 <div className="text-sm text-[#4B5563] font-body">{s.label}</div>
               </div>
