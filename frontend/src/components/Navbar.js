@@ -139,17 +139,22 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu, X, LogOut, Shield } from "lucide-react";
+import {
+  ShoppingCart,
+  Menu,
+  X,
+  LogOut,
+  Shield,
+} from "lucide-react";
 import { useState } from "react";
-
-const LOGO = "/shreemothergold_logo.png";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const isApproved = user?.approved || user?.role === "admin";
+  const isApproved =
+    user?.approved || user?.role === "admin";
 
   const handleLogout = () => {
     logout();
@@ -160,65 +165,86 @@ export default function Navbar() {
   const navLinks = [
     { to: "/", label: "Home", show: true },
     { to: "/about", label: "About", show: true },
-    { to: "/catalogue", label: "Catalogue", show: isApproved },
-    { to: "/customisation", label: "Customisation", show: isApproved },
-    { to: "/contact", label: "Contact", show: true },
+    {
+      to: "/catalogue",
+      label: "Catalogue",
+      show: isApproved,
+    },
+    {
+      to: "/customisation",
+      label: "Customisation",
+      show: isApproved,
+    },
+    {
+      to: "/contact",
+      label: "Contact",
+      show: true,
+    },
   ];
 
   return (
-    <nav className="relative w-full bg-white border-b border-gray-100 z-50">
-      {/* DESKTOP / MAIN NAVBAR */}
+    <nav className="w-full bg-white border-b border-gray-100 relative z-50">
+
+      {/* ========================= */}
+      {/* DESKTOP NAVBAR */}
+      {/* ========================= */}
+
       <div
         className="
-          relative
+          hidden
+          lg:grid
+          grid-cols-[1fr_auto_1fr]
+          items-center
           w-full
           min-h-[72px]
-          px-4 sm:px-6 lg:px-8
-          flex items-center
+          px-6
+          xl:px-8
         "
       >
-        {/* LEFT - LOGO + COMPANY NAME */}
-        <Link
-          to="/"
-          data-testid="nav-logo"
-          className="
-            flex items-center gap-2 sm:gap-4
-            min-w-0
-            shrink
-            lg:max-w-[34%]
-            xl:max-w-[36%]
-          "
-        >
-          <span
+
+        {/* ========================= */}
+        {/* LEFT - COMPANY NAME */}
+        {/* ========================= */}
+
+        <div className="flex items-center justify-start min-w-0">
+          <Link
+            to="/"
+            data-testid="nav-logo"
             className="
-              font-heading
-              text-[13px]
-              sm:text-xl
-              lg:text-base
-              xl:text-xl
-              font-semibold
-              text-[#0A0A0A]
-              whitespace-nowrap
-              leading-none
+              flex
+              items-center
+              min-w-0
+              max-w-full
             "
           >
-            Rooh By Shree Mother Gold And Diamond Jewellery
-          </span>
-        </Link>
+            <span
+              className="
+                font-heading
+                text-base
+                xl:text-xl
+                font-semibold
+                text-[#0A0A0A]
+                whitespace-nowrap
+                leading-none
+              "
+            >
+              Rooh By Shree Mother Gold And Diamond Jewellery
+            </span>
+          </Link>
+        </div>
 
-        {/* CENTER - NAVIGATION */}
+
+        {/* ========================= */}
+        {/* CENTER - MAIN NAVIGATION */}
+        {/* ========================= */}
+
         <div
           className="
-            hidden lg:flex
-            absolute
-            left-1/2
-            top-1/2
-            -translate-x-1/2
-            -translate-y-1/2
+            flex
             items-center
-            gap-4
+            justify-center
+            gap-5
             xl:gap-7
-            2xl:gap-8
             whitespace-nowrap
           "
         >
@@ -236,6 +262,7 @@ export default function Navbar() {
                   text-sm
                   font-medium
                   tracking-wide
+                  whitespace-nowrap
                 "
               >
                 {link.label}
@@ -243,24 +270,34 @@ export default function Navbar() {
             ))}
         </div>
 
-        {/* RIGHT - USER CONTROLS */}
+
+        {/* ========================= */}
+        {/* RIGHT - USER AREA */}
+        {/* ========================= */}
+
         <div
           className="
-            hidden lg:flex
+            flex
             items-center
+            justify-end
             gap-1
             xl:gap-2
-            ml-auto
-            shrink-0
-            justify-end
+            min-w-0
           "
         >
+
           {user ? (
             <>
               {/* CART */}
               {isApproved && (
-                <Link to="/cart" data-testid="nav-cart-link">
-                  <Button variant="ghost" size="icon">
+                <Link
+                  to="/cart"
+                  data-testid="nav-cart-link"
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                  >
                     <ShoppingCart
                       className="w-5 h-5"
                       strokeWidth={1.5}
@@ -269,26 +306,37 @@ export default function Navbar() {
                 </Link>
               )}
 
+
               {/* ADMIN */}
               {user.role === "admin" && (
-                <Link to="/admin" data-testid="nav-admin-link">
+                <Link
+                  to="/admin"
+                  data-testid="nav-admin-link"
+                >
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="gap-2 text-[#359E58]"
+                    className="
+                      gap-2
+                      text-[#359E58]
+                    "
                   >
                     <Shield
                       className="w-4 h-4"
                       strokeWidth={1.5}
                     />
-                    Admin
+
+                    <span>Admin</span>
                   </Button>
                 </Link>
               )}
 
+
               {/* USER NAME */}
               <span
                 className="
+                  hidden
+                  xl:block
                   text-sm
                   text-[#4B5563]
                   font-medium
@@ -298,6 +346,7 @@ export default function Navbar() {
               >
                 {user.name}
               </span>
+
 
               {/* LOGOUT */}
               <Button
@@ -325,7 +374,8 @@ export default function Navbar() {
                 </Button>
               </Link>
 
-              {/* REGISTER */}
+
+              {/* APPLY AS RETAILER */}
               <Link to="/register">
                 <Button
                   className="
@@ -333,7 +383,8 @@ export default function Navbar() {
                     hover:bg-[#2e884c]
                     text-white
                     rounded-sm
-                    px-6
+                    px-5
+                    xl:px-6
                   "
                   data-testid="nav-register-button"
                 >
@@ -342,12 +393,60 @@ export default function Navbar() {
               </Link>
             </>
           )}
+
         </div>
 
-        {/* MOBILE MENU BUTTON */}
+      </div>
+
+
+      {/* ========================= */}
+      {/* MOBILE NAVBAR */}
+      {/* ========================= */}
+
+      <div
+        className="
+          lg:hidden
+          flex
+          items-center
+          justify-between
+          min-h-[64px]
+          px-4
+          sm:px-6
+        "
+      >
+
+        {/* COMPANY NAME */}
+
+        <Link
+          to="/"
+          data-testid="nav-logo"
+          className="
+            min-w-0
+            flex-1
+            mr-3
+          "
+        >
+          <span
+            className="
+              font-heading
+              text-[13px]
+              sm:text-base
+              font-semibold
+              text-[#0A0A0A]
+              whitespace-nowrap
+              leading-none
+            "
+          >
+            Rooh By Shree Mother Gold And Diamond Jewellery
+          </span>
+        </Link>
+
+
+        {/* MOBILE BUTTON */}
+
         <button
           onClick={() => setOpen(!open)}
-          className="lg:hidden ml-auto p-2"
+          className="p-2 shrink-0"
           data-testid="nav-mobile-toggle"
           aria-label="Toggle menu"
         >
@@ -357,9 +456,14 @@ export default function Navbar() {
             <Menu className="w-6 h-6" />
           )}
         </button>
+
       </div>
 
+
+      {/* ========================= */}
       {/* MOBILE MENU */}
+      {/* ========================= */}
+
       {open && (
         <div
           className="
@@ -374,6 +478,7 @@ export default function Navbar() {
             overflow-y-auto
           "
         >
+
           {navLinks
             .filter((link) => link.show)
             .map((link) => (
@@ -397,8 +502,11 @@ export default function Navbar() {
               </Link>
             ))}
 
+
           {user ? (
             <>
+              {/* CART */}
+
               {isApproved && (
                 <Link
                   to="/cart"
@@ -417,6 +525,9 @@ export default function Navbar() {
                   Cart
                 </Link>
               )}
+
+
+              {/* ADMIN */}
 
               {user.role === "admin" && (
                 <Link
@@ -437,7 +548,17 @@ export default function Navbar() {
                 </Link>
               )}
 
-              <div className="border-t border-gray-100 mt-2 pt-2">
+
+              {/* LOGOUT */}
+
+              <div
+                className="
+                  border-t
+                  border-gray-100
+                  mt-2
+                  pt-2
+                "
+              >
                 <button
                   onClick={handleLogout}
                   className="
@@ -457,7 +578,18 @@ export default function Navbar() {
               </div>
             </>
           ) : (
-            <div className="flex flex-col gap-2 pt-3 border-t border-gray-100 mt-2">
+            <div
+              className="
+                flex
+                flex-col
+                gap-2
+                pt-3
+                border-t
+                border-gray-100
+                mt-2
+              "
+            >
+
               <Link
                 to="/login"
                 onClick={() => setOpen(false)}
@@ -469,6 +601,7 @@ export default function Navbar() {
                   Login
                 </Button>
               </Link>
+
 
               <Link
                 to="/register"
@@ -486,10 +619,13 @@ export default function Navbar() {
                   Apply as Retailer
                 </Button>
               </Link>
+
             </div>
           )}
+
         </div>
       )}
+
     </nav>
   );
 }
