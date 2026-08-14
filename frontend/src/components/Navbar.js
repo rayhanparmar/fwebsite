@@ -53,7 +53,7 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap min-w-0">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap min-w-0 absolute left-1/2 -translate-x-1/2">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
