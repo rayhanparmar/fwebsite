@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { City } from "country-state-city";
+import { City, State } from "country-state-city";
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -36,7 +36,7 @@ export default function RegisterPage() {
     "West Bengal","Delhi"
   ];
 
-  const indianCities = City.getCitiesOfCountry("IN");
+  const indianStateData = State.getStatesOfCountry("IN");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -258,28 +258,34 @@ export default function RegisterPage() {
 
     ) : f.name === "city" ? (
       <select
-        name="city"
-        value={form.city}
-        onChange={handleChange}
-        required
-        disabled={!form.state}
-        className="mt-1 w-full rounded-sm border border-[#E5E7EB] p-2 focus:outline-none focus:ring-2 focus:ring-[#4AB868] disabled:bg-gray-100"
-      >
-        <option value="">
-          {form.state ? "Select City" : "Select State First"}
-        </option>
+  name="city"
+  value={form.city}
+  onChange={handleChange}
+  required
+  disabled={!form.state}
+  className="mt-1 w-full rounded-sm border border-[#E5E7EB] p-2 focus:outline-none focus:ring-2 focus:ring-[#4AB868] disabled:bg-gray-100"
+>
+  <option value="">
+    {form.state ? "Select City" : "Select State First"}
+  </option>
 
-        {indianCities
-          .filter((city) => city.stateName === form.state)
-          .map((city) => (
-            <option
-              key={`${city.name}-${city.stateCode}`}
-              value={city.name}
-            >
-              {city.name}
-            </option>
-          ))}
-      </select>
+  {(() => {
+    const selectedState = indianStateData.find(
+      (state) => state.name === form.state
+    );
+
+    if (!selectedState) return null;
+
+    return City.getCitiesOfState("IN", selectedState.isoCode).map((city) => (
+      <option
+        key={city.name}
+        value={city.name}
+      >
+        {city.name}
+      </option>
+    ));
+  })()}
+</select>
 
     ) : f.name === "business_address" ? (
       <textarea
