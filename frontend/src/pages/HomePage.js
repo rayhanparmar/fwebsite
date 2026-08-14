@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Zap, Palette, Award, MessageSquare, ClipboardList, Search, Send, Package } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const HERO_BG = "https://static.prod-images.emergentagent.com/jobs/9bb42aae-fb6d-46ba-ae48-310133cc4e67/images/698ab8deb15cdb7d190448cac4df80dcd80eff7d114580c39d22f1a61f1049d4.png";
 
@@ -56,25 +56,51 @@ export default function HomePage() {
   const isApproved = user?.approved || user?.role === "admin";
   const navigate = useNavigate();
   const [count, setCount] = useState([0, 0, 0, 0]);
+  const statsRef = useRef(null);
 
   useEffect(() => {
-    const targets = [50, 500, 10000, 24];
-    const duration = 2000;
-    const startTime = Date.now();
+    const statsSection = statsRef.current;
   
-    const timer = setInterval(() => {
-      const progress = Math.min((Date.now() - startTime) / duration, 1);
+    if (!statsSection) return;
   
-      setCount(
-        targets.map(target => Math.floor(target * progress))
-      );
+    let timer;
   
-      if (progress === 1) {
-        clearInterval(timer);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          const targets = [50, 500, 10000, 24];
+          const duration = 2000;
+          const startTime = Date.now();
+  
+          timer = setInterval(() => {
+            const progress = Math.min(
+              (Date.now() - startTime) / duration,
+              1
+            );
+  
+            setCount(
+              targets.map(target => Math.floor(target * progress))
+            );
+  
+            if (progress === 1) {
+              clearInterval(timer);
+            }
+          }, 30);
+  
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.3,
       }
-    }, 30);
+    );
   
-    return () => clearInterval(timer);
+    observer.observe(statsSection);
+  
+    return () => {
+      observer.disconnect();
+      if (timer) clearInterval(timer);
+    };
   }, []);
 
   return (
@@ -216,7 +242,10 @@ export default function HomePage() {
       </section>
 
       {/* Stats */}
-      <section className="py-16 sm:py-24 md:py-32">
+      <section
+  ref={statsRef}
+  className="py-16 sm:py-24 md:py-32"
+>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((s, i) => (
