@@ -861,7 +861,21 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
                   <div>
                     <p className="font-medium text-[#0A0A0A] font-body">{r.name}</p>
                     <p className="text-xs text-[#4B5563] font-body">{r.email} | {r.phone} | {r.business_name}</p>
-                    <p className="text-xs text-[#4B5563] font-body">GST: {r.gst_number} | {r.location}</p>
+                    <p className="text-xs text-[#4B5563] font-body">
+  GST: {r.gst_number}
+</p>
+
+<p className="text-xs text-[#4B5563] font-body">
+  {r.city}, {r.state}
+</p>
+
+<p className="text-xs text-[#4B5563] font-body">
+  {r.business_address}
+</p>
+
+<p className="text-xs text-[#4B5563] font-body">
+  Pincode: {r.pincode}
+</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
                     {!r.approved ? (

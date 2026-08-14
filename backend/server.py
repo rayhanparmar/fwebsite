@@ -219,7 +219,10 @@ class RegisterRequest(BaseModel):
     business_name: str
     gst_number: str
     phone: str
-    location: str
+    state: str
+    city: str
+    business_address: str
+    pincode: str
 
 class LoginRequest(BaseModel):
     email: str
@@ -276,13 +279,20 @@ async def register(req: RegisterRequest):
     if existing:
         raise HTTPException(400, "Email already registered")
     user_doc = {
-        "name": req.name, "email": email,
-        "password_hash": hash_password(req.password),
-        "business_name": req.business_name, "gst_number": req.gst_number,
-        "phone": req.phone, "location": req.location,
-        "role": "retailer", "approved": False,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
+    "name": req.name,
+    "email": email,
+    "password_hash": hash_password(req.password),
+    "business_name": req.business_name,
+    "gst_number": req.gst_number,
+    "phone": req.phone,
+    "state": req.state,
+    "city": req.city,
+    "business_address": req.business_address,
+    "pincode": req.pincode,
+    "role": "retailer",
+    "approved": False,
+    "created_at": datetime.now(timezone.utc).isoformat()
+}
     result = await db.users.insert_one(user_doc)
     logger.info(f"New retailer registration: {req.name} ({email})")
     return {
