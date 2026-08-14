@@ -24,10 +24,10 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 flex items-center">
+      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full lg:w-[36%] xl:w-[38%] shrink-0"
+  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full max-w-full shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -41,7 +41,7 @@ export default function Navbar() {
   font-heading
 text-[13px]
 sm:text-xl
-lg:text-[15px]
+lg:text-[13px]
 xl:text-xl
 font-semibold
 text-[#0A0A0A]
@@ -53,7 +53,7 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center gap-2 xl:gap-5 2xl:gap-7 absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-4 whitespace-nowrap">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
@@ -66,7 +66,7 @@ leading-none
   ))}
 </div>
 
-<div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0 max-w-[24vw]">
+<div className="hidden lg:flex items-center justify-end gap-1 xl:gap-2 min-w-0">
           {user ? (
             <>
               {isApproved && (
