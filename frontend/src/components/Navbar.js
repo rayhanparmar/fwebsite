@@ -27,7 +27,7 @@ export default function Navbar() {
       <div className="w-full px-4 md:px-8 h-20 flex items-center">
       <Link
   to="/"
-  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full lg:w-[32vw] xl:w-[36vw] lg:max-w-[500px] shrink-0"
+  className="flex items-center gap-2 sm:gap-4 min-w-0 w-full lg:w-[36%] xl:w-[38%] shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -53,7 +53,7 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center gap-2 xl:gap-6 2xl:gap-8 absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+<div className="hidden lg:flex items-center gap-2 xl:gap-5 2xl:gap-7 absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
@@ -66,7 +66,7 @@ leading-none
   ))}
 </div>
 
-<div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0 max-w-[30vw]">
+<div className="hidden lg:flex items-center gap-1 xl:gap-2 ml-auto flex-shrink-0 max-w-[24vw]">
           {user ? (
             <>
               {isApproved && (
@@ -81,7 +81,7 @@ leading-none
                   </Button>
                 </Link>
               )}
-              <span className="text-sm text-[#4B5563] font-medium">{user.name}</span>
+              <span className="text-sm text-[#4B5563] font-medium max-w-[90px] truncate">{user.name}</span>
               <Button onClick={handleLogout} variant="ghost" size="icon" data-testid="nav-logout-button">
                 <LogOut className="w-5 h-5" strokeWidth={1.5} />
               </Button>
