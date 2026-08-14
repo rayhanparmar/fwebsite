@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Zap, Palette, Award, MessageSquare, ClipboardList, Search, Send, Package } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const HERO_BG = "https://static.prod-images.emergentagent.com/jobs/9bb42aae-fb6d-46ba-ae48-310133cc4e67/images/698ab8deb15cdb7d190448cac4df80dcd80eff7d114580c39d22f1a61f1049d4.png";
 
@@ -54,6 +55,27 @@ export default function HomePage() {
   const { user } = useAuth();
   const isApproved = user?.approved || user?.role === "admin";
   const navigate = useNavigate();
+  const [count, setCount] = useState([0, 0, 0, 0]);
+
+  useEffect(() => {
+    const targets = [50, 500, 10000, 24];
+    const duration = 2000;
+    const startTime = Date.now();
+  
+    const timer = setInterval(() => {
+      const progress = Math.min((Date.now() - startTime) / duration, 1);
+  
+      setCount(
+        targets.map(target => Math.floor(target * progress))
+      );
+  
+      if (progress === 1) {
+        clearInterval(timer);
+      }
+    }, 30);
+  
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div data-testid="home-page">
@@ -66,7 +88,7 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 md:px-12 py-16 sm:py-24 md:py-32">
           <div className="max-w-3xl">
             <p className="text-sm sm:text-base md:text-lg font-semibold tracking-[0.2em] sm:tracking-[0.25em] uppercase text-[#359E58] mb-4 sm:mb-6 animate-fade-up font-body">
-              Premium B2B Jewellery Manufacturing
+              B2B Jewellery Manufacturing
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight leading-[1.15]">
   <span className="text-[#0A0A0A]">
@@ -199,7 +221,9 @@ export default function HomePage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((s, i) => (
               <div key={i} className="text-center" data-testid={`stat-${i}`}>
-                <div className="text-4xl sm:text-5xl font-serif font-semibold text-[#359E58] mb-2">{s.value}</div>
+                <div className="text-4xl sm:text-5xl font-serif font-semibold text-[#359E58] mb-2">
+  {i === 0 ? `${count[i]}+` : i === 1 ? `${count[i]}+` : i === 2 ? `${count[i] >= 1000 ? `${Math.floor(count[i] / 1000)}K` : count[i]}+` : `${count[i]}h`}
+</div>
                 <div className="text-sm text-[#4B5563] font-body">{s.label}</div>
               </div>
             ))}
