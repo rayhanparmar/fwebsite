@@ -24,10 +24,10 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center">
+      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center">
       <Link
   to="/"
-  className="flex items-center gap-1 sm:gap-4 min-w-max shrink-0"
+  className="flex items-center gap-1 sm:gap-4 min-w-0 shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -53,13 +53,13 @@ leading-none
   </span>
 </Link>
 
-<div className="hidden lg:flex items-center justify-center gap-1 xl:gap-5 2xl:gap-7 px-2 xl:px-4 whitespace-nowrap min-w-0 absolute left-1/2 -translate-x-1/2">
+<div className="hidden lg:flex items-center justify-center gap-2 xl:gap-5 2xl:gap-7 px-3 whitespace-nowrap min-w-max">
   {navLinks.filter(l => l.show).map(l => (
     <Link
       key={l.to}
       to={l.to}
       data-testid={`nav-${l.label.toLowerCase()}-link`}
-      className="text-[#4B5563] hover:text-[#359E58] transition-colors text-[11px] xl:text-sm font-medium tracking-wide"
+      className="text-[#4B5563] hover:text-[#359E58] transition-colors text-xs xl:text-sm font-medium tracking-wide"
     >
       {l.label}
     </Link>
