@@ -651,6 +651,38 @@ async def admin_update_product(request: Request, product_id: str, update: Produc
         raise HTTPException(404, "Product not found")
     return {"message": "Product updated"}
 
+@api_router.put("/admin/products/{product_id}/front-image")
+async def admin_set_product_front_image(
+    request: Request,
+    product_id: str,
+    image_url: str = Form(...)
+):
+    await get_admin_user(request)
+
+    product = await db.products.find_one({"product_id": product_id})
+
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    images = product.get("images", [])
+
+    if image_url not in images:
+        raise HTTPException(400, "Image does not belong to this product")
+
+    images.remove(image_url)
+    images.insert(0, image_url)
+
+    await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": {"images": images}}
+    )
+
+    return {
+        "success": True,
+        "message": "Front image updated successfully",
+        "images": images
+    }
+
 @api_router.delete("/admin/products/{product_id}")
 async def admin_delete_product(request: Request, product_id: str):
     await get_admin_user(request)

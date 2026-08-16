@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const CATEGORIES = ["Bali","Bangle","Kada","Bracelet","Chains","Cufflinks","Earrings","Hath Pan","Maang Tikka","Mangal Sutra","Necklace","Nose Pin","Pendant","Rings","Tops","Watchbelts"];
 
@@ -51,6 +52,17 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
+  const [categoryImages, setCategoryImages] = useState({});
+
+  useEffect(() => {
+    api.get("/admin/category-images")
+      .then((res) => {
+        setCategoryImages(res.data.category_images || {});
+      })
+      .catch((err) => {
+        console.error("Failed to load category images:", err);
+      });
+  }, [api]);
   const [customers, setCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState("");
 
@@ -199,6 +211,31 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
     } catch (err) {
       toast.error(err.response?.data?.detail || "Upload failed");
     } finally { setUploading(false); }
+  };
+
+
+  const setFrontImage = async (productId, imageUrl) => {
+    try {
+      const formData = new FormData();
+      formData.append("image_url", imageUrl);
+
+      const res = await api.put(
+        `/admin/products/${productId}/front-image`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      toast.success(res.data.message || "Front image updated");
+
+      loadProducts();
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err.response?.data?.detail || "Failed to update front image"
+      );
+    }
   };
 
   const resetForm = () => {
@@ -977,12 +1014,34 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
             <div className="space-y-2">
               {products.map(p => (
                 <div key={p.product_id} className="flex items-center gap-4 p-3 border border-[#E5E7EB] bg-white" data-testid={`admin-product-${p.product_id}`}>
-                  <div className="flex gap-1 shrink-0">
-                    {(p.images || []).slice(0, 3).map((img, i) => (
-                      <div key={i} className="w-12 h-12 bg-[#FAFAFA] overflow-hidden border border-[#E5E7EB]">
-                        <img src={img.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
+                  <div className="flex gap-2 shrink-0">
+  {(p.images || []).slice(0, 3).map((img, i) => (
+    <div key={i} className="flex flex-col items-center gap-1">
+      <div className="relative w-12 h-12 bg-[#FAFAFA] overflow-hidden border border-[#E5E7EB]">
+        <img
+          src={img.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img}
+          alt=""
+          className="w-full h-full object-cover"
+        />
+
+        {i === 0 && (
+          <div className="absolute bottom-0 left-0 right-0 bg-[#359E58] text-white text-[8px] text-center py-0.5">
+            FRONT
+          </div>
+        )}
+      </div>
+
+      {i !== 0 && (
+        <button
+          type="button"
+          onClick={() => setFrontImage(p.product_id, img)}
+          className="text-[9px] text-[#359E58] hover:underline whitespace-nowrap"
+        >
+          Set as Front
+        </button>
+      )}
+    </div>
+  ))}
                     {(p.images || []).length > 3 && (
                       <div className="w-12 h-12 bg-[#FAFAFA] border border-[#E5E7EB] flex items-center justify-center">
                         <span className="text-xs text-[#4B5563] font-body">+{p.images.length - 3}</span>
