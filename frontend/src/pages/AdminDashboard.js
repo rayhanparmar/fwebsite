@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
-import { useState, useEffect } from "react";
+
 
 const CATEGORIES = ["Bali","Bangle","Kada","Bracelet","Chains","Cufflinks","Earrings","Hath Pan","Maang Tikka","Mangal Sutra","Necklace","Nose Pin","Pendant","Rings","Tops","Watchbelts"];
 
