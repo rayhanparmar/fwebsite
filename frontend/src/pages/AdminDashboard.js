@@ -10,7 +10,25 @@ import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
 
 
-const CATEGORIES = ["Bali","Bangle","Kada","Bracelet","Chains","Cufflinks","Earrings","Hath Pan","Maang Tikka","Mangal Sutra","Necklace","Nose Pin","Pendant","Rings","Tops","Watchbelts"];
+const CATEGORIES = [
+  "Bali",
+  "Bangle/Kada",
+  "Bracelet",
+  "Chain + Multilayer",
+  "Cufflink",
+  "Brooch",
+  "Earring",
+  "Haathpaan",
+  "Maang Tikka",
+  "Mangal Sutra",
+  "Necklace",
+  "Nose Pin",
+  "Pendant + Dancing Stone",
+  "Ring + Titanium Ring",
+  "Tops",
+  "Watch Belt",
+  "Full Set"
+];
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
