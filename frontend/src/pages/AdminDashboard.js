@@ -296,8 +296,10 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   };
 
   const deleteProductImage = async (productId, imageUrl) => {
-    if (!window.confirm("Are you sure you want to delete this image?")) return;
-
+    if (!window.confirm("Are you sure you want to delete this image?")) {
+      return;
+    }
+  
     try {
       const res = await api.delete(
         `/admin/products/${productId}/image`,
@@ -307,19 +309,34 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
           },
         }
       );
-
-      toast.success(res.data.message || "Image deleted successfully");
-
-      setSelectedProduct((prev) => ({
-        ...prev,
-        images: (prev.images || []).filter((img) => img !== imageUrl),
-      }));
-
-      loadProducts();
+  
+      toast.success(
+        res.data.message || "Image deleted successfully"
+      );
+  
+      // Remove the deleted image from the currently opened product
+      setSelectedProduct((currentProduct) => {
+        if (!currentProduct) {
+          return currentProduct;
+        }
+  
+        return {
+          ...currentProduct,
+          images: (currentProduct.images || []).filter(
+            (img) => img !== imageUrl
+          ),
+        };
+      });
+  
+      // Refresh the product list in the background
+      await loadProducts();
+  
     } catch (err) {
-      console.error(err);
+      console.error("Delete image error:", err);
+  
       toast.error(
-        err.response?.data?.detail || "Failed to delete image"
+        err.response?.data?.detail ||
+        "Failed to delete image"
       );
     }
   };
