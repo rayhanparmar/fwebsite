@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Star, ArrowLeft, ShoppingCart, Send, MessageCircle } from "lucide-react";
 import { getProductWhatsAppUrl } from "@/components/FloatingWhatsApp";
+import { PRODUCT_CUSTOMIZATION_CONFIG } from "@/components/ProductCustomizationConfig";
 
 const SIZE_OPTIONS = {
   Rings: ["4","5","6","7","8","9","10","11","12","13"],
@@ -33,6 +34,7 @@ export default function ProductDetailPage() {
   const [diamondColor, setDiamondColor] = useState("");
   const [size, setSize] = useState("");
   const [notes, setNotes] = useState("");
+  const [customizations, setCustomizations] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -48,14 +50,12 @@ export default function ProductDetailPage() {
   };
 
   const getCustomizations = () => ({
-    metal_selection: metalSelection, metal_purity: metalPurity,
-    stone_selection: stoneSelection, diamond_quality: diamondQuality,
-    diamond_color: diamondColor, size: size,
+    ...customizations,
   });
 
   const addToCart = async () => {
-    if (!metalSelection || !metalPurity) { toast.error("Please select metal options"); return; }
     setSubmitting(true);
+
     try {
       await api.post("/cart", {
         product_id: product.product_id, category: product.category,
@@ -68,7 +68,6 @@ export default function ProductDetailPage() {
   };
 
   const placeOrder = async () => {
-    if (!metalSelection || !metalPurity) { toast.error("Please select metal options"); return; }
     setSubmitting(true);
     try {
       await api.post("/cart", {
@@ -89,7 +88,7 @@ export default function ProductDetailPage() {
   if (!product) {
     return <div className="min-h-[60vh] flex items-center justify-center"><p>Product not found</p></div>;
   }
-
+  const customizationConfig = PRODUCT_CUSTOMIZATION_CONFIG[product.category];
   const sizes = SIZE_OPTIONS[product.category] || SIZE_OPTIONS.default;
   const resolveImg = (img) => img?.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img;
 
@@ -126,102 +125,66 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="space-y-5">
-              {/* Metal Selection */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Metal Selection</label>
-                <Select value={metalSelection} onValueChange={setMetalSelection} disabled={metalPurity === "22KT"}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-metal">
-                    <SelectValue placeholder="Select Metal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {metalPurity === "22KT" ? (
-                      <SelectItem value="Yellow Gold">Yellow Gold</SelectItem>
-                    ) : (
-                      <>
-                        <SelectItem value="White Gold">White Gold</SelectItem>
-                        <SelectItem value="Yellow Gold">Yellow Gold</SelectItem>
-                        <SelectItem value="Rose Gold">Rose Gold</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-                {metalPurity === "22KT" && <p className="text-xs text-[#359E58] mt-1 font-body">Locked to Yellow Gold for 22KT</p>}
-              </div>
+            {customizationConfig?.fields?.map((field) => (
+                <div key={field.key}>
+                  <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">
+                    {field.label}
+                  </label>
 
-              {/* Metal Purity */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Metal Purity</label>
-                <Select value={metalPurity} onValueChange={handlePurityChange}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-purity">
-                    <SelectValue placeholder="Select Purity" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["9KT","14KT","18KT","22KT"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+                  {field.type === "select" && (
+                    <Select
+                      value={customizations[field.key] || ""}
+                      onValueChange={(value) =>
+                        setCustomizations((prev) => ({
+                          ...prev,
+                          [field.key]: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="rounded-sm border-[#E5E7EB]">
+                        <SelectValue placeholder={`Select ${field.label}`} />
+                      </SelectTrigger>
 
-              {/* Stone Selection */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Stone Selection</label>
-                <Select value={stoneSelection} onValueChange={setStoneSelection}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-stone">
-                    <SelectValue placeholder="Select Stone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Natural Diamond / Lab Grown","Polki","Color Stone","Pearl","Moti"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+                      <SelectContent>
+                        {field.options?.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
 
-              {/* Diamond Quality */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Diamond Quality</label>
-                <Select value={diamondQuality} onValueChange={setDiamondQuality}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-diamond-quality">
-                    <SelectValue placeholder="Select Quality" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["VVS-VS","VS","VS-SI","SI","SI2-3","I1","I2-I3","PK","OW-VS","OW-SI"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+                  {field.type === "date" && (
+                    <input
+                      type="date"
+                      value={customizations[field.key] || ""}
+                      onChange={(e) =>
+                        setCustomizations((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-[#359E58]"
+                    />
+                  )}
 
-              {/* Diamond Color */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Diamond Color</label>
-                <Select value={diamondColor} onValueChange={setDiamondColor}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-diamond-color">
-                    <SelectValue placeholder="Select Color" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["D","E","F","G","GH","H","I","J","K","L","M"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Size */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Size</label>
-                <Select value={size} onValueChange={setSize}>
-                  <SelectTrigger className="rounded-sm border-[#E5E7EB]" data-testid="select-size">
-                    <SelectValue placeholder="Select Size" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sizes.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">Special Notes</label>
-                <Textarea value={notes} onChange={e => setNotes(e.target.value)}
-                  className="rounded-sm border-[#E5E7EB] min-h-[80px]"
-                  placeholder="Any special requirements..." data-testid="product-notes" />
-              </div>
+                  {field.type === "textarea" && (
+                    <Textarea
+                      value={customizations[field.key] || ""}
+                      onChange={(e) =>
+                        setCustomizations((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                      className="rounded-sm border-[#E5E7EB] min-h-[80px]"
+                      placeholder={`Enter ${field.label.toLowerCase()}...`}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
-
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
               <Button onClick={addToCart} disabled={submitting}

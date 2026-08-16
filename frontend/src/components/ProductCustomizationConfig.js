@@ -1,0 +1,100 @@
+export const PRODUCT_CUSTOMIZATION_CONFIG = {
+    "Bracelet": {
+      fields: [
+        {
+          key: "metal_selection",
+          label: "Metal Selection",
+          type: "select",
+          options: [
+            "White Gold",
+            "Yellow Gold",
+            "Rose Gold",
+            "Platinum",
+            "Gold + Platinum",
+          ],
+        },
+        {
+          key: "metal_purity",
+          label: "Gold Purity",
+          type: "select",
+          options: ["9KT", "14KT", "18KT", "22KT"],
+        },
+        {
+          key: "gold_colour",
+          label: "Gold Colour",
+          type: "select",
+          options: [
+            "Yellow Gold",
+            "White Gold",
+            "Rose Gold",
+          ],
+        },
+        {
+          key: "stone_type",
+          label: "Stone Type",
+          type: "select",
+          options: [
+            "Natural Diamond",
+            "Lab Grown Diamond",
+            "CZ",
+            "Colour Stone",
+            "Precious Stone",
+            "Other",
+          ],
+        },
+        {
+          key: "bracelet_size",
+          label: "Bracelet Size",
+          type: "select",
+          options: [
+            '6.00"',
+            '6.25"',
+            '6.50"',
+            '6.75"',
+            '7.00"',
+            '7.25"',
+            '7.50"',
+            '7.75"',
+            '8.00"',
+            '8.25"',
+            '8.50"',
+          ],
+        },
+        {
+          key: "finish_type",
+          label: "Finish Type",
+          type: "select",
+          options: [
+            "High Polish",
+            "Matt",
+            "Sandblast",
+            "Hammered",
+            "Textured",
+            "Oxidised",
+          ],
+        },
+        {
+          key: "hallmark_required",
+          label: "Hallmark Required",
+          type: "select",
+          options: ["Yes", "No"],
+        },
+        {
+          key: "call_required",
+          label: "Need a Call to Explain Better?",
+          type: "select",
+          options: ["Yes", "No"],
+        },
+        {
+          key: "due_date",
+          label: "Due Date",
+          type: "date",
+        },
+        {
+          key: "remarks",
+          label: "Remarks",
+          type: "textarea",
+        },
+      ],
+    },
+  };
