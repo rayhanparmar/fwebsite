@@ -42,9 +42,9 @@ export default function CataloguePage() {
                     className="w-full h-full object-cover" loading="lazy" />
                 </div>
                 <div className="p-4 text-center">
-                  <h3 className="font-heading text-lg font-medium text-[#0A0A0A] group-hover:text-[#359E58] transition-colors">
-                    {cat.name}
-                  </h3>
+                <h3 className="font-heading text-base sm:text-lg font-medium text-[#0A0A0A] group-hover:text-[#359E58] transition-colors whitespace-nowrap">
+                  {cat.name}
+                </h3>
                   {/* <p className="text-xs text-[#4B5563] mt-1 font-body">{cat.product_count} Products</p> */}
                 </div>
               </div>

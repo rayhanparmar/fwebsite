@@ -5,11 +5,23 @@ import { toast } from "sonner";
 import { Star, ArrowLeft } from "lucide-react";
 
 const CATEGORIES = [
-  { name: "Bali", slug: "bali" }, { name: "Bangle", slug: "bangle" }, { name: "Kada", slug: "kada" },
-  { name: "Bracelet", slug: "bracelet" }, { name: "Chains", slug: "chains" }, { name: "Cufflinks", slug: "cufflinks" },
-  { name: "Earrings", slug: "earrings" }, { name: "Hath Pan", slug: "hath-pan" }, { name: "Maang Tikka", slug: "maang-tikka" },
-  { name: "Mangal Sutra", slug: "mangal-sutra" }, { name: "Necklace", slug: "necklace" }, { name: "Nose Pin", slug: "nose-pin" },
-  { name: "Pendant", slug: "pendant" }, { name: "Rings", slug: "rings" }, { name: "Tops", slug: "tops" }, { name: "Watchbelts", slug: "watchbelts" },
+  { name: "Bali", slug: "bali" },
+  { name: "Bangle/Kada", slug: "bangle-kada" },
+  { name: "Bracelet", slug: "bracelet" },
+  { name: "Chain + Multilayer", slug: "chain-multilayer" },
+  { name: "Cufflink", slug: "cufflink" },
+  { name: "Brooch", slug: "brooch" },
+  { name: "Earring", slug: "earring" },
+  { name: "Haathpaan", slug: "haathpaan" },
+  { name: "Maang Tikka", slug: "maang-tikka" },
+  { name: "Mangal Sutra", slug: "mangal-sutra" },
+  { name: "Necklace", slug: "necklace" },
+  { name: "Nose Pin", slug: "nose-pin" },
+  { name: "Pendant + Dancing Stone", slug: "pendant-dancing-stone" },
+  { name: "Ring + Titanium Ring", slug: "ring-titanium-ring" },
+  { name: "Tops", slug: "tops" },
+  { name: "Watch Belt", slug: "watch-belt" },
+  { name: "Full Set", slug: "full-set" },
 ];
 
 export default function CategoryProductsPage() {

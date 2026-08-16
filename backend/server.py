@@ -126,22 +126,59 @@ logger = logging.getLogger(__name__)
 # ──── CONSTANTS ────
 CATEGORIES = [
     {"name": "Bali", "prefix": "BL", "slug": "bali"},
-    {"name": "Bangle", "prefix": "BG", "slug": "bangle"},
-    {"name": "Kada", "prefix": "KD", "slug": "kada"},
+    {"name": "Bangle/Kada", "prefix": "BK", "slug": "bangle-kada"},
     {"name": "Bracelet", "prefix": "BR", "slug": "bracelet"},
-    {"name": "Chains", "prefix": "CH", "slug": "chains"},
-    {"name": "Cufflinks", "prefix": "CL", "slug": "cufflinks"},
-    {"name": "Earrings", "prefix": "ER", "slug": "earrings"},
-    {"name": "Hath Pan", "prefix": "HP", "slug": "hath-pan"},
+    {"name": "Chain + Multilayer", "prefix": "CM", "slug": "chain-multilayer"},
+    {"name": "Cufflink", "prefix": "CF", "slug": "cufflink"},
+    {"name": "Brooch", "prefix": "BC", "slug": "brooch"},
+    {"name": "Earring", "prefix": "ER", "slug": "earring"},
+    {"name": "Haathpaan", "prefix": "HP", "slug": "haathpaan"},
     {"name": "Maang Tikka", "prefix": "MT", "slug": "maang-tikka"},
     {"name": "Mangal Sutra", "prefix": "MS", "slug": "mangal-sutra"},
     {"name": "Necklace", "prefix": "NK", "slug": "necklace"},
     {"name": "Nose Pin", "prefix": "NP", "slug": "nose-pin"},
-    {"name": "Pendant", "prefix": "PN", "slug": "pendant"},
-    {"name": "Rings", "prefix": "RN", "slug": "rings"},
+    {"name": "Pendant + Dancing Stone", "prefix": "PD", "slug": "pendant-dancing-stone"},
+    {"name": "Ring + Titanium Ring", "prefix": "RT", "slug": "ring-titanium-ring"},
     {"name": "Tops", "prefix": "TP", "slug": "tops"},
-    {"name": "Watchbelts", "prefix": "WB", "slug": "watchbelts"},
+    {"name": "Watch Belt", "prefix": "WB", "slug": "watch-belt"},
+    {"name": "Full Set", "prefix": "FS", "slug": "full-set"},
 ]
+
+CATEGORY_ALIASES = {
+    "Bali": ["Bali"],
+
+    "Bangle/Kada": ["Bangle", "Kada"],
+
+    "Bracelet": ["Bracelet"],
+
+    "Chain + Multilayer": ["Chains"],
+
+    "Cufflink": ["Cufflinks"],
+
+    "Brooch": ["Brooch"],
+
+    "Earring": ["Earrings"],
+
+    "Haathpaan": ["Hath Pan"],
+
+    "Maang Tikka": ["Maang Tikka"],
+
+    "Mangal Sutra": ["Mangal Sutra"],
+
+    "Necklace": ["Necklace"],
+
+    "Nose Pin": ["Nose Pin"],
+
+    "Pendant + Dancing Stone": ["Pendant"],
+
+    "Ring + Titanium Ring": ["Rings"],
+
+    "Tops": ["Tops"],
+
+    "Watch Belt": ["Watchbelts"],
+
+    "Full Set": ["Full Set"],
+}
 
 STOCK_IMAGES = {
     "Bali": ["https://images.unsplash.com/photo-1723361656146-f201d215c49c?w=500&q=80"],
@@ -341,7 +378,8 @@ async def get_categories():
 async def get_products(category: Optional[str] = None, page: int = 1, limit: int = 30, search: Optional[str] = None):
     query = {}
     if category:
-        query["category"] = category
+        category_names = CATEGORY_ALIASES.get(category, [category])
+        query["category"] = {"$in": category_names}
     if search:
         query["product_id"] = {"$regex": search, "$options": "i"}
     skip = (page - 1) * limit
