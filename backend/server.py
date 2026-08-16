@@ -718,6 +718,74 @@ async def admin_delete_product_image(
         "images": images
     }
 
+# REPLACE PRODUCT IMAGE
+@api_router.put("/admin/products/{product_id}/replace-image")
+async def admin_replace_product_image(
+    request: Request,
+    product_id: str,
+    old_image_url: str = Form(...),
+    category: str = Form(...),
+    file: UploadFile = File(...)
+):
+    await get_admin_user(request)
+
+    product = await db.products.find_one({"product_id": product_id})
+
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    images = product.get("images", [])
+
+    if old_image_url not in images:
+        raise HTTPException(
+            404,
+            "Old image not found for this product"
+        )
+
+    # Upload the new image to S3
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+
+    filename = f"products/{uuid.uuid4()}.{ext}"
+
+    data = await file.read()
+
+    image_url = upload_to_s3(
+        BytesIO(data),
+        filename,
+        file.content_type or "application/octet-stream"
+    )
+
+    # Find the exact position of the old image
+    image_index = images.index(old_image_url)
+
+    # Replace old image with new image
+    images[image_index] = image_url
+
+    # Save updated image list to MongoDB
+    await db.products.update_one(
+        {"product_id": product_id},
+        {
+            "$set": {
+                "images": images,
+                "category": category
+            }
+        }
+    )
+
+    logger.info(
+        f"Product image replaced: "
+        f"product_id={product_id}, "
+        f"old_image={old_image_url}, "
+        f"new_image={image_url}"
+    )
+
+    return {
+        "success": True,
+        "message": "Product image replaced successfully",
+        "images": images,
+        "image": image_url
+    }
+
 @api_router.delete("/admin/products/{product_id}")
 async def admin_delete_product(request: Request, product_id: str):
     await get_admin_user(request)

@@ -384,15 +384,14 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
     if (!selectedProduct || !file) return;
   
     try {
-      // STEP 1: Upload the new image
       const formData = new FormData();
   
-      formData.append("product_id", selectedProduct.product_id);
+      formData.append("old_image_url", oldImageUrl);
       formData.append("category", selectedProduct.category);
       formData.append("file", file);
   
-      const uploadRes = await api.post(
-        "/admin/products/upload",
+      const res = await api.put(
+        `/admin/products/${selectedProduct.product_id}/replace-image`,
         formData,
         {
           headers: {
@@ -401,28 +400,31 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
         }
       );
   
-      // STEP 2: Delete the old image
-      await api.delete(
-        `/admin/products/${selectedProduct.product_id}/image`,
-        {
-          data: {
-            image_url: oldImageUrl,
-          },
-        }
-      );
-  
       toast.success(
-        uploadRes.data.message || "Image replaced successfully"
+        res.data.message || "Image replaced successfully"
       );
   
-      // STEP 3: Reload the latest product data
+      // Update the currently opened product immediately
+      setSelectedProduct((currentProduct) => {
+        if (!currentProduct) {
+          return currentProduct;
+        }
+  
+        return {
+          ...currentProduct,
+          images: res.data.images || currentProduct.images,
+        };
+      });
+  
+      // Refresh product list in the background
       await loadProducts();
   
     } catch (err) {
-      console.error(err);
+      console.error("Replace image error:", err);
   
       toast.error(
-        err.response?.data?.detail || "Failed to replace image"
+        err.response?.data?.detail ||
+        "Failed to replace image"
       );
     }
   };
