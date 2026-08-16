@@ -89,8 +89,40 @@ export default function ProductDetailPage() {
     return <div className="min-h-[60vh] flex items-center justify-center"><p>Product not found</p></div>;
   }
   const customizationConfig = PRODUCT_CUSTOMIZATION_CONFIG[product.category];
-  const sizes = SIZE_OPTIONS[product.category] || SIZE_OPTIONS.default;
-  const resolveImg = (img) => img?.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img;
+
+const resolveImg = (img) =>
+  img?.startsWith("/api/")
+    ? `${process.env.REACT_APP_BACKEND_URL}${img}`
+    : img;
+
+const shouldShowField = (field) => {
+  if (!field.showWhen) return true;
+
+  return Object.entries(field.showWhen).every(
+    ([key, expectedValue]) => customizations[key] === expectedValue
+  );
+};
+
+useEffect(() => {
+  const updates = {};
+
+  customizationConfig?.fields?.forEach((field) => {
+    if (
+      field.autoSelect &&
+      shouldShowField(field) &&
+      customizations[field.key] !== field.autoSelect
+    ) {
+      updates[field.key] = field.autoSelect;
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    setCustomizations((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  }
+}, [customizationConfig, customizations]);
 
   return (
     <div data-testid="product-detail-page" className="py-8 sm:py-12 md:py-20">
@@ -125,65 +157,107 @@ export default function ProductDetailPage() {
             </div>
 
             <div className="space-y-5">
-            {customizationConfig?.fields?.map((field) => (
-                <div key={field.key}>
-                  <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">
-                    {field.label}
-                  </label>
+            {customizationConfig?.fields
+              ?.filter(shouldShowField)
+              ?.map((field) => (
+              <div key={field.key}>
+                <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-1.5 block font-body">
+                  {field.label}
+                </label>
 
-                  {field.type === "select" && (
-                    <Select
-                      value={customizations[field.key] || ""}
-                      onValueChange={(value) =>
-                        setCustomizations((prev) => ({
-                          ...prev,
-                          [field.key]: value,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="rounded-sm border-[#E5E7EB]">
-                        <SelectValue placeholder={`Select ${field.label}`} />
-                      </SelectTrigger>
+              {field.type === "select" && (
+                <Select
+                  value={customizations[field.key] || ""}
+                  onValueChange={(value) =>
+                    setCustomizations((prev) => ({
+                      ...prev,
+                      [field.key]: value,
+                    }))
+                  }
+                >
+                  <SelectTrigger className="rounded-sm border-[#E5E7EB]">
+                    <SelectValue placeholder={`Select ${field.label}`} />
+                  </SelectTrigger>
 
-                      <SelectContent>
-                        {field.options?.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {option}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                  <SelectContent>
+                    {field.options?.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-                  {field.type === "date" && (
-                    <input
-                      type="date"
-                      value={customizations[field.key] || ""}
-                      onChange={(e) =>
-                        setCustomizations((prev) => ({
-                          ...prev,
-                          [field.key]: e.target.value,
-                        }))
-                      }
-                      className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-[#359E58]"
-                    />
-                  )}
+            {field.type === "radio" && (
+              <div className="flex flex-wrap gap-2">
+                {field.options?.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() =>
+                      setCustomizations((prev) => ({
+                        ...prev,
+                        [field.key]: option,
+                      }))
+                    }
+                    className={`px-4 py-2 border rounded-sm text-sm transition ${
+                      customizations[field.key] === option
+                        ? "border-[#359E58] bg-[#359E58] text-white"
+                        : "border-[#E5E7EB] bg-white text-[#111827]"
+                    }`}
+                  > 
+                    {option}
+                  </button>
+                ))}
+              </div>
+            )}
 
-                  {field.type === "textarea" && (
-                    <Textarea
-                      value={customizations[field.key] || ""}
-                      onChange={(e) =>
-                        setCustomizations((prev) => ({
-                          ...prev,
-                          [field.key]: e.target.value,
-                        }))
-                      }
-                      className="rounded-sm border-[#E5E7EB] min-h-[80px]"
-                      placeholder={`Enter ${field.label.toLowerCase()}...`}
-                    />
-                  )}
-                </div>
-              ))}
+            {field.type === "text" && (
+              <input
+                type="text"
+                value={customizations[field.key] || ""}
+                onChange={(e) =>
+                  setCustomizations((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                }))
+              }
+              className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-[#359E58]"
+              placeholder={`Enter ${field.label}`}
+            />
+          )}
+
+          {field.type === "date" && (
+            <input
+            type="date"
+            value={customizations[field.key] || ""}
+            onChange={(e) =>
+              setCustomizations((prev) => ({
+              ...prev,
+              [field.key]: e.target.value,
+            }))
+          }
+          className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2.5 text-sm focus:outline-none focus:border-[#359E58]"
+        />
+      )}
+
+      {field.type === "textarea" && (
+        <Textarea
+          value={customizations[field.key] || ""}
+          onChange={(e) =>
+            setCustomizations((prev) => ({
+              ...prev,
+              [field.key]: e.target.value,
+            }))
+          }
+          className="rounded-sm border-[#E5E7EB] min-h-[80px]"
+          placeholder={`Enter ${field.label}`}
+        />
+      )}
+    </div>
+  ))}
+                      
             </div>
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row gap-3 mt-8">
