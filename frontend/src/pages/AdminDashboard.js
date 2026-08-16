@@ -67,10 +67,12 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProductId, setNewProductId] = useState("");
   const [newProductCategory, setNewProductCategory] = useState("");
+  const [editingProductId, setEditingProductId] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [categoryImages, setCategoryImages] = useState({});
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     api.get("/admin/category-images")
@@ -231,6 +233,43 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
     } finally { setUploading(false); }
   };
 
+  const saveProductId = async () => {
+    if (!selectedProduct) return;
+  
+    const newId = editingProductId.trim();
+  
+    if (!newId) {
+      toast.error("Product ID cannot be empty");
+      return;
+    }
+  
+    if (newId === selectedProduct.product_id) {
+      toast.info("Product ID is already the same");
+      return;
+    }
+  
+    try {
+      await api.put(`/admin/products/${selectedProduct.product_id}`, {
+        product_id: newId,
+      });
+  
+      toast.success("Product ID updated successfully");
+  
+      setSelectedProduct({
+        ...selectedProduct,
+        product_id: newId,
+      });
+  
+      setEditingProductId(newId);
+  
+      loadProducts();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || "Failed to update Product ID"
+      );
+    }
+  };
+
 
   const setFrontImage = async (productId, imageUrl) => {
     try {
@@ -252,6 +291,121 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
       console.error(err);
       toast.error(
         err.response?.data?.detail || "Failed to update front image"
+      );
+    }
+  };
+
+  const deleteProductImage = async (productId, imageUrl) => {
+    if (!window.confirm("Are you sure you want to delete this image?")) return;
+
+    try {
+      const res = await api.delete(
+        `/admin/products/${productId}/image`,
+        {
+          data: {
+            image_url: imageUrl,
+          },
+        }
+      );
+
+      toast.success(res.data.message || "Image deleted successfully");
+
+      setSelectedProduct((prev) => ({
+        ...prev,
+        images: (prev.images || []).filter((img) => img !== imageUrl),
+      }));
+
+      loadProducts();
+    } catch (err) {
+      console.error(err);
+      toast.error(
+        err.response?.data?.detail || "Failed to delete image"
+      );
+    }
+  };
+
+  const uploadProductImage = async () => {
+    if (!selectedProduct || !selectedFile) {
+      toast.error("Please select an image");
+      return;
+    }
+  
+    try {
+      const formData = new FormData();
+  
+      formData.append("product_id", selectedProduct.product_id);
+      formData.append("category", selectedProduct.category);
+      formData.append("file", selectedFile);
+  
+      const res = await api.post(
+        "/admin/products/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+  
+      toast.success(res.data.message || "Image uploaded successfully");
+  
+      setSelectedFile(null);
+  
+      // Reload the products from the backend
+      await loadProducts();
+  
+    } catch (err) {
+      console.error(err);
+  
+      toast.error(
+        err.response?.data?.detail || "Failed to upload image"
+      );
+    }
+  };
+
+  const replaceProductImage = async (oldImageUrl, file) => {
+    if (!selectedProduct || !file) return;
+  
+    try {
+      // STEP 1: Upload the new image
+      const formData = new FormData();
+  
+      formData.append("product_id", selectedProduct.product_id);
+      formData.append("category", selectedProduct.category);
+      formData.append("file", file);
+  
+      const uploadRes = await api.post(
+        "/admin/products/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+  
+      // STEP 2: Delete the old image
+      await api.delete(
+        `/admin/products/${selectedProduct.product_id}/image`,
+        {
+          data: {
+            image_url: oldImageUrl,
+          },
+        }
+      );
+  
+      toast.success(
+        uploadRes.data.message || "Image replaced successfully"
+      );
+  
+      // STEP 3: Reload the latest product data
+      await loadProducts();
+  
+    } catch (err) {
+      console.error(err);
+  
+      toast.error(
+        err.response?.data?.detail || "Failed to replace image"
       );
     }
   };
@@ -1031,7 +1185,15 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
             {/* Product List */}
             <div className="space-y-2">
               {products.map(p => (
-                <div key={p.product_id} className="flex items-center gap-4 p-3 border border-[#E5E7EB] bg-white" data-testid={`admin-product-${p.product_id}`}>
+                <div
+                key={p.product_id}
+                onClick={() => {
+                  setSelectedProduct(p);
+                  setEditingProductId(p.product_id);
+                }}
+                className="flex items-center gap-4 p-3 border border-[#E5E7EB] bg-white cursor-pointer hover:border-[#359E58] transition-colors"
+                data-testid={`admin-product-${p.product_id}`}
+              >
                   <div className="flex gap-2 shrink-0">
   {(p.images || []).slice(0, 3).map((img, i) => (
     <div key={i} className="flex flex-col items-center gap-1">
@@ -1580,6 +1742,184 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
 </Tabs>
 </div>
 </div>
+
+{selectedProduct && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100] p-4">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+
+      <div className="flex items-center justify-between p-5 border-b">
+        <div>
+        <div>
+  <label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563]">
+    Product ID
+  </label>
+
+  <div className="flex items-center gap-2 mt-1">
+    <Input
+      value={editingProductId}
+      onChange={(e) => setEditingProductId(e.target.value)}
+      className="w-64"
+    />
+
+    <Button
+      onClick={saveProductId}
+      className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+    >
+      Save
+    </Button>
+  </div>
+</div>
+          <p className="text-sm text-[#4B5563] mt-1">
+            {selectedProduct.category}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setSelectedProduct(null)}
+          className="p-2 text-gray-500 hover:text-black"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="p-5">
+
+        <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
+          Product Images
+        </h3>
+
+        <div className="mb-5">
+  <input
+    type="file"
+    accept="image/*"
+    id="product-image-upload"
+    className="hidden"
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        setSelectedFile(file);
+      }
+    }}
+  />
+
+  <label
+    htmlFor="product-image-upload"
+    className="inline-flex items-center justify-center px-4 py-2 bg-[#359E58] hover:bg-[#2e884c] text-white text-sm rounded-sm cursor-pointer"
+  >
+    {selectedFile ? "Change Selected Image" : "Add Image"}
+  </label>
+
+  {selectedFile && (
+    <span className="ml-3 text-sm text-[#4B5563]">
+      {selectedFile.name}
+    </span>
+  )}
+
+{selectedFile && (
+  <Button
+    type="button"
+    onClick={uploadProductImage}
+    className="ml-3 bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Upload
+  </Button>
+)}
+</div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+
+          {(selectedProduct.images || []).map((img, index) => (
+            <div
+              key={index}
+              className="border border-[#E5E7EB] bg-white p-2"
+            >
+              <div className="aspect-square overflow-hidden bg-[#FAFAFA]">
+                <img
+                  src={
+                    img.startsWith("/api/")
+                      ? `${process.env.REACT_APP_BACKEND_URL}${img}`
+                      : img
+                  }
+                  alt={`${selectedProduct.product_id} ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="mt-2 space-y-2">
+  <p className="text-xs text-center text-[#4B5563]">
+    Image {index + 1}
+  </p>
+
+  {index === 0 ? (
+  <div className="text-xs text-center text-white bg-[#359E58] py-1 rounded-sm">
+    FRONT IMAGE
+  </div>
+) : (
+  <Button
+    type="button"
+    size="sm"
+    variant="outline"
+    className="w-full text-xs border-[#359E58] text-[#359E58] hover:bg-[#359E58] hover:text-white"
+    onClick={() => setFrontImage(selectedProduct.product_id, img)}
+  >
+    Set as Front
+  </Button>
+)}
+
+<Button
+  type="button"
+  size="sm"
+  variant="outline"
+  className="w-full text-xs border-red-300 text-red-500 hover:bg-red-500 hover:text-white"
+  onClick={() =>
+    deleteProductImage(selectedProduct.product_id, img)
+  }
+>
+  Delete Image
+</Button>
+
+<input
+  type="file"
+  accept="image/*"
+  id={`replace-image-${index}`}
+  className="hidden"
+  onChange={(e) => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      replaceProductImage(img, file);
+    }
+
+    e.target.value = "";
+  }}
+/>
+
+<label
+  htmlFor={`replace-image-${index}`}
+  className="block w-full text-center text-xs border border-blue-300 text-blue-500 hover:bg-blue-500 hover:text-white py-2 rounded-sm cursor-pointer"
+>
+  Replace Image
+</label>
+</div>
+            </div>
+          ))}
+
+        </div>
+
+      </div>
+
+      <div className="flex justify-end p-5 border-t">
+        <Button
+          variant="outline"
+          onClick={() => setSelectedProduct(null)}
+        >
+          Close
+        </Button>
+      </div>
+
+    </div>
+  </div>
+)}
 
 </>
 

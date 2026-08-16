@@ -683,6 +683,41 @@ async def admin_set_product_front_image(
         "images": images
     }
 
+@api_router.delete("/admin/products/{product_id}/image")
+async def admin_delete_product_image(
+    request: Request,
+    product_id: str,
+    image_url: str = Query(...)
+):
+    await get_admin_user(request)
+
+    product = await db.products.find_one({"product_id": product_id})
+
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    images = product.get("images", [])
+
+    if image_url not in images:
+        raise HTTPException(404, "Image not found for this product")
+
+    # Do not allow deleting the last image
+    if len(images) <= 1:
+        raise HTTPException(400, "A product must have at least one image")
+
+    images.remove(image_url)
+
+    await db.products.update_one(
+        {"product_id": product_id},
+        {"$set": {"images": images}}
+    )
+
+    return {
+        "success": True,
+        "message": "Product image deleted successfully",
+        "images": images
+    }
+
 @api_router.delete("/admin/products/{product_id}")
 async def admin_delete_product(request: Request, product_id: str):
     await get_admin_user(request)
