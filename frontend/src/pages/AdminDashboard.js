@@ -304,7 +304,7 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
       const res = await api.delete(
         `/admin/products/${productId}/image`,
         {
-          data: {
+          params: {
             image_url: imageUrl,
           },
         }
