@@ -44,6 +44,41 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [productId, api]);
 
+  const customizationConfig = product
+  ? PRODUCT_CUSTOMIZATION_CONFIG[product.category]
+  : null;
+
+const shouldShowField = (field) => {
+  if (!field.showWhen) return true;
+
+  return Object.entries(field.showWhen).every(
+    ([key, expectedValue]) => customizations[key] === expectedValue
+  );
+};
+
+useEffect(() => {
+  if (!product || !customizationConfig) return;
+
+  const updates = {};
+
+  customizationConfig.fields?.forEach((field) => {
+    if (
+      field.autoSelect &&
+      shouldShowField(field) &&
+      customizations[field.key] !== field.autoSelect
+    ) {
+      updates[field.key] = field.autoSelect;
+    }
+  });
+
+  if (Object.keys(updates).length > 0) {
+    setCustomizations((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  }
+}, [product, customizationConfig, customizations]);
+
   const handlePurityChange = (val) => {
     setMetalPurity(val);
     if (val === "22KT") setMetalSelection("Yellow Gold");
@@ -88,41 +123,15 @@ export default function ProductDetailPage() {
   if (!product) {
     return <div className="min-h-[60vh] flex items-center justify-center"><p>Product not found</p></div>;
   }
-  const customizationConfig = PRODUCT_CUSTOMIZATION_CONFIG[product.category];
+  
 
 const resolveImg = (img) =>
   img?.startsWith("/api/")
     ? `${process.env.REACT_APP_BACKEND_URL}${img}`
     : img;
 
-const shouldShowField = (field) => {
-  if (!field.showWhen) return true;
 
-  return Object.entries(field.showWhen).every(
-    ([key, expectedValue]) => customizations[key] === expectedValue
-  );
-};
 
-useEffect(() => {
-  const updates = {};
-
-  customizationConfig?.fields?.forEach((field) => {
-    if (
-      field.autoSelect &&
-      shouldShowField(field) &&
-      customizations[field.key] !== field.autoSelect
-    ) {
-      updates[field.key] = field.autoSelect;
-    }
-  });
-
-  if (Object.keys(updates).length > 0) {
-    setCustomizations((prev) => ({
-      ...prev,
-      ...updates,
-    }));
-  }
-}, [customizationConfig, customizations]);
 
   return (
     <div data-testid="product-detail-page" className="py-8 sm:py-12 md:py-20">
