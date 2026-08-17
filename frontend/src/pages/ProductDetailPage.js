@@ -74,7 +74,8 @@ export default function ProductDetailPage() {
   const [notes, setNotes] = useState("");
   const [customizations, setCustomizations] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
+  const [showZoom, setShowZoom] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   useEffect(() => {
     api.get(`/products/${productId}`)
       .then(res => setProduct(res.data.product))
@@ -172,6 +173,17 @@ const resolveImg = (img) =>
     ? `${process.env.REACT_APP_BACKEND_URL}${img}`
     : img;
 
+const handleZoomMove = (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top) / rect.height) * 100;
+  
+  setZoomPosition({
+    x: Math.max(0, Math.min(100, x)),
+    y: Math.max(0, Math.min(100, y)),
+  });
+};
+
 
 
 
@@ -185,9 +197,33 @@ const resolveImg = (img) =>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
           {/* Left - Images */}
           <div>
-            <div className="aspect-square bg-[#FAFAFA] border border-[#E5E7EB] overflow-hidden mb-4" data-testid="product-main-image">
-              <img src={resolveImg(product.images[activeImg])} alt={product.product_id} className="w-full h-full object-cover" />
-            </div>
+          <div
+  className="relative aspect-square bg-[#FAFAFA] border border-[#E5E7EB] overflow-hidden mb-4 cursor-crosshair"
+  data-testid="product-main-image"
+  onMouseEnter={() => setShowZoom(true)}
+  onMouseLeave={() => setShowZoom(false)}
+  onMouseMove={handleZoomMove}
+>
+  <img
+    src={resolveImg(product.images[activeImg])}
+    alt={product.product_id}
+    className="w-full h-full object-cover"
+  />
+
+  {showZoom && (
+    <div
+      className="absolute w-40 h-40 border-2 border-white shadow-xl pointer-events-none z-20 bg-no-repeat"
+      style={{
+        left: `${Math.max(0, Math.min(100, zoomPosition.x))}%`,
+        top: `${Math.max(0, Math.min(100, zoomPosition.y))}%`,
+        transform: "translate(-50%, -50%)",
+        backgroundImage: `url("${resolveImg(product.images[activeImg])}")`,
+        backgroundSize: "250%",
+        backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+      }}
+    />
+  )}
+</div>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {product.images.map((img, i) => (
                 <button key={i} onClick={() => setActiveImg(i)}
