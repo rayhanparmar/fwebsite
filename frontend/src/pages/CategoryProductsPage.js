@@ -64,7 +64,7 @@ export default function CategoryProductsPage() {
           {/* <p className="text-[#4B5563] font-body">{products.length} products available</p> */}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-8">
           {products.map((product) => (
             <div key={product.product_id}
               onClick={() => navigate(`/product/${product.product_id}`)}
