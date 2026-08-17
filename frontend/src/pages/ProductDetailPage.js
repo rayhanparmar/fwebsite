@@ -9,6 +9,44 @@ import { Star, ArrowLeft, ShoppingCart, Send, MessageCircle } from "lucide-react
 import { getProductWhatsAppUrl } from "@/components/FloatingWhatsApp";
 import { PRODUCT_CUSTOMIZATION_CONFIG } from "@/components/ProductCustomizationConfig";
 
+
+const CATEGORY_CONFIG_MAP = {
+  "Bali": "Bali",
+
+  "Bangle": "Bangle/Kada",
+  "Kada": "Bangle/Kada",
+
+  "Bracelet": "Bracelet",
+
+  "Chains": "Chain + Multilayer",
+
+  "Cufflinks": "Cufflink",
+
+  "Brooch": "Brooch",
+
+  "Earrings": "Earring",
+
+  "Hath Pan": "Haathpaan",
+
+  "Maang Tikka": "Maang Tikka",
+
+  "Mangal Sutra": "Mangal Sutra",
+
+  "Necklace": "Necklace",
+
+  "Nose Pin": "Nose Pin",
+
+  "Pendant": "Pendant + Dancing Stone",
+
+  "Rings": "Ring + Titanium Ring",
+
+  "Tops": "Tops",
+
+  "Watchbelts": "Watch Belt",
+
+  "Full Set": "Full Set",
+};
+
 const SIZE_OPTIONS = {
   Rings: ["4","5","6","7","8","9","10","11","12","13"],
   Bangle: ["2.2","2.4","2.6","2.8","2.10"],
@@ -44,8 +82,12 @@ export default function ProductDetailPage() {
       .finally(() => setLoading(false));
   }, [productId, api]);
 
-  const customizationConfig = product
-  ? PRODUCT_CUSTOMIZATION_CONFIG[product.category]
+  const customizationCategory = product
+  ? CATEGORY_CONFIG_MAP[product.category] || product.category
+  : null;
+
+const customizationConfig = customizationCategory
+  ? PRODUCT_CUSTOMIZATION_CONFIG[customizationCategory]
   : null;
 
 const shouldShowField = (field) => {
