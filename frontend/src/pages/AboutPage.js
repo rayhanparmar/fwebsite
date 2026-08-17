@@ -1,12 +1,28 @@
-import { Award, Gem, Monitor, TrendingUp } from "lucide-react";
+import { Handshake, Phone, Users, CheckCircle } from "lucide-react";
 
 const CRAFTSMAN = "/raydada.jpg";
 
 const highlights = [
-  { icon: Award, title: "50 Years of Legacy", desc: "Half a century of precision craftsmanship, manufacturing excellence, and commitment to quality that retailers trust." },
-  { icon: Gem, title: "Diamond & Polki Experts", desc: "Specialized expertise in diamond and polki jewellery with deep knowledge of stone selection and setting techniques." },
-  { icon: Monitor, title: "Advanced CAD Capabilities", desc: "State-of-the-art CAD technology for rapid design rendering, allowing retailers to visualize designs before production." },
-  { icon: TrendingUp, title: "Market-Ready Designs", desc: "We adapt our designs based on current market trends and retailer feedback, ensuring every piece sells." },
+  {
+    icon: Handshake,
+    title: "Relationships Before Transactions",
+    desc: "For us, every order is the beginning of a lasting partnership. We build trust through honesty, reliability, and always putting our retailers first.",
+  },
+  {
+    icon: Phone,
+    title: "Always Within Reach",
+    desc: "Every call matters. We respond with urgency, personal attention, and a commitment to solving challenges as if they were our own.",
+  },
+  {
+    icon: Users,
+    title: "Partners in Every Order",
+    desc: "We go beyond manufacturing—working alongside our retailers with thoughtful solutions, flexibility, and the extra effort needed to delight their customers.",
+  },
+  {
+    icon: CheckCircle,
+    title: "Every Detail Counts",
+    desc: "We obsess over the smallest details others might miss, ensuring every piece meets the highest standards before it reaches your customer.",
+  },
 ];
 
 export default function AboutPage() {
