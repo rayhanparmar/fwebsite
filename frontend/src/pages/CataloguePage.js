@@ -27,9 +27,9 @@ export default function CataloguePage() {
     <div data-testid="catalogue-page" className="py-8 sm:py-12 md:py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12">
         <div className="mb-12">
-          <p className="text-xs font-semibold tracking-[0.25em] uppercase text-[#359E58] mb-3 font-body">Our Collection</p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-medium text-[#0A0A0A] mb-3">Product Catalogue</h1>
-          <p className="text-[#4B5563] font-body">Browse our premium jewellery categories</p>
+          
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-medium text-[#0A0A0A] mb-3">Our Collection</h1>
+          <p className="text-[#4B5563] font-body">Browse our jewellery categories</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
