@@ -198,11 +198,19 @@ const handleZoomMove = (e) => {
           {/* Left - Images */}
           <div>
           <div
-  className="relative aspect-square bg-[#FAFAFA] border border-[#E5E7EB] overflow-hidden mb-4 cursor-crosshair"
+  className="relative aspect-square bg-[#FAFAFA] border border-[#E5E7EB] overflow-hidden mb-4 lg:cursor-crosshair"
   data-testid="product-main-image"
-  onMouseEnter={() => setShowZoom(true)}
+  onMouseEnter={() => {
+    if (window.innerWidth >= 1024) {
+      setShowZoom(true);
+    }
+  }}
   onMouseLeave={() => setShowZoom(false)}
-  onMouseMove={handleZoomMove}
+  onMouseMove={(e) => {
+    if (window.innerWidth >= 1024) {
+      handleZoomMove(e);
+    }
+  }}
 >
   {/* Main Product Image */}
   <img
@@ -212,7 +220,7 @@ const handleZoomMove = (e) => {
   />
 
   {/* Magnifying Lens */}
-  {showZoom && (
+  {showZoom && window.innerWidth >= 1024 && (
     <div
       className="absolute w-44 h-44 border-2 border-white shadow-2xl rounded-sm overflow-hidden pointer-events-none z-20"
       style={{
