@@ -204,24 +204,37 @@ const handleZoomMove = (e) => {
   onMouseLeave={() => setShowZoom(false)}
   onMouseMove={handleZoomMove}
 >
+  {/* Main Product Image */}
   <img
     src={resolveImg(product.images[activeImg])}
     alt={product.product_id}
     className="w-full h-full object-cover"
   />
 
+  {/* Magnifying Lens */}
   {showZoom && (
     <div
-      className="absolute w-40 h-40 border-2 border-white shadow-xl pointer-events-none z-20 bg-no-repeat"
+      className="absolute w-44 h-44 border-2 border-white shadow-2xl rounded-sm overflow-hidden pointer-events-none z-20"
       style={{
-        left: `${Math.max(0, Math.min(100, zoomPosition.x))}%`,
-        top: `${Math.max(0, Math.min(100, zoomPosition.y))}%`,
+        left: `${zoomPosition.x}%`,
+        top: `${zoomPosition.y}%`,
         transform: "translate(-50%, -50%)",
-        backgroundImage: `url("${resolveImg(product.images[activeImg])}")`,
-        backgroundSize: "250%",
-        backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+        backgroundColor: "#FAFAFA",
       }}
-    />
+    >
+      <img
+        src={resolveImg(product.images[activeImg])}
+        alt=""
+        className="absolute max-w-none"
+        style={{
+          width: "400%",
+          height: "400%",
+          objectFit: "cover",
+          left: `-${zoomPosition.x * 3}%`,
+          top: `-${zoomPosition.y * 3}%`,
+        }}
+      />
+    </div>
   )}
 </div>
             <div className="flex gap-3 overflow-x-auto pb-2">
