@@ -72,8 +72,10 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
-  const [categoryImages, setCategoryImages] = useState({});
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [categoryImages, setCategoryImages] = useState([]);
+const [selectedProduct, setSelectedProduct] = useState(null);
+const [selectedCategoryImage, setSelectedCategoryImage] = useState(null);
+const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
   useEffect(() => {
     api.get("/admin/category-images")
@@ -426,6 +428,94 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
       toast.error(
         err.response?.data?.detail ||
         "Failed to replace image"
+      );
+    }
+  };
+
+  const uploadCategoryImage = async (slug, file) => {
+    if (!file) return;
+  
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+  
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Image must be under 25MB");
+      return;
+    }
+  
+    setCategoryImageUploading(true);
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      const res = await api.post(
+        `/admin/category-images/${slug}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+  
+      toast.success(
+        res.data.message || "Collection image updated successfully"
+      );
+  
+      const updated = await api.get("/admin/category-images");
+  
+      setCategoryImages(
+        updated.data.category_images || []
+      );
+  
+      setSelectedCategoryImage(null);
+  
+    } catch (err) {
+      console.error("Category image upload error:", err);
+  
+      toast.error(
+        err.response?.data?.detail ||
+        "Failed to update Collection image"
+      );
+    } finally {
+      setCategoryImageUploading(false);
+    }
+  };
+  
+  
+  const deleteCategoryImage = async (slug) => {
+    if (
+      !window.confirm(
+        "Delete this custom Collection image?\n\nThe website will use the default image again."
+      )
+    ) {
+      return;
+    }
+  
+    try {
+      const res = await api.delete(
+        `/admin/category-images/${slug}`
+      );
+  
+      toast.success(
+        res.data.message || "Collection image deleted"
+      );
+  
+      const updated = await api.get("/admin/category-images");
+  
+      setCategoryImages(
+        updated.data.category_images || []
+      );
+  
+    } catch (err) {
+      console.error("Category image delete error:", err);
+  
+      toast.error(
+        err.response?.data?.detail ||
+        "Failed to delete Collection image"
       );
     }
   };
@@ -1034,6 +1124,14 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
             <TabsTrigger value="products" onClick={loadProducts} className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0" data-testid="admin-products-tab">
               <Package className="w-4 h-4" />Products
             </TabsTrigger>
+            <TabsTrigger
+  value="collection-images"
+  className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
+  data-testid="admin-collection-images-tab"
+>
+  <Image className="w-4 h-4" />
+  Collection Images
+</TabsTrigger>
             <TabsTrigger value="enquiries" onClick={loadEnquiries} className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0" data-testid="admin-enquiries-tab">
               <MessageSquare className="w-4 h-4" />Enquiries
             </TabsTrigger>
@@ -1272,6 +1370,129 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
               </div>
             )}
           </TabsContent>
+
+
+          {/* Collection Images */}
+<TabsContent value="collection-images">
+  <div className="space-y-6">
+
+    <div>
+      <h2 className="text-2xl font-semibold text-[#0A0A0A]">
+        Collection Images
+      </h2>
+
+      <p className="text-sm text-[#4B5563] font-body mt-1">
+        Manage the 17 category images displayed on the Our Collection page.
+      </p>
+    </div>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      {categoryImages.map((category) => (
+
+        <div
+          key={category.slug}
+          className="border border-[#E5E7EB] bg-white rounded-lg overflow-hidden"
+        >
+
+          {/* Image */}
+          <div className="aspect-square bg-[#FAFAFA] overflow-hidden">
+
+            {category.image ? (
+              <img
+                src={
+                  category.image.startsWith("/api/")
+                    ? `${process.env.REACT_APP_BACKEND_URL}${category.image}`
+                    : category.image
+                }
+                alt={category.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+                No Image
+              </div>
+            )}
+
+          </div>
+
+          {/* Details */}
+          <div className="p-4">
+
+            <h3 className="font-medium text-[#0A0A0A]">
+              {category.name}
+            </h3>
+
+            <p className="text-xs text-gray-500 mt-1">
+              {category.custom_image
+                ? "Custom image"
+                : "Default image"}
+            </p>
+
+            <div className="flex gap-2 mt-4">
+
+              {/* Replace / Upload */}
+              <label
+                className={`flex-1 cursor-pointer text-center px-3 py-2 rounded-md text-sm text-white ${
+                  categoryImageUploading
+                    ? "bg-gray-400"
+                    : "bg-[#359E58] hover:bg-[#2e884c]"
+                }`}
+              >
+
+                {category.custom_image
+                  ? "Replace"
+                  : "Upload"}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={categoryImageUploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+
+                    if (file) {
+                      uploadCategoryImage(
+                        category.slug,
+                        file
+                      );
+                    }
+
+                    e.target.value = "";
+                  }}
+                />
+
+              </label>
+
+              {/* Delete custom image */}
+              {category.custom_image && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    deleteCategoryImage(category.slug)
+                  }
+                  disabled={categoryImageUploading}
+                  className="px-3 py-2 rounded-md border border-red-200 text-red-500 hover:bg-red-50 text-sm"
+                >
+                  Delete
+                </button>
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      ))}
+
+    </div>
+
+  </div>
+</TabsContent>
+
+
 
           {/* Enquiries */}
           <TabsContent value="enquiries">

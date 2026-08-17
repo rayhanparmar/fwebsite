@@ -366,12 +366,36 @@ async def get_me(request: Request):
 @api_router.get("/categories")
 async def get_categories():
     cats = []
+
     for cat in CATEGORIES:
-        count = await db.products.count_documents({"category": cat["name"]})
-        sample = await db.products.find_one({"category": cat["name"]}, {"_id": 0, "images": 1})
-        image = sample["images"][0] if sample and sample.get("images") else STOCK_IMAGES.get(cat["name"], [""])[0]
-        cats.append({"name": cat["name"], "slug": cat["slug"], "prefix": cat["prefix"], "image": image, "product_count": count})
-    return {"categories": cats}
+
+        count = await db.products.count_documents({
+            "category": cat["name"]
+        })
+
+        # Check if admin has uploaded a custom Collection image
+        category_image = await db.category_images.find_one(
+            {"slug": cat["slug"]},
+            {"_id": 0, "image": 1}
+        )
+
+        if category_image and category_image.get("image"):
+            image = category_image["image"]
+        else:
+            # Use the existing default image if no custom image exists
+            image = get_default_category_image(cat)
+
+        cats.append({
+            "name": cat["name"],
+            "slug": cat["slug"],
+            "prefix": cat["prefix"],
+            "image": image,
+            "product_count": count
+        })
+
+    return {
+        "categories": cats
+    }
 
 # ──── PRODUCTS ────
 @api_router.get("/products")
@@ -793,6 +817,201 @@ async def admin_delete_product(request: Request, product_id: str):
     if result.deleted_count == 0:
         raise HTTPException(404, "Product not found")
     return {"message": "Product deleted"}
+
+# ============================================================
+# CATEGORY / COLLECTION IMAGES
+# ============================================================
+
+def get_category_by_slug(slug: str):
+    return next(
+        (cat for cat in CATEGORIES if cat["slug"] == slug),
+        None
+    )
+
+
+def get_default_category_image(category):
+    """
+    Return the existing default image for a category.
+    """
+
+    aliases = CATEGORY_ALIASES.get(category["name"], [])
+
+    # Try exact category name
+    if category["name"] in STOCK_IMAGES:
+        images = STOCK_IMAGES[category["name"]]
+        if images:
+            return images[0]
+
+    # Try aliases such as Bangle, Earrings, Rings, etc.
+    for alias in aliases:
+        if alias in STOCK_IMAGES:
+            images = STOCK_IMAGES[alias]
+            if images:
+                return images[0]
+
+    return ""
+
+
+@api_router.get("/admin/category-images")
+async def admin_get_category_images(request: Request):
+    await get_admin_user(request)
+
+    category_images = {}
+
+    async for doc in db.category_images.find({}, {"_id": 0}):
+        category_images[doc["slug"]] = {
+            "name": doc["name"],
+            "slug": doc["slug"],
+            "image": doc.get("image", ""),
+            "updated_at": doc.get("updated_at")
+        }
+
+    result = []
+
+    for category in CATEGORIES:
+        existing = category_images.get(category["slug"])
+
+        result.append({
+            "name": category["name"],
+            "slug": category["slug"],
+            "image": (
+                existing["image"]
+                if existing and existing.get("image")
+                else get_default_category_image(category)
+            ),
+            "custom_image": bool(
+                existing and existing.get("image")
+            ),
+            "updated_at": (
+                existing.get("updated_at")
+                if existing
+                else None
+            )
+        })
+
+    return {
+        "category_images": result
+    }
+
+
+@api_router.post("/admin/category-images/{slug}")
+async def admin_upload_category_image(
+    request: Request,
+    slug: str,
+    file: UploadFile = File(...)
+):
+    await get_admin_user(request)
+
+    category = get_category_by_slug(slug)
+
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only image files are allowed"
+        )
+
+    data = await file.read()
+
+    if not data:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded image is empty"
+        )
+
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(
+            status_code=400,
+            detail="Image must be under 25MB"
+        )
+
+    ext = (
+        file.filename.split(".")[-1].lower()
+        if file.filename and "." in file.filename
+        else "jpg"
+    )
+
+    filename = f"category-images/{slug}/{uuid.uuid4()}.{ext}"
+
+    image_url = upload_to_s3(
+        BytesIO(data),
+        filename,
+        file.content_type
+    )
+
+    await db.category_images.update_one(
+        {"slug": slug},
+        {
+            "$set": {
+                "name": category["name"],
+                "slug": slug,
+                "image": image_url,
+                "filename": filename,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$setOnInsert": {
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+
+    logger.info(
+        f"Category image updated: {category['name']} -> {image_url}"
+    )
+
+    return {
+        "success": True,
+        "message": f"{category['name']} image updated successfully",
+        "image": image_url,
+        "slug": slug
+    }
+
+
+@api_router.delete("/admin/category-images/{slug}")
+async def admin_delete_category_image(
+    request: Request,
+    slug: str
+):
+    await get_admin_user(request)
+
+    category = get_category_by_slug(slug)
+
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
+
+    existing = await db.category_images.find_one({
+        "slug": slug
+    })
+
+    if not existing:
+        raise HTTPException(
+            status_code=404,
+            detail="No custom image exists for this category"
+        )
+
+    await db.category_images.delete_one({
+        "slug": slug
+    })
+
+    logger.info(
+        f"Category custom image deleted: {category['name']}"
+    )
+
+    return {
+        "success": True,
+        "message": f"{category['name']} image deleted successfully",
+        "slug": slug,
+        "fallback_image": get_default_category_image(category)
+    }
 
 @api_router.get("/admin/enquiries")
 async def admin_get_enquiries(request: Request):
