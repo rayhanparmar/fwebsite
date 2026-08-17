@@ -38,15 +38,12 @@ export default function AboutPage() {
                 Crafting Excellence for 50 Years
               </h1>
               <p className="text-[#4B5563] leading-relaxed mb-6 font-body">
-                Shree Mother Gold & Diamond Jewellery has been a cornerstone of the B2B jewellery manufacturing 
-                industry for over five decades. Founded with a vision of precision and trust, we have grown to become 
-                one of the most reliable manufacturing partners for retailers across India.
-              </p>
-              <p className="text-[#4B5563] leading-relaxed font-body">
-                Our journey began with a small workshop and a passion for perfect craftsmanship. Today, we combine 
-                traditional techniques with modern CAD technology to deliver designs that meet the highest standards 
-                of quality and aesthetics.
-              </p>
+  Shree Mother Gold & Diamond Jewellery is built on a legacy that began over 50 years ago with one man's determination. In his teenage years, <em>Shree Sukanraj Vanechandji Parmar</em> left the small village of <em>Ranigaon, Rajasthan</em>, alongside his mother and two younger brothers, with little more than ambition and a willingness to work hard. With no prior knowledge of the jewellery industry, he earned respect through honesty, perseverance, and an unwavering commitment to excellence.
+</p>
+
+<p className="text-[#4B5563] leading-relaxed font-body">
+  Over the years, he worked with renowned names such as Swarovski, established manufacturing units under the name <em>Bombay Jewellers</em>, and laid the foundation for what would become a trusted manufacturing partner for retailers across India. Beyond business, he remained deeply committed to his community, serving as a trustee and earning admiration not only for his craftsmanship but for his character. Today, we proudly car
+</p>
             </div>
             <div className="aspect-[4/3] overflow-hidden bg-gray-100">
               <img src={CRAFTSMAN} alt="Craftsmanship" className="w-full h-full object-cover" />
