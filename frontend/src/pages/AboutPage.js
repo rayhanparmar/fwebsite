@@ -38,11 +38,11 @@ export default function AboutPage() {
                 Crafting Excellence for 50 Years
               </h1>
               <p className="text-[#4B5563] leading-relaxed mb-6 font-body">
-  Shree Mother Gold & Diamond Jewellery is built on a legacy that began over 50 years ago with one man's determination. In his teenage years, <em>Shree Sukanraj Vanechandji Parmar</em> left the small village of <em>Ranigaon, Rajasthan</em>, alongside his mother and two younger brothers, with little more than ambition and a willingness to work hard. With no prior knowledge of the jewellery industry, he earned respect through honesty, perseverance, and an unwavering commitment to excellence.
+  Shree Mother Gold & Diamond Jewellery is built on a legacy that began over 50 years ago with one man's determination. In his teenage years, <strong>Shree Sukanraj Vanechandji Parmar</strong> left the small village of <strong>Ranigaon, Rajasthan</strong>, alongside his mother and two younger brothers, with little more than ambition and a willingness to work hard. With no prior knowledge of the jewellery industry, he earned respect through honesty, perseverance, and an unwavering commitment to excellence.
 </p>
 
 <p className="text-[#4B5563] leading-relaxed font-body">
-  Over the years, he worked with renowned names such as Swarovski, established manufacturing units under the name <em>Bombay Jewellers</em>, and laid the foundation for what would become a trusted manufacturing partner for retailers across India. Beyond business, he remained deeply committed to his community, serving as a trustee and earning admiration not only for his craftsmanship but for his character. Today, we proudly car
+  Over the years, he worked with renowned names such as Swarovski, established manufacturing units under the name <strong>Bombay Jewellers</strong>, and laid the foundation for what would become a trusted manufacturing partner for retailers across India. Beyond business, he remained deeply committed to his community, serving as a trustee and earning admiration not only for his craftsmanship but for his character. Today, we proudly car
 </p>
             </div>
             <div className="aspect-[4/3] overflow-hidden bg-gray-100">
