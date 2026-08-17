@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [retailers, setRetailers] = useState([]);
   const [products, setProducts] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
+  const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [customisations, setCustomisations] = useState([]);
   const [whatsappOrders, setWhatsappOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -1275,8 +1276,13 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
           {/* Enquiries */}
           <TabsContent value="enquiries">
             <div className="space-y-4">
-              {enquiries.map(enq => (
-                <div key={enq.enquiry_id} className="border border-[#E5E7EB] bg-white p-4 sm:p-5" data-testid={`enquiry-${enq.enquiry_id}`}>
+            {enquiries.map(enq => (
+  <div
+    key={enq.enquiry_id}
+    onClick={() => setSelectedEnquiry(enq)}
+    className="border border-[#E5E7EB] bg-white p-4 sm:p-5 cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all"
+    data-testid={`enquiry-${enq.enquiry_id}`}
+  >
                   <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-2">
                     <div>
                       <p className="font-medium text-[#0A0A0A] font-body">{enq.enquiry_id}</p>
@@ -1305,9 +1311,198 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
               ))}
               {enquiries.length === 0 && <p className="text-[#4B5563] text-sm py-8 text-center font-body">No enquiries yet</p>}
             </div>
-          </TabsContent>
+            </TabsContent>
 
-          {/* Customisations */}
+{/* Enquiry Details Popup */}
+{selectedEnquiry && (
+  <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl">
+
+      {/* Popup Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div>
+          <h2 className="text-xl font-semibold text-[#0A0A0A]">
+            Enquiry Details
+          </h2>
+          <p className="text-sm text-[#4B5563] mt-1">
+            {selectedEnquiry.enquiry_id}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setSelectedEnquiry(null)}
+          className="text-2xl text-gray-500 hover:text-black"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Customer Details */}
+      <div className="p-6 border-b">
+        <h3 className="text-base font-semibold mb-4">
+          Customer Details
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-gray-500">Customer Name</p>
+            <p className="text-sm font-medium mt-1">
+              {selectedEnquiry.user_name || "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Email</p>
+            <p className="text-sm font-medium mt-1 break-all">
+              {selectedEnquiry.user_email || "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Phone</p>
+            <p className="text-sm font-medium mt-1">
+              {selectedEnquiry.user_phone || "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Enquiry Information */}
+      <div className="p-6 border-b">
+        <h3 className="text-base font-semibold mb-4">
+          Enquiry Information
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-gray-500">Enquiry ID</p>
+            <p className="text-sm font-medium mt-1">
+              {selectedEnquiry.enquiry_id}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Status</p>
+            <p className="text-sm font-medium mt-1 capitalize">
+              {selectedEnquiry.status || "-"}
+            </p>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-500">Date</p>
+            <p className="text-sm font-medium mt-1">
+              {selectedEnquiry.created_at
+                ? new Date(selectedEnquiry.created_at).toLocaleString()
+                : "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Products */}
+      <div className="p-6">
+        <h3 className="text-base font-semibold mb-4">
+          Products
+        </h3>
+
+        <div className="space-y-5">
+          {selectedEnquiry.items?.map((item, index) => (
+            <div
+              key={index}
+              className="border rounded-lg p-4"
+            >
+              <div className="flex gap-4">
+
+                {/* Product Image */}
+                <div className="w-24 h-24 shrink-0 border rounded-lg overflow-hidden bg-[#FAFAFA]">
+                  {item.image && (
+                    <img
+                      src={
+                        item.image.startsWith("/api/")
+                          ? `${process.env.REACT_APP_BACKEND_URL}${item.image}`
+                          : item.image
+                      }
+                      alt={item.product_id || "Product"}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </div>
+
+                {/* Product Basic Details */}
+                <div className="min-w-0">
+                  <p className="text-base font-semibold">
+                    {item.product_id || "-"}
+                  </p>
+
+                  <p className="text-sm text-[#4B5563] mt-1">
+                    Category: {item.category || "-"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Customizations */}
+              {item.customizations &&
+                Object.keys(item.customizations).length > 0 && (
+                  <div className="mt-5">
+                    <h4 className="text-sm font-semibold mb-3">
+                      Customization Details
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {Object.entries(item.customizations)
+                        .filter(([, value]) => value !== "" && value !== null && value !== undefined)
+                        .map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="bg-[#FAFAFA] rounded-lg px-3 py-2"
+                          >
+                            <p className="text-xs text-gray-500 capitalize">
+                              {key.replace(/_/g, " ")}
+                            </p>
+
+                            <p className="text-sm font-medium mt-1">
+                              {String(value)}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      {selectedEnquiry.notes && (
+        <div className="px-6 pb-6">
+          <div className="border rounded-lg p-4 bg-[#FAFAFA]">
+            <p className="text-xs text-gray-500 mb-1">
+              Notes
+            </p>
+
+            <p className="text-sm">
+              {selectedEnquiry.notes}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="flex justify-end px-6 py-4 border-t">
+        <button
+          onClick={() => setSelectedEnquiry(null)}
+          className="px-5 py-2 bg-[#359E58] text-white rounded-lg hover:bg-[#2e8b4d]"
+        >
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
+
+{/* Customisations */}
           <TabsContent value="customisations">
             <div className="space-y-4">
               {customisations.map(c => (
