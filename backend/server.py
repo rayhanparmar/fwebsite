@@ -1039,6 +1039,240 @@ async def admin_get_whatsapp_orders(request: Request):
     }
 
 
+# ============================================================
+# WHATSAPP ORDER ANALYSIS
+# ============================================================
+
+@api_router.get("/admin/whatsapp-orders/analysis")
+async def admin_whatsapp_order_analysis(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+):
+    await get_admin_user(request)
+
+    # --------------------------------------------------------
+    # DATE FILTER
+    # --------------------------------------------------------
+
+    query = {}
+
+    if from_date or to_date:
+        date_query = {}
+
+        if from_date:
+            date_query["$gte"] = from_date
+
+        if to_date:
+            date_query["$lte"] = to_date
+
+        query["order_date"] = date_query
+
+    # --------------------------------------------------------
+    # GET MATCHING ORDERS
+    # --------------------------------------------------------
+
+    orders = await whatsapp_orders.find(
+        query,
+        {"_id": 0}
+    ).to_list(length=None)
+
+    # --------------------------------------------------------
+    # BASIC KPIs
+    # --------------------------------------------------------
+
+    total_orders = len(orders)
+
+    customers = {
+        str(order.get("customer_name")).strip()
+        for order in orders
+        if order.get("customer_name")
+    }
+
+    unique_customers = len(customers)
+
+    custom_orders = sum(
+        1 for order in orders
+        if str(order.get("order_type", "")).lower() == "custom"
+    )
+
+    catalogue_orders = sum(
+        1 for order in orders
+        if str(order.get("order_type", "")).lower() == "catalogue"
+    )
+
+    delivered_orders = sum(
+        1 for order in orders
+        if order.get("status") == "Delivered"
+    )
+
+    urgent_orders = sum(
+        1 for order in orders
+        if order.get("priority") == "Urgent"
+    )
+
+    # --------------------------------------------------------
+    # OVERDUE ORDERS
+    # --------------------------------------------------------
+
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    completed_statuses = {
+        "Delivered",
+        "Rejected"
+    }
+
+    overdue_orders = 0
+
+    for order in orders:
+
+        due_date = order.get("due_date")
+
+        if not due_date:
+            continue
+
+        status = order.get("status")
+
+        if status in completed_statuses:
+            continue
+
+        if str(due_date)[:10] < today:
+            overdue_orders += 1
+
+    # --------------------------------------------------------
+    # GROUPING HELPER
+    # --------------------------------------------------------
+
+    def group_by_field(field):
+        result = {}
+
+        for order in orders:
+
+            value = order.get(field)
+
+            if value is None:
+                continue
+
+            value = str(value).strip()
+
+            if not value:
+                continue
+
+            result[value] = result.get(value, 0) + 1
+
+        return [
+            {
+                "name": name,
+                "count": count
+            }
+            for name, count in sorted(
+                result.items(),
+                key=lambda item: item[1],
+                reverse=True
+            )
+        ]
+
+    # --------------------------------------------------------
+    # ANALYSIS GROUPS
+    # --------------------------------------------------------
+
+    by_status = group_by_field("status")
+
+    by_category = group_by_field("product_category")
+
+    by_metal = group_by_field("metal")
+
+    by_gold_kt = group_by_field("gold_kt")
+
+    by_stone = group_by_field("stone_type")
+
+    by_customer = group_by_field("customer_name")[:10]
+
+    # --------------------------------------------------------
+    # DAILY ORDER TREND
+    # --------------------------------------------------------
+
+    daily_map = {}
+
+    for order in orders:
+
+        order_date = order.get("order_date")
+
+        if order_date:
+
+            date_string = str(order_date)[:10]
+
+        else:
+
+            created_at = order.get("createdAt")
+
+            if created_at:
+
+                try:
+                    if hasattr(created_at, "strftime"):
+                        date_string = created_at.strftime("%Y-%m-%d")
+                    else:
+                        date_string = str(created_at)[:10]
+                except Exception:
+                    continue
+
+            else:
+                continue
+
+        if date_string:
+            daily_map[date_string] = (
+                daily_map.get(date_string, 0) + 1
+            )
+
+    daily_trend = [
+        {
+            "date": date,
+            "count": count
+        }
+        for date, count in sorted(daily_map.items())
+    ]
+
+    # Last 14 dates only
+    daily_trend = daily_trend[-14:]
+
+    # --------------------------------------------------------
+    # RESPONSE
+    # --------------------------------------------------------
+
+    return {
+        "success": True,
+
+        "filters": {
+            "from_date": from_date,
+            "to_date": to_date
+        },
+
+        "kpis": {
+            "total_orders": total_orders,
+            "unique_customers": unique_customers,
+            "custom_orders": custom_orders,
+            "catalogue_orders": catalogue_orders,
+            "delivered_orders": delivered_orders,
+            "urgent_orders": urgent_orders,
+            "overdue_orders": overdue_orders
+        },
+
+        "status": by_status,
+
+        "category": by_category,
+
+        "metal": by_metal,
+
+        "gold_kt": by_gold_kt,
+
+        "stone": by_stone,
+
+        "customers": by_customer,
+
+        "daily_trend": daily_trend
+    }
+
+
 @api_router.get("/admin/whatsapp-orders/{order_id}")
 async def admin_get_whatsapp_order(
     order_id: str,
