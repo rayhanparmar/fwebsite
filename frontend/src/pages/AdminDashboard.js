@@ -2951,7 +2951,7 @@ const maxAnalysisCustomerCount = Math.max(
         EMPTY STATE
     ================================================= */}
 
-    {analysisOrders.length === 0 && (
+    {analysisTotalOrders === 0 && (
 
       <div className="bg-white border border-[#E5E7EB] rounded-lg p-12 text-center">
 
