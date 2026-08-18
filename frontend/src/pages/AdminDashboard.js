@@ -48,6 +48,25 @@ export default function AdminDashboard() {
   const [analysisFromDate, setAnalysisFromDate] = useState("");
   const [analysisToDate, setAnalysisToDate] = useState("");
 
+  const [analysisData, setAnalysisData] = useState({
+    kpis: {
+      total_orders: 0,
+      unique_customers: 0,
+      custom_orders: 0,
+      catalogue_orders: 0,
+      delivered_orders: 0,
+      urgent_orders: 0,
+      overdue_orders: 0,
+    },
+    status: [],
+    category: [],
+    customers: [],
+    metal: [],
+    gold_kt: [],
+    stone: [],
+    daily_trend: [],
+  });
+
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
@@ -117,6 +136,104 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   }, [api]);
 
 
+  const loadWhatsappAnalysis = useCallback(async () => {
+    try {
+      let url = "/admin/whatsapp-orders/analysis";
+  
+      const params = new URLSearchParams();
+  
+      if (analysisRange === "today") {
+        const today = new Date().toISOString().slice(0, 10);
+  
+        params.append("from_date", today);
+        params.append("to_date", today);
+      }
+  
+      if (analysisRange === "7days") {
+        const today = new Date();
+        const start = new Date();
+  
+        start.setDate(today.getDate() - 6);
+  
+        params.append(
+          "from_date",
+          start.toISOString().slice(0, 10)
+        );
+  
+        params.append(
+          "to_date",
+          today.toISOString().slice(0, 10)
+        );
+      }
+  
+      if (analysisRange === "30days") {
+        const today = new Date();
+        const start = new Date();
+  
+        start.setDate(today.getDate() - 29);
+  
+        params.append(
+          "from_date",
+          start.toISOString().slice(0, 10)
+        );
+  
+        params.append(
+          "to_date",
+          today.toISOString().slice(0, 10)
+        );
+      }
+  
+      if (analysisRange === "custom") {
+        if (analysisFromDate) {
+          params.append("from_date", analysisFromDate);
+        }
+  
+        if (analysisToDate) {
+          params.append("to_date", analysisToDate);
+        }
+      }
+  
+      const query = params.toString();
+  
+      if (query) {
+        url += `?${query}`;
+      }
+  
+      const response = await api.get(url);
+  
+      setAnalysisData({
+        kpis: response.data.kpis || {
+          total_orders: 0,
+          unique_customers: 0,
+          custom_orders: 0,
+          catalogue_orders: 0,
+          delivered_orders: 0,
+          urgent_orders: 0,
+          overdue_orders: 0,
+        },
+        status: response.data.status || [],
+        category: response.data.category || [],
+        customers: response.data.customers || [],
+        metal: response.data.metal || [],
+        gold_kt: response.data.gold_kt || [],
+        stone: response.data.stone || [],
+        daily_trend: response.data.daily_trend || [],
+      });
+  
+    } catch (error) {
+      console.error("WhatsApp Analysis API error:", error);
+      toast.error("Failed to load WhatsApp analysis");
+    }
+  }, [
+    api,
+    analysisRange,
+    analysisFromDate,
+    analysisToDate,
+  ]);
+
+
+
+
   useEffect(() => {
 
     let filtered = whatsappOrders;
@@ -168,6 +285,10 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
   // Auto-load products when category or page changes
   useEffect(() => { if (productsLoaded) loadProducts(); }, [productCategory, productPage]);
+
+  useEffect(() => {
+    loadWhatsappAnalysis();
+  }, [loadWhatsappAnalysis]);
 
   const approveRetailer = async (id) => {
     try { await api.put(`/admin/retailers/${id}/approve`); toast.success("Retailer approved"); loadRetailers(); loadStats(); }
@@ -713,258 +834,47 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 // WHATSAPP ORDER ANALYSIS
 // ======================================================
 
-const getAnalysisOrderDate = (order) => {
-  if (order.order_date) {
-    return String(order.order_date).slice(0, 10);
-  }
+const analysisTotalOrders =
+  analysisData.kpis.total_orders;
 
-  if (order.createdAt) {
-    const date = new Date(order.createdAt);
+const analysisUniqueCustomers =
+  analysisData.kpis.unique_customers;
 
-    if (!Number.isNaN(date.getTime())) {
-      return date.toISOString().slice(0, 10);
-    }
-  }
+const analysisCustomOrders =
+  analysisData.kpis.custom_orders;
 
-  return "";
-};
+const analysisCatalogueOrders =
+  analysisData.kpis.catalogue_orders;
 
-const analysisOrders = useMemo(() => {
-  let orders = [...whatsappOrders];
+const analysisDelivered =
+  analysisData.kpis.delivered_orders;
 
-  if (analysisRange === "today") {
-    const today = new Date().toISOString().slice(0, 10);
+const analysisUrgent =
+  analysisData.kpis.urgent_orders;
 
-    orders = orders.filter(
-      (order) => getAnalysisOrderDate(order) === today
-    );
-  }
+const analysisOverdue =
+  analysisData.kpis.overdue_orders;
 
-  if (analysisRange === "7days") {
-    const today = new Date();
-    const start = new Date();
+const analysisByStatus =
+  analysisData.status;
 
-    start.setDate(today.getDate() - 6);
+const analysisByCategory =
+  analysisData.category;
 
-    orders = orders.filter((order) => {
-      const dateString = getAnalysisOrderDate(order);
+const analysisByMetal =
+  analysisData.metal;
 
-      if (!dateString) return false;
+const analysisByGoldKT =
+  analysisData.gold_kt;
 
-      const date = new Date(dateString);
+const analysisByStone =
+  analysisData.stone;
 
-      return date >= start && date <= today;
-    });
-  }
+const analysisByCustomer =
+  analysisData.customers;
 
-  if (analysisRange === "30days") {
-    const today = new Date();
-    const start = new Date();
-
-    start.setDate(today.getDate() - 29);
-
-    orders = orders.filter((order) => {
-      const dateString = getAnalysisOrderDate(order);
-
-      if (!dateString) return false;
-
-      const date = new Date(dateString);
-
-      return date >= start && date <= today;
-    });
-  }
-
-  if (analysisRange === "custom") {
-    if (analysisFromDate) {
-      orders = orders.filter(
-        (order) =>
-          getAnalysisOrderDate(order) >= analysisFromDate
-      );
-    }
-
-    if (analysisToDate) {
-      orders = orders.filter(
-        (order) =>
-          getAnalysisOrderDate(order) <= analysisToDate
-      );
-    }
-  }
-
-  return orders;
-}, [
-  whatsappOrders,
-  analysisRange,
-  analysisFromDate,
-  analysisToDate
-]);
-
-
-// ------------------------------------------------------
-// BASIC KPIs
-// ------------------------------------------------------
-
-const analysisTotalOrders = analysisOrders.length;
-
-const analysisCustomers = new Set(
-  analysisOrders
-    .map((order) => order.customer_name)
-    .filter(Boolean)
-);
-
-const analysisUniqueCustomers = analysisCustomers.size;
-
-const analysisCustomOrders = analysisOrders.filter(
-  (order) => order.order_type === "custom"
-).length;
-
-const analysisCatalogueOrders = analysisOrders.filter(
-  (order) => order.order_type === "catalogue"
-).length;
-
-const analysisDelivered = analysisOrders.filter(
-  (order) => order.status === "Delivered"
-).length;
-
-const analysisUrgent = analysisOrders.filter(
-  (order) => order.priority === "Urgent"
-).length;
-
-
-// ------------------------------------------------------
-// OVERDUE ORDERS
-// ------------------------------------------------------
-
-const todayForAnalysis = new Date()
-  .toISOString()
-  .slice(0, 10);
-
-const analysisOverdue = analysisOrders.filter((order) => {
-  if (!order.due_date) return false;
-
-  const completedStatuses = [
-    "Delivered",
-    "Rejected"
-  ];
-
-  if (completedStatuses.includes(order.status)) {
-    return false;
-  }
-
-  return String(order.due_date).slice(0, 10) < todayForAnalysis;
-}).length;
-
-
-// ------------------------------------------------------
-// HELPER FOR GROUPING
-// ------------------------------------------------------
-
-const groupAnalysisData = (orders, field) => {
-  const map = {};
-
-  orders.forEach((order) => {
-    const value = order[field];
-
-    if (!value) return;
-
-    const key = String(value).trim();
-
-    if (!key) return;
-
-    map[key] = (map[key] || 0) + 1;
-  });
-
-  return Object.entries(map)
-    .map(([name, count]) => ({
-      name,
-      count
-    }))
-    .sort((a, b) => b.count - a.count);
-};
-
-
-// ------------------------------------------------------
-// STATUS
-// ------------------------------------------------------
-
-const analysisByStatus = groupAnalysisData(
-  analysisOrders,
-  "status"
-);
-
-
-// ------------------------------------------------------
-// PRODUCT CATEGORY
-// ------------------------------------------------------
-
-const analysisByCategory = groupAnalysisData(
-  analysisOrders,
-  "product_category"
-);
-
-
-// ------------------------------------------------------
-// METAL
-// ------------------------------------------------------
-
-const analysisByMetal = groupAnalysisData(
-  analysisOrders,
-  "metal"
-);
-
-
-// ------------------------------------------------------
-// GOLD KT
-// ------------------------------------------------------
-
-const analysisByGoldKT = groupAnalysisData(
-  analysisOrders,
-  "gold_kt"
-);
-
-
-// ------------------------------------------------------
-// STONE TYPE
-// ------------------------------------------------------
-
-const analysisByStone = groupAnalysisData(
-  analysisOrders,
-  "stone_type"
-);
-
-
-// ------------------------------------------------------
-// TOP CUSTOMERS
-// ------------------------------------------------------
-
-const analysisByCustomer = groupAnalysisData(
-  analysisOrders,
-  "customer_name"
-).slice(0, 10);
-
-
-// ------------------------------------------------------
-// DAILY ORDER TREND
-// ------------------------------------------------------
-
-const analysisByDate = (() => {
-  const map = {};
-
-  analysisOrders.forEach((order) => {
-    const date = getAnalysisOrderDate(order);
-
-    if (!date) return;
-
-    map[date] = (map[date] || 0) + 1;
-  });
-
-  return Object.entries(map)
-    .map(([date, count]) => ({
-      date,
-      count
-    }))
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(-14);
-})();
+const analysisByDate =
+  analysisData.daily_trend;
 
 const maxAnalysisDateCount = Math.max(
   ...analysisByDate.map((item) => item.count),
@@ -1433,7 +1343,7 @@ const maxAnalysisCustomerCount = Math.max(
 
 <TabsTrigger
   value="analysis"
-  onClick={loadWhatsappOrders}
+  onClick={loadWhatsappAnalysis}
   className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
   data-testid="admin-analysis-tab"
 >
@@ -2524,12 +2434,12 @@ const maxAnalysisCustomerCount = Math.max(
           </>
         )}
 
-        <button
-          onClick={loadWhatsappOrders}
-          className="bg-[#359E58] hover:bg-[#2e884c] text-white px-4 py-2 rounded-md text-sm"
-        >
-          Refresh
-        </button>
+<button
+  onClick={loadWhatsappAnalysis}
+  className="bg-[#359E58] hover:bg-[#2e884c] text-white px-4 py-2 rounded-md text-sm"
+>
+  Refresh
+</button>
 
       </div>
 
