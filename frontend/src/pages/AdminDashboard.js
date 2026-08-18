@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,12 @@ export default function AdminDashboard() {
   const [customisations, setCustomisations] = useState([]);
   const [whatsappOrders, setWhatsappOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  // =========================
+// ANALYSIS
+// =========================
+  const [analysisRange, setAnalysisRange] = useState("all");
+  const [analysisFromDate, setAnalysisFromDate] = useState("");
+  const [analysisToDate, setAnalysisToDate] = useState("");
 
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
@@ -702,6 +708,284 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     }
 };
 
+
+// ======================================================
+// WHATSAPP ORDER ANALYSIS
+// ======================================================
+
+const getAnalysisOrderDate = (order) => {
+  if (order.order_date) {
+    return String(order.order_date).slice(0, 10);
+  }
+
+  if (order.createdAt) {
+    const date = new Date(order.createdAt);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString().slice(0, 10);
+    }
+  }
+
+  return "";
+};
+
+const analysisOrders = useMemo(() => {
+  let orders = [...whatsappOrders];
+
+  if (analysisRange === "today") {
+    const today = new Date().toISOString().slice(0, 10);
+
+    orders = orders.filter(
+      (order) => getAnalysisOrderDate(order) === today
+    );
+  }
+
+  if (analysisRange === "7days") {
+    const today = new Date();
+    const start = new Date();
+
+    start.setDate(today.getDate() - 6);
+
+    orders = orders.filter((order) => {
+      const dateString = getAnalysisOrderDate(order);
+
+      if (!dateString) return false;
+
+      const date = new Date(dateString);
+
+      return date >= start && date <= today;
+    });
+  }
+
+  if (analysisRange === "30days") {
+    const today = new Date();
+    const start = new Date();
+
+    start.setDate(today.getDate() - 29);
+
+    orders = orders.filter((order) => {
+      const dateString = getAnalysisOrderDate(order);
+
+      if (!dateString) return false;
+
+      const date = new Date(dateString);
+
+      return date >= start && date <= today;
+    });
+  }
+
+  if (analysisRange === "custom") {
+    if (analysisFromDate) {
+      orders = orders.filter(
+        (order) =>
+          getAnalysisOrderDate(order) >= analysisFromDate
+      );
+    }
+
+    if (analysisToDate) {
+      orders = orders.filter(
+        (order) =>
+          getAnalysisOrderDate(order) <= analysisToDate
+      );
+    }
+  }
+
+  return orders;
+}, [
+  whatsappOrders,
+  analysisRange,
+  analysisFromDate,
+  analysisToDate
+]);
+
+
+// ------------------------------------------------------
+// BASIC KPIs
+// ------------------------------------------------------
+
+const analysisTotalOrders = analysisOrders.length;
+
+const analysisCustomers = new Set(
+  analysisOrders
+    .map((order) => order.customer_name)
+    .filter(Boolean)
+);
+
+const analysisUniqueCustomers = analysisCustomers.size;
+
+const analysisCustomOrders = analysisOrders.filter(
+  (order) => order.order_type === "custom"
+).length;
+
+const analysisCatalogueOrders = analysisOrders.filter(
+  (order) => order.order_type === "catalogue"
+).length;
+
+const analysisDelivered = analysisOrders.filter(
+  (order) => order.status === "Delivered"
+).length;
+
+const analysisUrgent = analysisOrders.filter(
+  (order) => order.priority === "Urgent"
+).length;
+
+
+// ------------------------------------------------------
+// OVERDUE ORDERS
+// ------------------------------------------------------
+
+const todayForAnalysis = new Date()
+  .toISOString()
+  .slice(0, 10);
+
+const analysisOverdue = analysisOrders.filter((order) => {
+  if (!order.due_date) return false;
+
+  const completedStatuses = [
+    "Delivered",
+    "Rejected"
+  ];
+
+  if (completedStatuses.includes(order.status)) {
+    return false;
+  }
+
+  return String(order.due_date).slice(0, 10) < todayForAnalysis;
+}).length;
+
+
+// ------------------------------------------------------
+// HELPER FOR GROUPING
+// ------------------------------------------------------
+
+const groupAnalysisData = (orders, field) => {
+  const map = {};
+
+  orders.forEach((order) => {
+    const value = order[field];
+
+    if (!value) return;
+
+    const key = String(value).trim();
+
+    if (!key) return;
+
+    map[key] = (map[key] || 0) + 1;
+  });
+
+  return Object.entries(map)
+    .map(([name, count]) => ({
+      name,
+      count
+    }))
+    .sort((a, b) => b.count - a.count);
+};
+
+
+// ------------------------------------------------------
+// STATUS
+// ------------------------------------------------------
+
+const analysisByStatus = groupAnalysisData(
+  analysisOrders,
+  "status"
+);
+
+
+// ------------------------------------------------------
+// PRODUCT CATEGORY
+// ------------------------------------------------------
+
+const analysisByCategory = groupAnalysisData(
+  analysisOrders,
+  "product_category"
+);
+
+
+// ------------------------------------------------------
+// METAL
+// ------------------------------------------------------
+
+const analysisByMetal = groupAnalysisData(
+  analysisOrders,
+  "metal"
+);
+
+
+// ------------------------------------------------------
+// GOLD KT
+// ------------------------------------------------------
+
+const analysisByGoldKT = groupAnalysisData(
+  analysisOrders,
+  "gold_kt"
+);
+
+
+// ------------------------------------------------------
+// STONE TYPE
+// ------------------------------------------------------
+
+const analysisByStone = groupAnalysisData(
+  analysisOrders,
+  "stone_type"
+);
+
+
+// ------------------------------------------------------
+// TOP CUSTOMERS
+// ------------------------------------------------------
+
+const analysisByCustomer = groupAnalysisData(
+  analysisOrders,
+  "customer_name"
+).slice(0, 10);
+
+
+// ------------------------------------------------------
+// DAILY ORDER TREND
+// ------------------------------------------------------
+
+const analysisByDate = (() => {
+  const map = {};
+
+  analysisOrders.forEach((order) => {
+    const date = getAnalysisOrderDate(order);
+
+    if (!date) return;
+
+    map[date] = (map[date] || 0) + 1;
+  });
+
+  return Object.entries(map)
+    .map(([date, count]) => ({
+      date,
+      count
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14);
+})();
+
+const maxAnalysisDateCount = Math.max(
+  ...analysisByDate.map((item) => item.count),
+  1
+);
+
+const maxAnalysisStatusCount = Math.max(
+  ...analysisByStatus.map((item) => item.count),
+  1
+);
+
+const maxAnalysisCategoryCount = Math.max(
+  ...analysisByCategory.map((item) => item.count),
+  1
+);
+
+const maxAnalysisCustomerCount = Math.max(
+  ...analysisByCustomer.map((item) => item.count),
+  1
+);
+
   return (
     <>
   
@@ -1145,6 +1429,16 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 >
     <MessageSquare className="w-4 h-4" />
     WhatsApp Orders
+</TabsTrigger>
+
+<TabsTrigger
+  value="analysis"
+  onClick={loadWhatsappOrders}
+  className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0"
+  data-testid="admin-analysis-tab"
+>
+  <BarChart3 className="w-4 h-4" />
+  Analysis
 </TabsTrigger>
 
           </TabsList>
@@ -2173,6 +2467,600 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 )}
 
   </div>
+</TabsContent>
+
+{/* =====================================================
+    ANALYSIS
+===================================================== */}
+
+<TabsContent value="analysis">
+
+  <div className="space-y-6">
+
+    {/* HEADER */}
+    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+      <div>
+        <h2 className="text-2xl font-heading font-semibold text-[#0A0A0A]">
+          WhatsApp Order Analysis
+        </h2>
+
+        <p className="text-sm text-[#4B5563] font-body mt-1">
+          Analyse order trends, customers, products and production status.
+        </p>
+      </div>
+
+
+      {/* DATE FILTER */}
+      <div className="flex flex-wrap gap-2">
+
+        <select
+          value={analysisRange}
+          onChange={(e) => setAnalysisRange(e.target.value)}
+          className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+        >
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="7days">Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+          <option value="custom">Custom Range</option>
+        </select>
+
+        {analysisRange === "custom" && (
+          <>
+            <input
+              type="date"
+              value={analysisFromDate}
+              onChange={(e) => setAnalysisFromDate(e.target.value)}
+              className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm"
+            />
+
+            <input
+              type="date"
+              value={analysisToDate}
+              onChange={(e) => setAnalysisToDate(e.target.value)}
+              className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm"
+            />
+          </>
+        )}
+
+        <button
+          onClick={loadWhatsappOrders}
+          className="bg-[#359E58] hover:bg-[#2e884c] text-white px-4 py-2 rounded-md text-sm"
+        >
+          Refresh
+        </button>
+
+      </div>
+
+    </div>
+
+
+    {/* =================================================
+        KPI CARDS
+    ================================================= */}
+
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4">
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Total Orders</p>
+        <p className="text-3xl font-semibold mt-2">
+          {analysisTotalOrders}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Customers</p>
+        <p className="text-3xl font-semibold mt-2">
+          {analysisUniqueCustomers}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Custom</p>
+        <p className="text-3xl font-semibold mt-2">
+          {analysisCustomOrders}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Catalogue</p>
+        <p className="text-3xl font-semibold mt-2">
+          {analysisCatalogueOrders}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Delivered</p>
+        <p className="text-3xl font-semibold mt-2 text-[#359E58]">
+          {analysisDelivered}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Urgent</p>
+        <p className="text-3xl font-semibold mt-2 text-red-600">
+          {analysisUrgent}
+        </p>
+      </div>
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
+        <p className="text-xs text-[#6B7280]">Overdue</p>
+        <p className="text-3xl font-semibold mt-2 text-orange-600">
+          {analysisOverdue}
+        </p>
+      </div>
+
+    </div>
+
+
+    {/* =================================================
+        ORDER TYPE
+    ================================================= */}
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Order Type
+        </h3>
+
+        <div className="space-y-5">
+
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span>Custom Jewellery</span>
+              <span className="font-semibold">
+                {analysisCustomOrders}
+              </span>
+            </div>
+
+            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#359E58] rounded-full"
+                style={{
+                  width: `${
+                    analysisTotalOrders
+                      ? (analysisCustomOrders / analysisTotalOrders) * 100
+                      : 0
+                  }%`
+                }}
+              />
+            </div>
+          </div>
+
+
+          <div>
+            <div className="flex justify-between text-sm mb-2">
+              <span>Catalogue</span>
+              <span className="font-semibold">
+                {analysisCatalogueOrders}
+              </span>
+            </div>
+
+            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gray-700 rounded-full"
+                style={{
+                  width: `${
+                    analysisTotalOrders
+                      ? (analysisCatalogueOrders / analysisTotalOrders) * 100
+                      : 0
+                  }%`
+                }}
+              />
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* STATUS */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Orders by Status
+        </h3>
+
+        <div className="space-y-4">
+
+          {analysisByStatus.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No order data available.
+            </p>
+          )}
+
+          {analysisByStatus.map((item) => (
+
+            <div key={item.name}>
+
+              <div className="flex justify-between text-sm mb-1">
+                <span>{item.name}</span>
+                <span className="font-semibold">
+                  {item.count}
+                </span>
+              </div>
+
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+
+                <div
+                  className="h-full bg-[#359E58] rounded-full"
+                  style={{
+                    width: `${
+                      (item.count / maxAnalysisStatusCount) * 100
+                    }%`
+                  }}
+                />
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    {/* =================================================
+        DAILY TREND
+    ================================================= */}
+
+    <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+      <div className="flex items-center justify-between mb-6">
+
+        <div>
+          <h3 className="font-semibold text-lg">
+            Order Trend
+          </h3>
+
+          <p className="text-xs text-gray-500 mt-1">
+            Last 14 order dates in the selected period
+          </p>
+        </div>
+
+      </div>
+
+
+      {analysisByDate.length === 0 ? (
+
+        <div className="py-12 text-center text-sm text-gray-500">
+          No order data available for this period.
+        </div>
+
+      ) : (
+
+        <div className="flex items-end gap-3 h-64 overflow-x-auto">
+
+          {analysisByDate.map((item) => {
+
+            const height =
+              (item.count / maxAnalysisDateCount) * 100;
+
+            return (
+
+              <div
+                key={item.date}
+                className="flex flex-col items-center justify-end min-w-[55px] h-full"
+              >
+
+                <span className="text-xs font-semibold mb-2">
+                  {item.count}
+                </span>
+
+                <div
+                  className="w-8 bg-[#359E58] rounded-t-md transition-all"
+                  style={{
+                    height: `${Math.max(height, 5)}%`
+                  }}
+                />
+
+                <span className="text-[10px] text-gray-500 mt-2 whitespace-nowrap">
+                  {item.date.slice(5)}
+                </span>
+
+              </div>
+
+            );
+
+          })}
+
+        </div>
+
+      )}
+
+    </div>
+
+
+    {/* =================================================
+        PRODUCT CATEGORY + CUSTOMER
+    ================================================= */}
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+
+      {/* PRODUCT CATEGORY */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Orders by Product Category
+        </h3>
+
+        <div className="space-y-4">
+
+          {analysisByCategory.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No category data available.
+            </p>
+          )}
+
+          {analysisByCategory.slice(0, 10).map((item) => (
+
+            <div key={item.name}>
+
+              <div className="flex justify-between text-sm mb-1">
+
+                <span className="truncate pr-3">
+                  {item.name}
+                </span>
+
+                <span className="font-semibold">
+                  {item.count}
+                </span>
+
+              </div>
+
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+
+                <div
+                  className="h-full bg-[#359E58] rounded-full"
+                  style={{
+                    width: `${
+                      (item.count / maxAnalysisCategoryCount) * 100
+                    }%`
+                  }}
+                />
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* TOP CUSTOMERS */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Top Customers
+        </h3>
+
+        <div className="space-y-4">
+
+          {analysisByCustomer.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No customer data available.
+            </p>
+          )}
+
+          {analysisByCustomer.map((item, index) => (
+
+            <div
+              key={item.name}
+              className="flex items-center gap-3"
+            >
+
+              <div className="w-7 h-7 rounded-full bg-[#359E58]/10 text-[#359E58] flex items-center justify-center text-xs font-semibold">
+                {index + 1}
+              </div>
+
+              <div className="flex-1 min-w-0">
+
+                <div className="flex justify-between text-sm mb-1">
+
+                  <span className="truncate">
+                    {item.name}
+                  </span>
+
+                  <span className="font-semibold ml-2">
+                    {item.count}
+                  </span>
+
+                </div>
+
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+
+                  <div
+                    className="h-full bg-[#359E58] rounded-full"
+                    style={{
+                      width: `${
+                        (item.count / maxAnalysisCustomerCount) * 100
+                      }%`
+                    }}
+                  />
+
+                </div>
+
+              </div>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    {/* =================================================
+        METAL / GOLD KT / STONE
+    ================================================= */}
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+
+      {/* METAL */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Metal
+        </h3>
+
+        <div className="space-y-3">
+
+          {analysisByMetal.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No metal data available.
+            </p>
+          )}
+
+          {analysisByMetal.map((item) => (
+
+            <div
+              key={item.name}
+              className="flex justify-between items-center border-b pb-2"
+            >
+
+              <span className="text-sm">
+                {item.name}
+              </span>
+
+              <span className="font-semibold">
+                {item.count}
+              </span>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* GOLD KT */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Gold Purity
+        </h3>
+
+        <div className="space-y-3">
+
+          {analysisByGoldKT.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No gold KT data available.
+            </p>
+          )}
+
+          {analysisByGoldKT.map((item) => (
+
+            <div
+              key={item.name}
+              className="flex justify-between items-center border-b pb-2"
+            >
+
+              <span className="text-sm">
+                {item.name}
+              </span>
+
+              <span className="font-semibold">
+                {item.count}
+              </span>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* STONE */}
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+
+        <h3 className="font-semibold text-lg mb-5">
+          Stone Type
+        </h3>
+
+        <div className="space-y-3">
+
+          {analysisByStone.length === 0 && (
+            <p className="text-sm text-gray-500">
+              No stone data available.
+            </p>
+          )}
+
+          {analysisByStone.map((item) => (
+
+            <div
+              key={item.name}
+              className="flex justify-between items-center border-b pb-2"
+            >
+
+              <span className="text-sm">
+                {item.name}
+              </span>
+
+              <span className="font-semibold">
+                {item.count}
+              </span>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    {/* =================================================
+        EMPTY STATE
+    ================================================= */}
+
+    {analysisOrders.length === 0 && (
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-12 text-center">
+
+        <BarChart3 className="w-10 h-10 mx-auto text-gray-300 mb-3" />
+
+        <h3 className="font-semibold text-lg">
+          No orders found
+        </h3>
+
+        <p className="text-sm text-gray-500 mt-1">
+          Try changing the date range or refresh the orders.
+        </p>
+
+      </div>
+
+    )}
+
+  </div>
+
 </TabsContent>
 </Tabs>
 </div>
