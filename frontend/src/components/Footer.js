@@ -24,11 +24,11 @@ export default function Footer() {
           <div>
             <h4 className="font-heading text-lg font-medium mb-4 text-[#6CC284]">Contact</h4>
             <div className="space-y-3">
-              <a href="tel:7045927391" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
-                <Phone className="w-4 h-4" strokeWidth={1.5} />7045927391
+              <a href="tel:8657427281" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                <Phone className="w-4 h-4" strokeWidth={1.5} />8657427281
               </a>
-              <a href="mailto:jaysachetijs@gmail.com" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
-                <Mail className="w-4 h-4" strokeWidth={1.5} />jaysachetijs@gmail.com
+              <a href="mailto:shreemothergold.rooh@gmail.com" className="flex items-center gap-2 text-gray-400 hover:text-white text-sm">
+                <Mail className="w-4 h-4" strokeWidth={1.5} />shreemothergold.rooh@gmail.com
               </a>
               <div className="flex items-start gap-2 text-gray-400 text-sm">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" strokeWidth={1.5} />India
