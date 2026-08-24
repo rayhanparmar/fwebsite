@@ -1,7 +1,7 @@
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import Form, Query
-from whatsapp_service import send_flow, send_text_message
+from whatsapp_service import send_flow, send_text_message, send_document
 from flow_crypto import decrypt_request, encrypt_response
 from cloudinary.uploader import destroy
 from io import BytesIO
@@ -34,7 +34,7 @@ from cloudinary_service import (
     upload_whatsapp_image,
     upload_whatsapp_video,
 )
-
+from pdf_service import create_order_pdf
 
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 AWS_REGION = os.getenv("AWS_REGION")
@@ -2160,7 +2160,18 @@ async def whatsapp_webhook(request: Request):
                 print("UPDATED DOC:")
                 print(doc)
 
-                del pending_video_uploads[sender]
+                                # ========================================================
+                # REFERENCE VIDEO SUCCESSFULLY RECEIVED
+                # ========================================================
+
+                send_text_message(
+                    sender,
+                    "✅ Reference video received successfully."
+                )
+
+                # --------------------------------------------------------
+                # Cancel the video timer
+                # --------------------------------------------------------
 
                 timer = video_upload_timers.pop(sender, None)
 
@@ -2168,11 +2179,118 @@ async def whatsapp_webhook(request: Request):
                     timer.cancel()
 
                 video_waiting_users.pop(sender, None)
+
+                # --------------------------------------------------------
+                # GET UPDATED ORDER
+                # --------------------------------------------------------
+
+                order = await whatsapp_orders.find_one(
+                    {
+                        "orderId": order_id
+                    },
+                    {
+                        "_id": 0
+                    }
+                )
+
+                if not order:
+
+                    print(
+                        "Could not find order for PDF:",
+                        order_id
+                    )
+
+                    pending_video_uploads.pop(sender, None)
+
+                    return {"success": True}
+
+                # --------------------------------------------------------
+                # CREATE PDF
+                # --------------------------------------------------------
+
+                try:
+
+                    pdf_path = create_order_pdf(order)
+
+                    print(
+                        "PDF generated successfully:",
+                        pdf_path
+                    )
+
+                except Exception as e:
+
+                    print(
+                        "PDF generation failed:",
+                        str(e)
+                    )
+
+                    send_text_message(
+                        sender,
+                        """⚠️ Reference video received successfully.
+
+However, we could not generate your order PDF."""
+                    )
+
+                    pending_video_uploads.pop(sender, None)
+
+                    return {"success": True}
+
+                # --------------------------------------------------------
+                # UPLOAD PDF TO S3
+                # --------------------------------------------------------
+
+                try:
+
+                    with open(pdf_path, "rb") as pdf_file:
+
+                        pdf_url = upload_to_s3(
+                            pdf_file,
+                            f"orders/pdfs/{order_id}.pdf",
+                            "application/pdf"
+                        )
+
+                    print(
+                        "PDF uploaded successfully:",
+                        pdf_url
+                    )
+
+                except Exception as e:
+
+                    print(
+                        "PDF S3 upload failed:",
+                        str(e)
+                    )
+
+                    send_text_message(
+                        sender,
+                        """⚠️ Reference video received successfully.
+
+However, we could not send your order PDF."""
+                    )
+
+                    pending_video_uploads.pop(sender, None)
+
+                    return {"success": True}
+
+                # --------------------------------------------------------
+                # SEND PDF TO CUSTOMER
+                # --------------------------------------------------------
+
+                send_document(
+                    sender,
+                    pdf_url,
+                    f"{order_id}.pdf",
+                    "📄 Your Jewellery Manufacturing Order"
+                )
+
+                # --------------------------------------------------------
+                # CLEAR PENDING ORDER
+                # --------------------------------------------------------
+
                 pending_video_uploads.pop(sender, None)
 
-                send_text_message(
-                    sender,
-                    "✅ Reference video received successfully."
+                print(
+                    f"Order PDF sent successfully for {order_id}"
                 )
 
                 return {"success": True}
@@ -2243,26 +2361,178 @@ async def whatsapp_webhook(request: Request):
                     return {"success": True}
 
                 # Customer doesn't want to upload video
+                                # Customer doesn't want to upload video
                 if text == "no":
 
-                    timer = video_upload_timers.pop(sender, None)  
+                    # ========================================================
+                    # CUSTOMER DOES NOT WANT TO UPLOAD VIDEO
+                    # ========================================================
+
+                    # IMPORTANT:
+                    # Get the order ID BEFORE removing it from memory.
+                    order_id = pending_video_uploads.get(sender)
+
+                    if not order_id:
+                        send_text_message(
+                            sender,
+                            """⚠️ We could not find your order.
+
+Please contact our team."""
+                        )
+
+                        return {"success": True}
+
+                    # --------------------------------------------------------
+                    # Cancel the 10-minute video timer
+                    # --------------------------------------------------------
+
+                    timer = video_upload_timers.pop(sender, None)
 
                     if timer:
                         timer.cancel()
-                    pending_video_uploads.pop(sender, None)
-                
+
+                    # --------------------------------------------------------
+                    # Stop waiting for video
+                    # --------------------------------------------------------
+
                     video_waiting_users.pop(sender, None)
-                
+
+                    # --------------------------------------------------------
+                    # Get the complete order from MongoDB
+                    # --------------------------------------------------------
+
+                    order = await whatsapp_orders.find_one(
+                        {
+                            "orderId": order_id
+                        },
+                        {
+                            "_id": 0
+                        }
+                    )
+
+                    if not order:
+                        send_text_message(
+                            sender,
+                            """⚠️ We could not find your order.
+
+Please contact our team."""
+                        )
+
+                        pending_video_uploads.pop(sender, None)
+
+                        return {"success": True}
+
+                    # --------------------------------------------------------
+                    # CREATE PDF
+                    # --------------------------------------------------------
+
+                    try:
+
+                        pdf_path = create_order_pdf(order)
+
+                        print(
+                            "PDF generated successfully:",
+                            pdf_path
+                        )
+
+                    except Exception as e:
+
+                        print(
+                            "PDF generation failed:",
+                            str(e)
+                        )
+
+                        send_text_message(
+                            sender,
+                            """⚠️ Your order was submitted successfully, but we could not generate the PDF.
+
+Our team will contact you."""
+                        )
+
+                        pending_video_uploads.pop(sender, None)
+
+                        return {"success": True}
+
+                    # --------------------------------------------------------
+                    # UPLOAD PDF TO S3
+                    # --------------------------------------------------------
+
+                    try:
+
+                        with open(pdf_path, "rb") as pdf_file:
+
+                            pdf_url = upload_to_s3(
+                                pdf_file,
+                                f"orders/pdfs/{order_id}.pdf",
+                                "application/pdf"
+                            )
+
+                        print(
+                            "PDF uploaded successfully:",
+                            pdf_url
+                        )
+
+                    except Exception as e:
+
+                        print(
+                            "PDF S3 upload failed:",
+                            str(e)
+                        )
+
+                        send_text_message(
+                            sender,
+                            """⚠️ Your order was submitted successfully, but we could not send the PDF.
+
+Our team will contact you."""
+                        )
+
+                        pending_video_uploads.pop(sender, None)
+
+                        return {"success": True}
+
+                    # --------------------------------------------------------
+                    # SEND PDF TO CUSTOMER
+                    # --------------------------------------------------------
+
+                    send_document(
+                        sender,
+                        pdf_url,
+                        f"{order_id}.pdf",
+                        "📄 Your Jewellery Manufacturing Order"
+                    )
+
+                    # --------------------------------------------------------
+                    # CLEAR PENDING ORDER
+                    # --------------------------------------------------------
+
+                    pending_video_uploads.pop(sender, None)
+
+                    # --------------------------------------------------------
+                    # FINAL MESSAGE
+                    # --------------------------------------------------------
+
+                    send_text_message(
+                        sender,
+                        """✅ Your order PDF has been sent successfully."""
+                    )
+
+                    return {"success": True}
+
+    # --------------------------------------------------------
+    # SEND PDF
+    # --------------------------------------------------------
+
+    # TEMPORARY:
+    # We will connect this to a public PDF URL in the next step.
+
                     send_text_message(
                         sender,
                         """✅ Thank you!
 
-            Your order has been submitted successfully.
+                Your order has been submitted successfully."""
+                    )
 
-            Our team will contact you if any clarification is required."""
-                )
-
-                return {"success": True}
+                    return {"success": True}
                     
 
                     

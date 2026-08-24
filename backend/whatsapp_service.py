@@ -80,3 +80,45 @@ def send_flow(to):
     print(response.text)
 
     return response
+
+
+# ============================================================
+# SEND PDF DOCUMENT
+# ============================================================
+
+def send_document(to, document_url, filename, caption=None):
+
+    url = f"https://graph.facebook.com/v23.0/{PHONE_NUMBER_ID}/messages"
+
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    document_data = {
+        "link": document_url,
+        "filename": filename
+    }
+
+    if caption:
+        document_data["caption"] = caption
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "document",
+        "document": document_data
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json=payload
+    )
+
+    print("PDF Document Response:")
+    print(response.status_code)
+    print(response.text)
+
+    return response
