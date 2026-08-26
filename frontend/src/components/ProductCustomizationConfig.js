@@ -147,14 +147,7 @@ const selectField = (key, label, options = [], extra = {}) => ({
       "Yes",
       "No",
     ]),
-  
-    radioField("need_call", "Call Required?", [
-      "Yes",
-      "No",
-    ]),
-  
-    dateField("due_date", "Due Date"),
-  
+    
     textareaField("remarks", "Remarks"),
   
     textField("approx_weight", "Weight (g)"),
