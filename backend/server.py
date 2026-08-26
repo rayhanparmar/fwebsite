@@ -675,6 +675,49 @@ async def admin_update_product(request: Request, product_id: str, update: Produc
         raise HTTPException(404, "Product not found")
     return {"message": "Product updated"}
 
+
+# ============================================================
+# PRODUCT DETAILS / SPECIFICATIONS
+# ============================================================
+
+@api_router.put("/admin/products/{product_id}/details")
+async def admin_update_product_details(
+    request: Request,
+    product_id: str,
+    details: Dict
+):
+    await get_admin_user(request)
+
+    product = await db.products.find_one(
+        {"product_id": product_id}
+    )
+
+    if not product:
+        raise HTTPException(
+            status_code=404,
+            detail="Product not found"
+        )
+
+    # Save the product-specific specifications
+    await db.products.update_one(
+        {"product_id": product_id},
+        {
+            "$set": {
+                "product_details": details,
+                "product_details_updated_at": datetime.now(
+                    timezone.utc
+                ).isoformat()
+            }
+        }
+    )
+
+    return {
+        "success": True,
+        "message": "Product details saved successfully",
+        "product_id": product_id,
+        "product_details": details
+    }
+
 @api_router.put("/admin/products/{product_id}/front-image")
 async def admin_set_product_front_image(
     request: Request,

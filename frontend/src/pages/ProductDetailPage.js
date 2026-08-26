@@ -76,6 +76,7 @@ export default function ProductDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showZoom, setShowZoom] = useState(false);
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
+  const [showProductDetails, setShowProductDetails] = useState(false);
   useEffect(() => {
     api.get(`/products/${productId}`)
       .then(res => setProduct(res.data.product))
@@ -173,6 +174,15 @@ const resolveImg = (img) =>
     ? `${process.env.REACT_APP_BACKEND_URL}${img}`
     : img;
 
+  const productDetailFields =
+    customizationConfig?.fields?.filter((field) => {
+      const value = product?.product_details?.[field.key];
+  
+      return value !== undefined &&
+        value !== null &&
+        String(value).trim() !== "";
+    }) || [];
+
 const handleZoomMove = (e) => {
   const rect = e.currentTarget.getBoundingClientRect();
   const x = ((e.clientX - rect.left) / rect.width) * 100;
@@ -254,6 +264,50 @@ const handleZoomMove = (e) => {
                 </button>
               ))}
             </div>
+
+            {/* VIEW PRODUCT DETAILS BUTTON */}
+<Button
+  type="button"
+  variant="outline"
+  onClick={() => setShowProductDetails((prev) => !prev)}
+  className="w-full mt-4 border-[#359E58] text-[#359E58] hover:bg-[#359E58]/5 rounded-sm py-5"
+  data-testid="view-product-details"
+>
+  {showProductDetails
+    ? "HIDE PRODUCT DETAILS"
+    : "VIEW PRODUCT DETAILS"}
+</Button>
+
+{showProductDetails && (
+  <div className="mt-4 border border-[#E5E7EB] rounded-sm bg-white p-5">
+    <h2 className="text-lg font-medium text-[#0A0A0A] mb-5">
+      Product Details
+    </h2>
+
+    {productDetailFields.length > 0 ? (
+      <div className="divide-y divide-[#E5E7EB]">
+        {productDetailFields.map((field) => (
+          <div
+            key={field.key}
+            className="flex justify-between gap-6 py-3 first:pt-0 last:pb-0"
+          >
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+              {field.label}
+            </span>
+
+            <span className="text-sm text-[#111827] text-right font-medium">
+              {product.product_details[field.key]}
+            </span>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="text-sm text-[#6B7280]">
+        Product details are not available yet.
+      </p>
+    )}
+  </div>
+)}
           </div>
 
           {/* Right - Details & Customization */}

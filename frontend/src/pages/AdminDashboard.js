@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
+import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
+
 
 
 const CATEGORIES = [
@@ -99,6 +101,8 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [categoryImages, setCategoryImages] = useState([]);
 const [selectedProduct, setSelectedProduct] = useState(null);
+const [productDetails, setProductDetails] = useState({});
+const [savingProductDetails, setSavingProductDetails] = useState(false);
 const [selectedCategoryImage, setSelectedCategoryImage] = useState(null);
 const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
@@ -120,6 +124,16 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     const q = retailerFilter === "all" ? "" : `?status=${retailerFilter}`;
     api.get(`/admin/retailers${q}`).then(r => setRetailers(r.data.retailers)).catch(() => {});
   }, [api, retailerFilter]);
+
+  const shouldShowProductField = (field, values) => {
+    if (!field.showWhen) {
+      return true;
+    }
+  
+    return Object.entries(field.showWhen).every(
+      ([key, expectedValue]) => values[key] === expectedValue
+    );
+  };
   const loadProducts = useCallback(() => {
     const q = productCategory ? `?category=${encodeURIComponent(productCategory)}&page=${productPage}&limit=30` : `?page=${productPage}&limit=30`;
     api.get(`/admin/products${q}`).then(r => { setProducts(r.data.products); setProductTotal(r.data.total); setProductsLoaded(true); }).catch(() => {});
@@ -361,6 +375,48 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Upload failed");
     } finally { setUploading(false); }
+  };
+
+  const saveProductDetails = async () => {
+    if (!selectedProduct) {
+      toast.error("No product selected");
+      return;
+    }
+  
+    setSavingProductDetails(true);
+  
+    try {
+      const res = await api.put(
+        `/admin/products/${selectedProduct.product_id}/details`,
+        productDetails
+      );
+  
+      setSelectedProduct((currentProduct) => {
+        if (!currentProduct) {
+          return currentProduct;
+        }
+  
+        return {
+          ...currentProduct,
+          product_details: productDetails,
+        };
+      });
+  
+      toast.success(
+        res.data.message || "Product details saved successfully"
+      );
+  
+      await loadProducts();
+    } catch (err) {
+      console.error("Save product details error:", err);
+  
+      toast.error(
+        err.response?.data?.detail ||
+          "Failed to save product details"
+      );
+    } finally {
+      setSavingProductDetails(false);
+    }
   };
 
   const saveProductId = async () => {
@@ -1512,6 +1568,7 @@ const maxAnalysisCustomerCount = Math.max(
                 onClick={() => {
                   setSelectedProduct(p);
                   setEditingProductId(p.product_id);
+                  setProductDetails(p.product_details || {});
                 }}
                 className="flex items-center gap-4 p-3 border border-[#E5E7EB] bg-white cursor-pointer hover:border-[#359E58] transition-colors"
                 data-testid={`admin-product-${p.product_id}`}
@@ -3016,6 +3073,163 @@ const maxAnalysisCustomerCount = Math.max(
       </div>
 
       <div className="p-5">
+
+      {/* PRODUCT DETAILS */}
+<div className="mb-8 border border-[#E5E7EB] rounded-md p-5 bg-[#FAFAFA]">
+  <div className="flex items-center justify-between mb-5">
+    <div>
+      <h3 className="text-sm font-semibold text-[#0A0A0A]">
+        Product Details
+      </h3>
+
+      <p className="text-xs text-[#6B7280] mt-1">
+        Fill in the specifications for this product.
+      </p>
+    </div>
+  </div>
+
+  {PRODUCT_CUSTOMIZATION_CONFIG[selectedProduct.category] ? (
+    <div className="space-y-5">
+
+      {PRODUCT_CUSTOMIZATION_CONFIG[
+        selectedProduct.category
+      ].fields.map((field) => {
+
+        if (!shouldShowProductField(field, productDetails)) {
+          return null;
+        }
+
+        const value = productDetails[field.key] || "";
+
+        return (
+          <div key={field.key}>
+
+            <label className="block text-xs font-semibold tracking-wider uppercase text-[#4B5563] mb-2">
+              {field.label}
+            </label>
+
+            {/* SELECT */}
+            {field.type === "select" && (
+              <select
+                value={value}
+                onChange={(e) =>
+                  setProductDetails((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                  }))
+                }
+                className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2 text-sm bg-white"
+              >
+                <option value="">
+                  Select {field.label}
+                </option>
+
+                {(field.options || []).map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* RADIO */}
+            {field.type === "radio" && (
+              <div className="flex flex-wrap gap-4">
+                {(field.options || []).map((option) => (
+                  <label
+                    key={option}
+                    className="flex items-center gap-2 text-sm cursor-pointer"
+                  >
+                    <input
+                      type="radio"
+                      name={`${selectedProduct.product_id}-${field.key}`}
+                      value={option}
+                      checked={value === option}
+                      onChange={(e) =>
+                        setProductDetails((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                    />
+
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {/* TEXT */}
+            {field.type === "text" && (
+              <input
+                type="text"
+                value={value}
+                onChange={(e) =>
+                  setProductDetails((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                  }))
+                }
+                className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2 text-sm bg-white"
+                placeholder={`Enter ${field.label}`}
+              />
+            )}
+
+            {/* DATE */}
+            {field.type === "date" && (
+              <input
+                type="date"
+                value={value}
+                onChange={(e) =>
+                  setProductDetails((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                  }))
+                }
+                className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2 text-sm bg-white"
+              />
+            )}
+
+            {/* TEXTAREA */}
+            {field.type === "textarea" && (
+              <textarea
+                value={value}
+                onChange={(e) =>
+                  setProductDetails((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                  }))
+                }
+                rows={3}
+                className="w-full border border-[#E5E7EB] rounded-sm px-3 py-2 text-sm bg-white resize-none"
+                placeholder={`Enter ${field.label}`}
+              />
+            )}
+
+          </div>
+        );
+      })}
+
+      <div className="flex justify-end pt-3">
+        <Button
+          type="button"
+          onClick={saveProductDetails}
+          disabled={savingProductDetails}
+          className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+        >
+          {savingProductDetails
+            ? "Saving..."
+            : "Save Product Details"}
+        </Button>
+      </div>
+
+    </div>
+  ) : (
+    <p className="text-sm text-gray-500">
+      No product configuration found for this category.
+    </p>
+  )}
+</div>
 
         <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
           Product Images
