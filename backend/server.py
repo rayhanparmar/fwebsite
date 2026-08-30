@@ -1086,122 +1086,401 @@ async def admin_get_whatsapp_orders(request: Request):
 # WHATSAPP ORDER ANALYSIS
 # ============================================================
 
-@api_router.get("/admin/whatsapp-orders/analysis")
-async def admin_whatsapp_order_analysis(
+# ============================================================
+# COMBINED BUSINESS ANALYSIS
+# Website + WhatsApp
+# ============================================================
+
+@api_router.get("/admin/analysis")
+async def admin_combined_analysis(
     request: Request,
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
+    channel: Optional[str] = None,
+    retailer_id: Optional[str] = None,
+    category: Optional[str] = None,
+    product_id: Optional[str] = None,
+    order_type: Optional[str] = None,
+    metal: Optional[str] = None,
+    purity: Optional[str] = None,
+    stone: Optional[str] = None,
 ):
     await get_admin_user(request)
 
     # --------------------------------------------------------
-    # DATE FILTER
+    # HELPERS
     # --------------------------------------------------------
 
-    query = {}
+    def clean(value):
+        if value is None:
+            return ""
+        return str(value).strip()
 
-    if from_date or to_date:
-        date_query = {}
+    def normalize_channel(value):
+        value = clean(value).lower()
 
-        if from_date:
-            date_query["$gte"] = from_date
+        if value == "whatsapp":
+            return "whatsapp"
 
-        if to_date:
-            date_query["$lte"] = to_date
+        if value == "website":
+            return "website"
 
-        query["order_date"] = date_query
+        return ""
+
+    def normalize_order_type(value):
+        value = clean(value).lower()
+
+        if value in {"custom", "customisation", "customization"}:
+            return "custom"
+
+        if value in {"stock", "catalogue", "catalog", "catalogue order"}:
+            return "stock"
+
+        return value
+
+    def get_order_date(order):
+        value = (
+            order.get("order_date")
+            or order.get("created_at")
+            or order.get("createdAt")
+        )
+
+        if not value:
+            return ""
+
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m-%d")
+
+        return str(value)[:10]
+
+    def get_due_date(order):
+        value = order.get("due_date")
+
+        if not value:
+            return ""
+
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m-%d")
+
+        return str(value)[:10]
 
     # --------------------------------------------------------
-    # GET MATCHING ORDERS
+    # 1. GET WEBSITE ORDERS
+    #
+    # Current website submission system stores these as
+    # enquiries in db.enquiries.
     # --------------------------------------------------------
 
-    orders = await whatsapp_orders.find(
-        query,
+    website_docs = await db.enquiries.find(
+        {},
         {"_id": 0}
     ).to_list(length=None)
 
+    website_orders = []
+
+    for enquiry in website_docs:
+
+        items = enquiry.get("items") or []
+
+        normalized_items = []
+
+        for item in items:
+
+            normalized_items.append({
+                "product_id": clean(
+                    item.get("product_id")
+                    or item.get("design_number")
+                ),
+
+                "design_number": clean(
+                    item.get("design_number")
+                    or item.get("product_id")
+                ),
+
+                "category": clean(
+                    item.get("category")
+                    or item.get("product_category")
+                ),
+
+                "metal": clean(item.get("metal")),
+
+                "purity": clean(
+                    item.get("purity")
+                    or item.get("gold_kt")
+                ),
+
+                "gold_colour": clean(
+                    item.get("gold_colour")
+                    or item.get("gold_color")
+                ),
+
+                "stone": clean(
+                    item.get("stone")
+                    or item.get("stone_type")
+                ),
+            })
+
+        website_orders.append({
+            "order_id": clean(enquiry.get("enquiry_id")),
+            "channel": "website",
+
+            "retailer_id": clean(
+                enquiry.get("retailer_id")
+                or enquiry.get("user_id")
+            ),
+
+            "retailer_name": clean(
+                enquiry.get("retailer_name")
+                or enquiry.get("user_name")
+            ),
+
+            "order_date": get_order_date(enquiry),
+            "due_date": get_due_date(enquiry),
+
+            "order_type": normalize_order_type(
+                enquiry.get("order_type")
+            ),
+
+            "status": clean(
+                enquiry.get("status")
+            ),
+
+            "items": normalized_items,
+        })
+
     # --------------------------------------------------------
-    # BASIC KPIs
+    # 2. GET WHATSAPP ORDERS
+    # --------------------------------------------------------
+
+    whatsapp_docs = await whatsapp_orders.find(
+        {},
+        {"_id": 0}
+    ).to_list(length=None)
+
+    whatsapp_normalized = []
+
+    for order in whatsapp_docs:
+
+        item = {
+            "product_id": clean(
+                order.get("product_id")
+                or order.get("design_number")
+            ),
+
+            "design_number": clean(
+                order.get("design_number")
+                or order.get("product_id")
+            ),
+
+            "category": clean(
+                order.get("product_category")
+                or order.get("category")
+            ),
+
+            "metal": clean(
+                order.get("metal")
+            ),
+
+            "purity": clean(
+                order.get("gold_kt")
+                or order.get("purity")
+            ),
+
+            "gold_colour": clean(
+                order.get("gold_colour")
+                or order.get("gold_color")
+            ),
+
+            "stone": clean(
+                order.get("stone_type")
+                or order.get("stone")
+            ),
+        }
+
+        whatsapp_normalized.append({
+            "order_id": clean(
+                order.get("orderId")
+                or order.get("order_id")
+            ),
+
+            "channel": "whatsapp",
+
+            "retailer_id": clean(
+                order.get("retailer_id")
+            ),
+
+            "retailer_name": clean(
+                order.get("retailer_name")
+            ),
+
+            "order_date": get_order_date(order),
+            "due_date": get_due_date(order),
+
+            "order_type": normalize_order_type(
+                order.get("order_type")
+            ),
+
+            "status": clean(
+                order.get("status")
+            ),
+
+            "items": [item],
+        })
+
+    # --------------------------------------------------------
+    # 3. COMBINE WEBSITE + WHATSAPP
+    # --------------------------------------------------------
+
+    all_orders = website_orders + whatsapp_normalized
+
+    # --------------------------------------------------------
+    # 4. FILTER ORDERS
+    # --------------------------------------------------------
+
+    filtered_orders = []
+
+    for order in all_orders:
+
+        order_date = clean(order.get("order_date"))
+
+        # Date
+        if from_date and order_date:
+            if order_date < from_date:
+                continue
+
+        if to_date and order_date:
+            if order_date > to_date:
+                continue
+
+        # Channel
+        if channel and channel.lower() != "all":
+            if clean(order.get("channel")).lower() != channel.lower():
+                continue
+
+        # Retailer
+        if retailer_id and retailer_id.lower() != "all":
+            if clean(order.get("retailer_id")) != retailer_id:
+                continue
+
+        # Order type
+        if order_type and order_type.lower() != "all":
+
+            requested_type = normalize_order_type(order_type)
+
+            if normalize_order_type(order.get("order_type")) != requested_type:
+                continue
+
+        # Item-level filters
+        matching_items = []
+
+        for item in order.get("items", []):
+
+            if category and category.lower() != "all":
+                if clean(item.get("category")) != category:
+                    continue
+
+            if product_id and product_id.lower() != "all":
+                if (
+                    clean(item.get("product_id")) != product_id
+                    and clean(item.get("design_number")) != product_id
+                ):
+                    continue
+
+            if metal and metal.lower() != "all":
+                if clean(item.get("metal")).lower() != metal.lower():
+                    continue
+
+            if purity and purity.lower() != "all":
+                if clean(item.get("purity")).lower() != purity.lower():
+                    continue
+
+            if stone and stone.lower() != "all":
+                if clean(item.get("stone")).lower() != stone.lower():
+                    continue
+
+            matching_items.append(item)
+
+        # If item filters were supplied, order must contain
+        # at least one matching item.
+        item_filter_used = any([
+            category and category.lower() != "all",
+            product_id and product_id.lower() != "all",
+            metal and metal.lower() != "all",
+            purity and purity.lower() != "all",
+            stone and stone.lower() != "all",
+        ])
+
+        if item_filter_used:
+            if not matching_items:
+                continue
+
+            order["items"] = matching_items
+
+        filtered_orders.append(order)
+
+    orders = filtered_orders
+
+    # --------------------------------------------------------
+    # 5. OVERVIEW
     # --------------------------------------------------------
 
     total_orders = len(orders)
 
-    customers = {
-        str(order.get("customer_name")).strip()
+    website_order_count = sum(
+        1
         for order in orders
-        if order.get("customer_name")
+        if order.get("channel") == "website"
+    )
+
+    whatsapp_order_count = sum(
+        1
+        for order in orders
+        if order.get("channel") == "whatsapp"
+    )
+
+    total_products = sum(
+        len(order.get("items", []))
+        for order in orders
+    )
+
+    dates = {
+        order.get("order_date")
+        for order in orders
+        if order.get("order_date")
     }
 
-    unique_customers = len(customers)
+    if from_date and to_date:
+        try:
+            start = datetime.strptime(from_date, "%Y-%m-%d")
+            end = datetime.strptime(to_date, "%Y-%m-%d")
+            number_of_days = max(1, (end - start).days + 1)
+        except Exception:
+            number_of_days = max(1, len(dates))
+    else:
+        number_of_days = max(1, len(dates))
 
-    custom_orders = sum(
-        1 for order in orders
-        if str(order.get("order_type", "")).lower() == "custom"
-    )
-
-    catalogue_orders = sum(
-        1 for order in orders
-        if str(order.get("order_type", "")).lower() == "catalogue"
-    )
-
-    delivered_orders = sum(
-        1 for order in orders
-        if order.get("status") == "Delivered"
-    )
-
-    urgent_orders = sum(
-        1 for order in orders
-        if order.get("priority") == "Urgent"
+    average_orders_per_day = (
+        round(total_orders / number_of_days, 2)
+        if number_of_days
+        else 0
     )
 
     # --------------------------------------------------------
-    # OVERDUE ORDERS
+    # 6. HELPER FOR ITEM GROUPING
     # --------------------------------------------------------
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-    completed_statuses = {
-        "Delivered",
-        "Rejected"
-    }
-
-    overdue_orders = 0
-
-    for order in orders:
-
-        due_date = order.get("due_date")
-
-        if not due_date:
-            continue
-
-        status = order.get("status")
-
-        if status in completed_statuses:
-            continue
-
-        if str(due_date)[:10] < today:
-            overdue_orders += 1
-
-    # --------------------------------------------------------
-    # GROUPING HELPER
-    # --------------------------------------------------------
-
-    def group_by_field(field):
+    def group_items(field):
         result = {}
 
         for order in orders:
+            for item in order.get("items", []):
 
-            value = order.get(field)
+                value = clean(item.get(field))
 
-            if value is None:
-                continue
+                if not value:
+                    continue
 
-            value = str(value).strip()
-
-            if not value:
-                continue
-
-            result[value] = result.get(value, 0) + 1
+                result[value] = result.get(value, 0) + 1
 
         return [
             {
@@ -1210,76 +1489,278 @@ async def admin_whatsapp_order_analysis(
             }
             for name, count in sorted(
                 result.items(),
-                key=lambda item: item[1],
+                key=lambda x: x[1],
                 reverse=True
             )
         ]
 
     # --------------------------------------------------------
-    # ANALYSIS GROUPS
+    # 7. CATEGORY
     # --------------------------------------------------------
 
-    by_status = group_by_field("status")
-
-    by_category = group_by_field("product_category")
-
-    by_metal = group_by_field("metal")
-
-    by_gold_kt = group_by_field("gold_kt")
-
-    by_stone = group_by_field("stone_type")
-
-    by_customer = group_by_field("customer_name")[:10]
+    category_data = group_items("category")
 
     # --------------------------------------------------------
-    # DAILY ORDER TREND
+    # 8. PRODUCT / DESIGN
     # --------------------------------------------------------
 
-    daily_map = {}
+    product_data = group_items("product_id")
+
+    # --------------------------------------------------------
+    # 9. METAL
+    # --------------------------------------------------------
+
+    metal_data = group_items("metal")
+
+    # --------------------------------------------------------
+    # 10. PURITY
+    # --------------------------------------------------------
+
+    purity_data = group_items("purity")
+
+    # --------------------------------------------------------
+    # 11. GOLD COLOUR
+    # --------------------------------------------------------
+
+    gold_colour_data = group_items("gold_colour")
+
+    # --------------------------------------------------------
+    # 12. STONE
+    # --------------------------------------------------------
+
+    stone_data = group_items("stone")
+
+    # --------------------------------------------------------
+    # 13. STATUS
+    # --------------------------------------------------------
+
+    status_counts = {}
 
     for order in orders:
 
-        order_date = order.get("order_date")
+        value = clean(order.get("status"))
 
-        if order_date:
+        if not value:
+            continue
 
-            date_string = str(order_date)[:10]
+        status_counts[value] = (
+            status_counts.get(value, 0) + 1
+        )
+
+    status_data = [
+        {
+            "name": name,
+            "count": count
+        }
+        for name, count in sorted(
+            status_counts.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+    ]
+
+    # --------------------------------------------------------
+    # 14. CATEGORY ORDER %
+    # --------------------------------------------------------
+
+    for category_item in category_data:
+
+        category_item["percentage"] = (
+            round(
+                (category_item["count"] / total_products) * 100,
+                2
+            )
+            if total_products
+            else 0
+        )
+
+    # --------------------------------------------------------
+    # 15. MONTHLY CATEGORY PERFORMANCE
+    # --------------------------------------------------------
+
+    monthly_category = {}
+
+    for order in orders:
+
+        order_date = clean(order.get("order_date"))
+
+        if not order_date:
+            continue
+
+        month = order_date[:7]
+
+        for item in order.get("items", []):
+
+            category_name = clean(
+                item.get("category")
+            )
+
+            if not category_name:
+                continue
+
+            monthly_category.setdefault(
+                month,
+                {}
+            )
+
+            monthly_category[month][category_name] = (
+                monthly_category[month].get(
+                    category_name,
+                    0
+                ) + 1
+            )
+
+    category_monthly = []
+
+    for month in sorted(monthly_category):
+
+        category_monthly.append({
+            "month": month,
+            "categories": monthly_category[month]
+        })
+
+    # --------------------------------------------------------
+    # 16. RETAILER ANALYSIS
+    # --------------------------------------------------------
+
+    retailer_map = {}
+
+    for order in orders:
+
+        retailer_key = (
+            clean(order.get("retailer_id"))
+            or clean(order.get("retailer_name"))
+            or "Unknown"
+        )
+
+        retailer_name = (
+            clean(order.get("retailer_name"))
+            or "Unknown"
+        )
+
+        if retailer_key not in retailer_map:
+
+            retailer_map[retailer_key] = {
+                "retailer_id": retailer_key,
+                "retailer_name": retailer_name,
+                "total_orders": 0,
+                "custom_orders": 0,
+                "stock_orders": 0,
+                "categories": {}
+            }
+
+        retailer = retailer_map[retailer_key]
+
+        retailer["total_orders"] += 1
+
+        if order.get("order_type") == "custom":
+            retailer["custom_orders"] += 1
+        elif order.get("order_type") == "stock":
+            retailer["stock_orders"] += 1
+
+        for item in order.get("items", []):
+
+            category_name = clean(
+                item.get("category")
+            )
+
+            if not category_name:
+                continue
+
+            retailer["categories"][category_name] = (
+                retailer["categories"].get(
+                    category_name,
+                    0
+                ) + 1
+            )
+
+    retailer_data = list(
+        retailer_map.values()
+    )
+
+    retailer_data.sort(
+        key=lambda x: x["total_orders"],
+        reverse=True
+    )
+
+    # --------------------------------------------------------
+    # 17. DUE DATE ANALYSIS
+    # --------------------------------------------------------
+
+    today = datetime.now(timezone.utc).date()
+
+    due_this_week = 0
+    due_next_week = 0
+    overdue = 0
+    completed_on_time = 0
+    delayed = 0
+
+    completed_statuses = {
+        "delivered",
+        "completed",
+        "rejected"
+    }
+
+    for order in orders:
+
+        due_date_string = clean(
+            order.get("due_date")
+        )
+
+        if not due_date_string:
+            continue
+
+        try:
+            due_date_value = datetime.strptime(
+                due_date_string[:10],
+                "%Y-%m-%d"
+            ).date()
+        except Exception:
+            continue
+
+        status = clean(
+            order.get("status")
+        ).lower()
+
+        days_difference = (
+            due_date_value - today
+        ).days
+
+        if status in completed_statuses:
+
+            order_date_string = clean(
+                order.get("order_date")
+            )
+
+            if order_date_string:
+
+                try:
+                    completed_date = datetime.strptime(
+                        order_date_string[:10],
+                        "%Y-%m-%d"
+                    ).date()
+
+                    if completed_date <= due_date_value:
+                        completed_on_time += 1
+                    else:
+                        delayed += 1
+
+                except Exception:
+                    pass
 
         else:
 
-            created_at = order.get("createdAt")
+            if days_difference < 0:
+                overdue += 1
 
-            if created_at:
+            elif 0 <= days_difference <= 6:
+                due_this_week += 1
 
-                try:
-                    if hasattr(created_at, "strftime"):
-                        date_string = created_at.strftime("%Y-%m-%d")
-                    else:
-                        date_string = str(created_at)[:10]
-                except Exception:
-                    continue
-
-            else:
-                continue
-
-        if date_string:
-            daily_map[date_string] = (
-                daily_map.get(date_string, 0) + 1
-            )
-
-    daily_trend = [
-        {
-            "date": date,
-            "count": count
-        }
-        for date, count in sorted(daily_map.items())
-    ]
-
-    # Last 14 dates only
-    daily_trend = daily_trend[-14:]
+            elif 7 <= days_difference <= 13:
+                due_next_week += 1
 
     # --------------------------------------------------------
-    # RESPONSE
+    # 18. RETURN
     # --------------------------------------------------------
 
     return {
@@ -1287,32 +1768,50 @@ async def admin_whatsapp_order_analysis(
 
         "filters": {
             "from_date": from_date,
-            "to_date": to_date
+            "to_date": to_date,
+            "channel": channel or "all",
+            "retailer_id": retailer_id or "all",
+            "category": category or "all",
+            "product_id": product_id or "all",
+            "order_type": order_type or "all",
+            "metal": metal or "all",
+            "purity": purity or "all",
+            "stone": stone or "all",
         },
 
-        "kpis": {
+        "overview": {
             "total_orders": total_orders,
-            "unique_customers": unique_customers,
-            "custom_orders": custom_orders,
-            "catalogue_orders": catalogue_orders,
-            "delivered_orders": delivered_orders,
-            "urgent_orders": urgent_orders,
-            "overdue_orders": overdue_orders
+            "website_orders": website_order_count,
+            "whatsapp_orders": whatsapp_order_count,
+            "total_products": total_products,
+            "average_orders_per_day": average_orders_per_day,
         },
 
-        "status": by_status,
+        "category": category_data,
 
-        "category": by_category,
+        "category_monthly": category_monthly,
 
-        "metal": by_metal,
+        "products": product_data,
 
-        "gold_kt": by_gold_kt,
+        "retailers": retailer_data,
 
-        "stone": by_stone,
+        "metal": metal_data,
 
-        "customers": by_customer,
+        "purity": purity_data,
 
-        "daily_trend": daily_trend
+        "gold_colour": gold_colour_data,
+
+        "stone": stone_data,
+
+        "status": status_data,
+
+        "due_dates": {
+            "due_this_week": due_this_week,
+            "due_next_week": due_next_week,
+            "overdue": overdue,
+            "completed_on_time": completed_on_time,
+            "delayed": delayed,
+        },
     }
 
 
