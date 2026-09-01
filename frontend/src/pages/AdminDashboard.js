@@ -2184,6 +2184,27 @@ const analysisByDate =
     analysisData?.daily_trend
   );
 
+const maxAnalysisStatusCount = Math.max(
+    ...analysisByStatus.map((item) =>
+      Number(item?.count ?? item?.orders ?? item?.order_count ?? 0)
+    ),
+    1
+  );
+  
+  const maxAnalysisDateCount = Math.max(
+    ...analysisByDate.map((item) =>
+      Number(item?.count ?? item?.orders ?? item?.order_count ?? 0)
+    ),
+    1
+  );
+  
+  const maxAnalysisCustomerCount = Math.max(
+    ...analysisByCustomer.map((item) =>
+      Number(item?.count ?? item?.orders ?? item?.order_count ?? 0)
+    ),
+    1
+  );
+
 const analysisDueDates =
   analysisData?.due_dates || {};
 
