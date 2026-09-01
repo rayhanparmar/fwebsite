@@ -27,6 +27,8 @@ import {
 
 
 
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
 const CATEGORIES = [
   "Bali",
   "Bangle/Kada",
@@ -164,7 +166,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   useEffect(() => {
     api.get("/admin/category-images")
       .then((res) => {
-        setCategoryImages(res.data.category_images || {});
+        setCategoryImages(toArray(res.data.category_images));
       })
       .catch((err) => {
         console.error("Failed to load category images:", err);
@@ -272,16 +274,16 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
             response.data.overview?.average_orders_per_day || 0,
         },
       
-        category: response.data.category || [],
+        category: toArray(response.data.category),
 
 category_monthly:
-  response.data.category_monthly || [],
+  toArray(response.data.category_monthly),
 
 by_date:
-  response.data.by_date || [],
+  toArray(response.data.by_date),
 
 products:
-  response.data.products || [],
+  toArray(response.data.products),
       
         product_intelligence:
           response.data.product_intelligence || {
@@ -291,25 +293,25 @@ products:
           },
       
         retailers:
-          response.data.retailers || [],
+          toArray(response.data.retailers),
       
           metal:
-          response.data.metal || [],
+          toArray(response.data.metal),
 
         category_metal:
-          response.data.category_metal || [],
+          toArray(response.data.category_metal),
 
         purity:
-          response.data.purity || [],
+          toArray(response.data.purity),
       
         gold_colour:
-          response.data.gold_colour || [],
+          toArray(response.data.gold_colour),
       
         stone:
-          response.data.stone || [],
+          toArray(response.data.stone),
       
         status:
-          response.data.status || {},
+          toArray(response.data.status),
       
         due_dates:
           response.data.due_dates || {},
@@ -393,7 +395,7 @@ products:
 }, [searchTerm, statusFilter, whatsappOrders, api]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
-  useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
+  useEffect(() => { loadRetailers(); }, [loadRetailers]);
   // Auto-load products when category or page changes
   useEffect(() => { if (productsLoaded) loadProducts(); }, [productCategory, productPage]);
 
@@ -748,7 +750,7 @@ products:
       const updated = await api.get("/admin/category-images");
   
       setCategoryImages(
-        updated.data.category_images || []
+        toArray(updated.data.category_images)
       );
   
       setSelectedCategoryImage(null);
@@ -787,7 +789,7 @@ products:
       const updated = await api.get("/admin/category-images");
   
       setCategoryImages(
-        updated.data.category_images || []
+        toArray(updated.data.category_images)
       );
   
     } catch (err) {
@@ -1214,24 +1216,21 @@ const exportAnalysisCSV = () => {
     rows.push(["ORDER STATUS"]);
     rows.push(["Status", "Orders"]);
 
-    Object.entries(
-      analysisByStatus || {}
-    ).forEach(([status, value]) => {
+    (analysisByStatus || []).forEach((item) => {
+      const status =
+        item?.status ||
+        item?.name ||
+        item?.value ||
+        "Unknown";
 
-      const orders =
-        typeof value === "object"
-          ? Number(
-              value?.orders ||
-              value?.count ||
-              0
-            )
-          : Number(value || 0);
+      const orders = Number(
+        item?.orders ||
+        item?.order_count ||
+        item?.count ||
+        0
+      );
 
-      rows.push([
-        status,
-        orders
-      ]);
-
+      rows.push([status, orders]);
     });
 
     // CSV CREATION
@@ -1539,23 +1538,21 @@ const exportAnalysisExcel = async () => {
       ["Status", "Orders"],
     ];
 
-    Object.entries(
-      analysisByStatus || {}
-    ).forEach(([status, value]) => {
+    (analysisByStatus || []).forEach((item) => {
+      const status =
+        item?.status ||
+        item?.name ||
+        item?.value ||
+        "Unknown";
 
-      const orders =
-        typeof value === "object"
-          ? Number(
-              value?.orders ||
-              value?.count ||
-              0
-            )
-          : Number(value || 0);
+      const orders = Number(
+        item?.orders ||
+        item?.order_count ||
+        item?.count ||
+        0
+      );
 
-      statusRows.push([
-        status,
-        orders
-      ]);
+      statusRows.push([status, orders]);
     });
 
     XLSX.utils.book_append_sheet(
@@ -1929,8 +1926,7 @@ const analysisCatalogueOrders =
     analysisData?.overview?.catalogue_orders || 0
   );
 
-const analysisByStatus =
-  analysisData?.status || [];
+const analysisByStatus = toArray(analysisData?.status);
 
 const maxAnalysisStatusCount =
   Math.max(
@@ -1940,8 +1936,7 @@ const maxAnalysisStatusCount =
     1
   );
 
-const analysisByCustomer =
-  analysisData?.customers || [];
+const analysisByCustomer = toArray(analysisData?.customers);
 
 const maxAnalysisCustomerCount =
   Math.max(
@@ -1953,20 +1948,16 @@ const maxAnalysisCustomerCount =
 
 
 
-const analysisByCategory =
-  analysisData?.category || [];
+const analysisByCategory = toArray(analysisData?.category);
 
 const analysisCategoryProductDrilldown =
   analysisData?.category_product_drilldown || {};
 
-const analysisByCategoryMonthly =
-  analysisData?.category_monthly || [];
+const analysisByCategoryMonthly = toArray(analysisData?.category_monthly);
 
-const analysisByProducts =
-  analysisData?.products || [];
+const analysisByProducts = toArray(analysisData?.products);
 
-const analysisByDate =
-  analysisData?.by_date || [];
+const analysisByDate = toArray(analysisData?.by_date);
 
 const maxAnalysisDateCount =
   Math.max(
@@ -1983,23 +1974,19 @@ const analysisProductIntelligence =
     never_ordered: [],
   };
 
-const analysisByRetailer =
-  analysisData?.retailers || [];
+const analysisByRetailer = toArray(analysisData?.retailers);
 
-const analysisByMetal =
-  analysisData?.metal || [];
+const analysisByMetal = toArray(analysisData?.metal);
 
-const analysisByCategoryMetal =
-  analysisData?.category_metal || [];
+const analysisByCategoryMetal = toArray(analysisData?.category_metal);
 
-const analysisByPurity =
-  analysisData?.purity || [];
+const analysisByPurity = toArray(analysisData?.purity);
 
-const analysisByGoldColour =
-  analysisData?.gold_colour || [];
+const analysisByGoldKT = analysisByPurity;
 
-const analysisByStone =
-  analysisData?.stone || [];
+const analysisByGoldColour = toArray(analysisData?.gold_colour);
+
+const analysisByStone = toArray(analysisData?.stone);
 
 const analysisDueDates =
   analysisData?.due_dates || {};
