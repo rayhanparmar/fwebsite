@@ -1911,221 +1911,6 @@ const exportAnalysisPDF = () => {
 // ======================================================
 
 
-{/* =====================================================
-    AUTOMATIC BUSINESS INSIGHTS
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mb-6">
-
-<div className="mb-5">
-  <h3 className="font-semibold text-lg">
-    Automatic Business Insights
-  </h3>
-
-  <p className="text-sm text-gray-500 mt-1">
-    Key observations from your current analysis
-  </p>
-</div>
-
-{automaticInsights.length === 0 ? (
-
-  <p className="text-sm text-gray-500">
-    No automatic insights available for the selected filters.
-  </p>
-
-) : (
-
-  <div className="space-y-3">
-
-    {automaticInsights.map((insight, index) => (
-
-      <div
-        key={`insight-${index}`}
-        className="flex items-start gap-3 border border-gray-100 rounded-lg p-4"
-      >
-
-        <div
-          className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
-            insight.type === "positive"
-              ? "bg-green-500"
-              : insight.type === "warning"
-              ? "bg-red-500"
-              : "bg-blue-500"
-          }`}
-        />
-
-        <p className="text-sm text-gray-700 leading-6">
-          {insight.text}
-        </p>
-
-      </div>
-
-    ))}
-
-  </div>
-
-)}
-
-</div>
-
-{/* =====================================================
-    OVERVIEW
-===================================================== */}
-
-<div className="space-y-4">
-
-  {/* DATE FILTER */}
-<div className="flex flex-col sm:flex-row gap-3">
-
-<div>
-  <label className="block text-sm font-medium text-[#374151] mb-1">
-    From Date
-  </label>
-
-  <input
-    type="date"
-    value={analysisFromDate}
-    onChange={(e) => setAnalysisFromDate(e.target.value)}
-    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
-  />
-</div>
-
-<div>
-  <label className="block text-sm font-medium text-[#374151] mb-1">
-    To Date
-  </label>
-
-  <input
-    type="date"
-    value={analysisToDate}
-    onChange={(e) => setAnalysisToDate(e.target.value)}
-    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
-  />
-</div>
-
-</div>
-
-<div>
-  <h3 className="text-lg font-heading font-semibold text-[#0A0A0A]">
-    Overview
-  </h3>
-
-  <p className="text-sm text-[#6B7280] mt-1">
-    Combined Website + WhatsApp performance
-  </p>
-
-  <div className="flex justify-end mb-4">
-  <div className="flex gap-2">
-
-  <Button
-    onClick={exportAnalysisCSV}
-    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
-  >
-    Export CSV
-  </Button>
-
-  <Button
-    onClick={exportAnalysisExcel}
-    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
-  >
-    Export Excel
-  </Button>
-
-  <Button
-    onClick={exportAnalysisPDF}
-    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
-  >
-    Export PDF
-  </Button>
-
-</div>
-</div>
-</div>
-
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-  {/* TOTAL ORDERS */}
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-    <p className="text-sm text-[#6B7280]">
-      Total Orders
-    </p>
-
-    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
-      {analysisData?.overview?.total_orders ?? 0}
-    </p>
-
-    <p className="text-xs text-[#9CA3AF] mt-1">
-      Website + WhatsApp
-    </p>
-  </div>
-
-
-  {/* WEBSITE ORDERS */}
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-    <p className="text-sm text-[#6B7280]">
-      Website Orders
-    </p>
-
-    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
-      {analysisData?.overview?.website_orders ?? 0}
-    </p>
-
-    <p className="text-xs text-[#9CA3AF] mt-1">
-      Website channel
-    </p>
-  </div>
-
-
-  {/* WHATSAPP ORDERS */}
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-    <p className="text-sm text-[#6B7280]">
-      WhatsApp Orders
-    </p>
-
-    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
-      {analysisData?.overview?.whatsapp_orders ?? 0}
-    </p>
-
-    <p className="text-xs text-[#9CA3AF] mt-1">
-      WhatsApp channel
-    </p>
-  </div>
-
-
-  {/* TOTAL PRODUCTS */}
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-    <p className="text-sm text-[#6B7280]">
-      Total Products
-    </p>
-
-    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
-      {analysisData?.overview?.total_products ?? 0}
-    </p>
-
-    <p className="text-xs text-[#9CA3AF] mt-1">
-      Products ordered
-    </p>
-  </div>
-
-
-  {/* AVERAGE ORDERS / DAY */}
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
-    <p className="text-sm text-[#6B7280]">
-      Average Orders/Day
-    </p>
-
-    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
-      {analysisData?.overview?.average_orders_per_day ?? 0}
-    </p>
-
-    <p className="text-xs text-[#9CA3AF] mt-1">
-      Based on selected dates
-    </p>
-  </div>
-
-</div>
-
-</div>
 
 const analysisByStatus =
   analysisData?.status || [];
@@ -2453,6 +2238,225 @@ const automaticInsights = useMemo(() => {
 
   return (
     <>
+    {/* =====================================================
+    AUTOMATIC BUSINESS INSIGHTS
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mb-6">
+
+<div className="mb-5">
+  <h3 className="font-semibold text-lg">
+    Automatic Business Insights
+  </h3>
+
+  <p className="text-sm text-gray-500 mt-1">
+    Key observations from your current analysis
+  </p>
+</div>
+
+{automaticInsights.length === 0 ? (
+
+  <p className="text-sm text-gray-500">
+    No automatic insights available for the selected filters.
+  </p>
+
+) : (
+
+  <div className="space-y-3">
+
+    {automaticInsights.map((insight, index) => (
+
+      <div
+        key={`insight-${index}`}
+        className="flex items-start gap-3 border border-gray-100 rounded-lg p-4"
+      >
+
+        <div
+          className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+            insight.type === "positive"
+              ? "bg-green-500"
+              : insight.type === "warning"
+              ? "bg-red-500"
+              : "bg-blue-500"
+          }`}
+        />
+
+        <p className="text-sm text-gray-700 leading-6">
+          {insight.text}
+        </p>
+
+      </div>
+
+    ))}
+
+  </div>
+
+)}
+
+</div>
+
+{/* =====================================================
+    OVERVIEW
+===================================================== */}
+
+<div className="space-y-4">
+
+  {/* DATE FILTER */}
+<div className="flex flex-col sm:flex-row gap-3">
+
+<div>
+  <label className="block text-sm font-medium text-[#374151] mb-1">
+    From Date
+  </label>
+
+  <input
+    type="date"
+    value={analysisFromDate}
+    onChange={(e) => setAnalysisFromDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
+  />
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-[#374151] mb-1">
+    To Date
+  </label>
+
+  <input
+    type="date"
+    value={analysisToDate}
+    onChange={(e) => setAnalysisToDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
+  />
+</div>
+
+</div>
+
+<div>
+  <h3 className="text-lg font-heading font-semibold text-[#0A0A0A]">
+    Overview
+  </h3>
+
+  <p className="text-sm text-[#6B7280] mt-1">
+    Combined Website + WhatsApp performance
+  </p>
+
+  <div className="flex justify-end mb-4">
+  <div className="flex gap-2">
+
+  <Button
+    onClick={exportAnalysisCSV}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export CSV
+  </Button>
+
+  <Button
+    onClick={exportAnalysisExcel}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export Excel
+  </Button>
+
+  <Button
+    onClick={exportAnalysisPDF}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export PDF
+  </Button>
+
+</div>
+</div>
+</div>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+  {/* TOTAL ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Total Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.total_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Website + WhatsApp
+    </p>
+  </div>
+
+
+  {/* WEBSITE ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Website Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.website_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Website channel
+    </p>
+  </div>
+
+
+  {/* WHATSAPP ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      WhatsApp Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.whatsapp_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      WhatsApp channel
+    </p>
+  </div>
+
+
+  {/* TOTAL PRODUCTS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Total Products
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.total_products ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Products ordered
+    </p>
+  </div>
+
+
+  {/* AVERAGE ORDERS / DAY */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Average Orders/Day
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.average_orders_per_day ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Based on selected dates
+    </p>
+  </div>
+
+</div>
+
+</div>
+
+
+
+    
   
       {showCustomerDialog && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]">
