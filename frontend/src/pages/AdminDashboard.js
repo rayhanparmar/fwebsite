@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
@@ -1299,8 +1299,9 @@ const exportAnalysisCSV = () => {
 // ANALYSIS EXPORT — EXCEL
 // ======================================================
 
-const exportAnalysisExcel = () => {
+const exportAnalysisExcel = async () => {
   try {
+    const XLSX = await import("xlsx");
     const workbook = XLSX.utils.book_new();
 
     // OVERVIEW
