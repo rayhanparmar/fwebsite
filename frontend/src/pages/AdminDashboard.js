@@ -1910,7 +1910,20 @@ const exportAnalysisPDF = () => {
 // WHATSAPP ORDER ANALYSIS
 // ======================================================
 
+const analysisTotalOrders =
+  Number(
+    analysisData?.overview?.total_orders || 0
+  );
 
+const analysisCustomOrders =
+  Number(
+    analysisData?.overview?.custom_orders || 0
+  );
+
+const analysisCatalogueOrders =
+  Number(
+    analysisData?.overview?.catalogue_orders || 0
+  );
 
 const analysisByStatus =
   analysisData?.status || [];
