@@ -1656,7 +1656,9 @@ async def admin_combined_analysis(
         if not product_key:
             continue
 
-        ordered = product_counts.get(product_key)
+        # product_counts uses normalized keys; normalize the catalogue key too.
+        product_key_normalized = normalize_analysis_value(product_key)
+        ordered = product_counts.get(product_key_normalized)
 
         product_performance.append({
             "product_id": product_id,
@@ -1854,7 +1856,7 @@ async def admin_combined_analysis(
     # First build the complete catalogue structure
     # so products with zero orders are also available.
 
-    for product in products:
+    for product in catalogue_products:
 
         category_name = normalize_analysis_value(
             product.get("category")
@@ -2119,34 +2121,6 @@ async def admin_combined_analysis(
                     reverse=True
                 )
             }
-
-
-    # --------------------------------------------------------
-    # DAILY ORDER ANALYSIS
-    # --------------------------------------------------------
-
-    by_date_counts = {}
-
-    for order in orders:
-        order_date = clean(order.get("order_date"))
-
-        if not order_date:
-            continue
-
-        by_date_counts[order_date] = (
-            by_date_counts.get(order_date, 0) + 1
-        )
-
-    by_date = [
-        {
-            "date": date,
-            "count": count
-        }
-        for date, count in sorted(
-            by_date_counts.items(),
-            key=lambda x: x[0]
-        )
-    ]
 
 
     # --------------------------------------------------------
@@ -3039,17 +3013,15 @@ async def admin_combined_analysis(
         },
 
         "overview": {
-    "total_orders": total_orders,
-    "combined_orders": combined_orders,
-    "website_orders": website_order_count,
-    "whatsapp_orders": whatsapp_order_count,
-    "total_products": total_products,
-    "average_orders_per_day": average_orders_per_day,
-},
+            "total_orders": total_orders,
+            "combined_orders": combined_orders,
+            "website_orders": website_order_count,
+            "whatsapp_orders": whatsapp_order_count,
+            "total_products": total_products,
+            "average_orders_per_day": average_orders_per_day,
+        },
 
-"by_date": by_date,
-
-"category": category_data,
+        "category": category_data,
 
 "category_product_drilldown": category_product_data,
 
