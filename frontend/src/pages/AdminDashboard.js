@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +12,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
 import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 
 
@@ -46,29 +61,68 @@ export default function AdminDashboard() {
   // =========================
 // ANALYSIS
 // =========================
-  const [analysisRange, setAnalysisRange] = useState("all");
-  const [analysisFromDate, setAnalysisFromDate] = useState("");
-  const [analysisToDate, setAnalysisToDate] = useState("");
+const [analysisFromDate, setAnalysisFromDate] = useState("");
+const [analysisToDate, setAnalysisToDate] = useState("");
 
-  const [analysisData, setAnalysisData] = useState({
-    kpis: {
-      total_orders: 0,
-      unique_customers: 0,
-      custom_orders: 0,
-      catalogue_orders: 0,
-      delivered_orders: 0,
-      urgent_orders: 0,
-      overdue_orders: 0,
-    },
-    status: [],
-    category: [],
-    customers: [],
-    metal: [],
-    gold_kt: [],
-    stone: [],
-    daily_trend: [],
-  });
 
+const [analysisChannel, setAnalysisChannel] = useState("all");
+const [analysisRetailer, setAnalysisRetailer] = useState("all");
+const [analysisCategory, setAnalysisCategory] = useState("all");
+const [analysisProduct, setAnalysisProduct] = useState("all");
+const [analysisOrderType, setAnalysisOrderType] = useState("all");
+const [analysisMetal, setAnalysisMetal] = useState("all");
+const [analysisPurity, setAnalysisPurity] = useState("all");
+const [analysisStone, setAnalysisStone] = useState("all");
+
+const [analysisData, setAnalysisData] = useState({
+  overview: {
+    total_orders: 0,
+    combined_orders: 0,
+    website_orders: 0,
+    whatsapp_orders: 0,
+    total_products: 0,
+    average_orders_per_day: 0,
+  },
+
+  category: [],
+  category_monthly: [],
+
+  products: [],
+
+  product_intelligence: {
+    best_sellers: [],
+    underperforming: [],
+    never_ordered: [],
+  },
+
+  retailers: [],
+
+  metal: [],
+  category_metal: [],
+  purity: [],
+  gold_colour: [],
+  stone: [],
+
+  status: [],
+  due_dates: {},
+
+  filters: {},
+});
+
+
+const [selectedAnalysisCategories, setSelectedAnalysisCategories] =
+  useState([]);
+
+const [selectedCategoryDrilldown, setSelectedCategoryDrilldown] =
+  useState(null);
+const [expandedAnalysisRetailer, setExpandedAnalysisRetailer] =
+  useState(null);
+
+const [retailerAnalysisSort, setRetailerAnalysisSort] =
+  useState("orders_desc");
+
+const [productPerformanceSort, setProductPerformanceSort] =
+  useState("orders_desc");
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
@@ -152,97 +206,136 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
   const loadWhatsappAnalysis = useCallback(async () => {
     try {
-      let url = "/admin/whatsapp-orders/analysis";
-  
       const params = new URLSearchParams();
   
-      if (analysisRange === "today") {
-        const today = new Date().toISOString().slice(0, 10);
-  
-        params.append("from_date", today);
-        params.append("to_date", today);
+      if (analysisFromDate) {
+        params.append("from_date", analysisFromDate);
       }
   
-      if (analysisRange === "7days") {
-        const today = new Date();
-        const start = new Date();
-  
-        start.setDate(today.getDate() - 6);
-  
-        params.append(
-          "from_date",
-          start.toISOString().slice(0, 10)
-        );
-  
-        params.append(
-          "to_date",
-          today.toISOString().slice(0, 10)
-        );
+      if (analysisToDate) {
+        params.append("to_date", analysisToDate);
       }
-  
-      if (analysisRange === "30days") {
-        const today = new Date();
-        const start = new Date();
-  
-        start.setDate(today.getDate() - 29);
-  
-        params.append(
-          "from_date",
-          start.toISOString().slice(0, 10)
-        );
-  
-        params.append(
-          "to_date",
-          today.toISOString().slice(0, 10)
-        );
+
+      if (analysisChannel !== "all") {
+        params.append("channel", analysisChannel);
       }
-  
-      if (analysisRange === "custom") {
-        if (analysisFromDate) {
-          params.append("from_date", analysisFromDate);
-        }
-  
-        if (analysisToDate) {
-          params.append("to_date", analysisToDate);
-        }
+
+      if (analysisRetailer !== "all") {
+        params.append("retailer_id", analysisRetailer);
+      }
+
+      if (analysisCategory !== "all") {
+        params.append("category", analysisCategory);
+      }
+
+      if (analysisProduct !== "all") {
+        params.append("product_id", analysisProduct);
+      }
+
+      if (analysisOrderType !== "all") {
+        params.append("order_type", analysisOrderType);
+      }
+
+      if (analysisMetal !== "all") {
+        const metalValue =
+            analysisMetal === "gold_platinum"
+                ? "Gold + Platinum"
+                : analysisMetal;
+    
+        params.append("metal", metalValue);
+    }
+
+      if (analysisPurity !== "all") {
+        params.append("purity", analysisPurity);
+      }
+
+      if (analysisStone !== "all") {
+        params.append("stone", analysisStone);
       }
   
       const query = params.toString();
   
-      if (query) {
-        url += `?${query}`;
-      }
-  
-      const response = await api.get(url);
+      const response = await api.get(
+        `/admin/analysis${query ? `?${query}` : ""}`
+      );
   
       setAnalysisData({
-        kpis: response.data.kpis || {
-          total_orders: 0,
-          unique_customers: 0,
-          custom_orders: 0,
-          catalogue_orders: 0,
-          delivered_orders: 0,
-          urgent_orders: 0,
-          overdue_orders: 0,
+        overview: {
+          total_orders: response.data.overview?.total_orders || 0,
+          combined_orders:
+            response.data.overview?.combined_orders || 0,
+          website_orders: response.data.overview?.website_orders || 0,
+          whatsapp_orders: response.data.overview?.whatsapp_orders || 0,
+          total_products: response.data.overview?.total_products || 0,
+          average_orders_per_day:
+            response.data.overview?.average_orders_per_day || 0,
         },
-        status: response.data.status || [],
+      
         category: response.data.category || [],
-        customers: response.data.customers || [],
-        metal: response.data.metal || [],
-        gold_kt: response.data.gold_kt || [],
-        stone: response.data.stone || [],
-        daily_trend: response.data.daily_trend || [],
+      
+        category_monthly:
+          response.data.category_monthly || [],
+      
+        products:
+          response.data.products || [],
+      
+        product_intelligence:
+          response.data.product_intelligence || {
+            best_sellers: [],
+            underperforming: [],
+            never_ordered: [],
+          },
+      
+        retailers:
+          response.data.retailers || [],
+      
+          metal:
+          response.data.metal || [],
+
+        category_metal:
+          response.data.category_metal || [],
+
+        purity:
+          response.data.purity || [],
+      
+        gold_colour:
+          response.data.gold_colour || [],
+      
+        stone:
+          response.data.stone || [],
+      
+        status:
+          response.data.status || {},
+      
+        due_dates:
+          response.data.due_dates || {},
+      
+        filters:
+          response.data.filters || {},
       });
   
     } catch (error) {
-      console.error("WhatsApp Analysis API error:", error);
-      toast.error("Failed to load WhatsApp analysis");
+      console.error(
+        "Combined Analysis API error:",
+        error
+      );
+  
+      toast.error(
+        "Failed to load business analysis"
+      );
     }
   }, [
     api,
-    analysisRange,
     analysisFromDate,
     analysisToDate,
+    analysisChannel,
+    analysisRetailer,
+    analysisCategory,
+    analysisProduct,
+    analysisOrderType,
+    analysisMetal,
+    analysisPurity,
+    analysisStone,
   ]);
 
 
@@ -887,70 +980,1475 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
 
 // ======================================================
+// ANALYSIS EXPORT — CSV
+// ======================================================
+
+const exportAnalysisCSV = () => {
+  try {
+    const rows = [];
+
+    // OVERVIEW
+    rows.push(["ANALYSIS OVERVIEW"]);
+    rows.push(["Metric", "Value"]);
+
+    rows.push([
+      "Total Orders",
+      analysisData?.overview?.total_orders ?? 0
+    ]);
+
+    rows.push([
+      "Website Orders",
+      analysisData?.overview?.website_orders ?? 0
+    ]);
+
+    rows.push([
+      "WhatsApp Orders",
+      analysisData?.overview?.whatsapp_orders ?? 0
+    ]);
+
+    rows.push([
+      "Total Products",
+      analysisData?.overview?.total_products ?? 0
+    ]);
+
+    rows.push([
+      "Average Orders/Day",
+      analysisData?.overview?.average_orders_per_day ?? 0
+    ]);
+
+    rows.push([]);
+
+    // SELECTED FILTERS
+    rows.push(["SELECTED FILTERS"]);
+    rows.push(["From Date", analysisFromDate || "All"]);
+    rows.push(["To Date", analysisToDate || "All"]);
+    rows.push(["Channel", analysisChannel]);
+    rows.push(["Retailer", analysisRetailer]);
+    rows.push(["Category", analysisCategory]);
+    rows.push(["Product/Design", analysisProduct]);
+    rows.push(["Custom/Stock", analysisOrderType]);
+    rows.push(["Metal", analysisMetal]);
+    rows.push(["Purity", analysisPurity]);
+    rows.push(["Stone", analysisStone]);
+
+    rows.push([]);
+
+    // CATEGORY PERFORMANCE
+    rows.push(["CATEGORY PERFORMANCE"]);
+    rows.push(["Category", "Orders", "Order %"]);
+
+    (analysisByCategory || []).forEach((item) => {
+
+      const category =
+        item?.category ||
+        item?.name ||
+        "Unknown";
+
+      const orders =
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        );
+
+      const percentage =
+        Number(
+          item?.percentage ||
+          item?.order_percentage ||
+          0
+        );
+
+      rows.push([
+        category,
+        orders,
+        percentage
+      ]);
+
+    });
+
+    rows.push([]);
+
+    // PRODUCT PERFORMANCE
+    rows.push(["PRODUCT PERFORMANCE"]);
+    rows.push(["Product/Design", "Category", "Orders"]);
+
+    (analysisByProducts || []).forEach((item) => {
+
+      const product =
+        item?.design_number ||
+        item?.product_id ||
+        item?.name ||
+        "Unknown";
+
+      const category =
+        item?.category ||
+        "Unknown";
+
+      const orders =
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        );
+
+      rows.push([
+        product,
+        category,
+        orders
+      ]);
+
+    });
+
+    rows.push([]);
+
+    // RETAILER PERFORMANCE
+    rows.push(["RETAILER PERFORMANCE"]);
+    rows.push([
+      "Retailer",
+      "Total Orders",
+      "Custom Orders",
+      "Stock Orders"
+    ]);
+
+    (analysisByRetailer || []).forEach((item) => {
+
+      const retailer =
+        item?.retailer_name ||
+        item?.name ||
+        "Unknown";
+
+      const total =
+        Number(item?.total_orders || 0);
+
+      const custom =
+        Number(
+          item?.custom_orders ||
+          item?.custom ||
+          0
+        );
+
+      const stock =
+        Number(
+          item?.stock_orders ||
+          item?.stock ||
+          0
+        );
+
+      rows.push([
+        retailer,
+        total,
+        custom,
+        stock
+      ]);
+
+    });
+
+    rows.push([]);
+
+    // METAL
+    rows.push(["METAL ANALYSIS"]);
+    rows.push(["Metal", "Orders"]);
+
+    (analysisByMetal || []).forEach((item) => {
+
+      const metal =
+        item?.metal ||
+        item?.name ||
+        item?.value ||
+        "Unknown";
+
+      const orders =
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        );
+
+      rows.push([
+        metal,
+        orders
+      ]);
+
+    });
+
+    rows.push([]);
+
+    // STONE
+    rows.push(["STONE ANALYSIS"]);
+    rows.push(["Stone", "Orders"]);
+
+    (analysisByStone || []).forEach((item) => {
+
+      const stone =
+        item?.stone ||
+        item?.stone_type ||
+        item?.name ||
+        item?.value ||
+        "Unknown";
+
+      const orders =
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        );
+
+      rows.push([
+        stone,
+        orders
+      ]);
+
+    });
+
+    rows.push([]);
+
+    // ORDER STATUS
+    rows.push(["ORDER STATUS"]);
+    rows.push(["Status", "Orders"]);
+
+    Object.entries(
+      analysisByStatus || {}
+    ).forEach(([status, value]) => {
+
+      const orders =
+        typeof value === "object"
+          ? Number(
+              value?.orders ||
+              value?.count ||
+              0
+            )
+          : Number(value || 0);
+
+      rows.push([
+        status,
+        orders
+      ]);
+
+    });
+
+    // CSV CREATION
+    const csv = rows
+      .map((row) =>
+        row
+          .map((value) => {
+            const text =
+              value === null ||
+              value === undefined
+                ? ""
+                : String(value);
+
+            return `"${text.replace(/"/g, '""')}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob(
+      [csv],
+      { type: "text/csv;charset=utf-8;" }
+    );
+
+    const url =
+      window.URL.createObjectURL(blob);
+
+    const link =
+      document.createElement("a");
+
+    link.href = url;
+
+    const from =
+      analysisFromDate || "all";
+
+    const to =
+      analysisToDate || "all";
+
+    link.download =
+      `Business_Analysis_${from}_to_${to}.csv`;
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+
+    toast.success(
+      "Analysis CSV downloaded successfully"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Analysis CSV export error:",
+      error
+    );
+
+    toast.error(
+      "Failed to export analysis CSV"
+    );
+
+  }
+};
+
+// ======================================================
+// ANALYSIS EXPORT — EXCEL
+// ======================================================
+
+const exportAnalysisExcel = () => {
+  try {
+    const workbook = XLSX.utils.book_new();
+
+    // OVERVIEW
+    const overviewRows = [
+      ["ANALYSIS OVERVIEW"],
+      ["Metric", "Value"],
+      [
+        "Total Orders",
+        analysisData?.overview?.total_orders ?? 0
+      ],
+      [
+        "Website Orders",
+        analysisData?.overview?.website_orders ?? 0
+      ],
+      [
+        "WhatsApp Orders",
+        analysisData?.overview?.whatsapp_orders ?? 0
+      ],
+      [
+        "Total Products",
+        analysisData?.overview?.total_products ?? 0
+      ],
+      [
+        "Average Orders/Day",
+        analysisData?.overview?.average_orders_per_day ?? 0
+      ],
+    ];
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(overviewRows),
+      "Overview"
+    );
+
+
+    // FILTERS
+    const filterRows = [
+      ["SELECTED FILTERS"],
+      ["From Date", analysisFromDate || "All"],
+      ["To Date", analysisToDate || "All"],
+      ["Channel", analysisChannel],
+      ["Retailer", analysisRetailer],
+      ["Category", analysisCategory],
+      ["Product/Design", analysisProduct],
+      ["Custom/Stock", analysisOrderType],
+      ["Metal", analysisMetal],
+      ["Purity", analysisPurity],
+      ["Stone", analysisStone],
+    ];
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(filterRows),
+      "Filters"
+    );
+
+
+    // CATEGORY
+    const categoryRows = [
+      ["CATEGORY PERFORMANCE"],
+      ["Category", "Orders", "Order %"],
+    ];
+
+    (analysisByCategory || []).forEach((item) => {
+      categoryRows.push([
+        item?.category ||
+          item?.name ||
+          "Unknown",
+
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        ),
+
+        Number(
+          item?.percentage ||
+          item?.order_percentage ||
+          0
+        ),
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(categoryRows),
+      "Categories"
+    );
+
+
+    // PRODUCTS
+    const productRows = [
+      ["PRODUCT PERFORMANCE"],
+      ["Product/Design", "Category", "Orders"],
+    ];
+
+    (analysisByProducts || []).forEach((item) => {
+      productRows.push([
+        item?.design_number ||
+          item?.product_id ||
+          item?.name ||
+          "Unknown",
+
+        item?.category ||
+          "Unknown",
+
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        ),
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(productRows),
+      "Products"
+    );
+
+
+    // RETAILERS
+    const retailerRows = [
+      [
+        "RETAILER PERFORMANCE"
+      ],
+      [
+        "Retailer",
+        "Total Orders",
+        "Custom Orders",
+        "Stock Orders",
+      ],
+    ];
+
+    (analysisByRetailer || []).forEach((item) => {
+      retailerRows.push([
+        item?.retailer_name ||
+          item?.name ||
+          "Unknown",
+
+        Number(
+          item?.total_orders ||
+          0
+        ),
+
+        Number(
+          item?.custom_orders ||
+          item?.custom ||
+          0
+        ),
+
+        Number(
+          item?.stock_orders ||
+          item?.stock ||
+          0
+        ),
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(retailerRows),
+      "Retailers"
+    );
+
+
+    // METAL
+    const metalRows = [
+      ["METAL ANALYSIS"],
+      ["Metal", "Orders"],
+    ];
+
+    (analysisByMetal || []).forEach((item) => {
+      metalRows.push([
+        item?.metal ||
+          item?.name ||
+          item?.value ||
+          "Unknown",
+
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        ),
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(metalRows),
+      "Metal"
+    );
+
+
+    // STONE
+    const stoneRows = [
+      ["STONE ANALYSIS"],
+      ["Stone", "Orders"],
+    ];
+
+    (analysisByStone || []).forEach((item) => {
+      stoneRows.push([
+        item?.stone ||
+          item?.stone_type ||
+          item?.name ||
+          item?.value ||
+          "Unknown",
+
+        Number(
+          item?.orders ||
+          item?.order_count ||
+          item?.count ||
+          0
+        ),
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(stoneRows),
+      "Stone"
+    );
+
+
+    // STATUS
+    const statusRows = [
+      ["ORDER STATUS"],
+      ["Status", "Orders"],
+    ];
+
+    Object.entries(
+      analysisByStatus || {}
+    ).forEach(([status, value]) => {
+
+      const orders =
+        typeof value === "object"
+          ? Number(
+              value?.orders ||
+              value?.count ||
+              0
+            )
+          : Number(value || 0);
+
+      statusRows.push([
+        status,
+        orders
+      ]);
+    });
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.aoa_to_sheet(statusRows),
+      "Status"
+    );
+
+
+    // DOWNLOAD
+    const from =
+      analysisFromDate || "all";
+
+    const to =
+      analysisToDate || "all";
+
+    XLSX.writeFile(
+      workbook,
+      `Business_Analysis_${from}_to_${to}.xlsx`
+    );
+
+    toast.success(
+      "Analysis Excel downloaded successfully"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Analysis Excel export error:",
+      error
+    );
+
+    toast.error(
+      "Failed to export analysis Excel"
+    );
+
+  }
+};
+
+// ======================================================
+// ANALYSIS EXPORT — PDF
+// ======================================================
+
+const exportAnalysisPDF = () => {
+  try {
+    const doc = new jsPDF();
+
+    const fromDate = analysisFromDate || "All";
+    const toDate = analysisToDate || "All";
+
+    // TITLE
+    doc.setFontSize(18);
+    doc.text("Business Analysis Report", 14, 18);
+
+    doc.setFontSize(9);
+    doc.text(
+      `Period: ${fromDate} to ${toDate}`,
+      14,
+      25
+    );
+
+    // SELECTED FILTERS
+    doc.setFontSize(12);
+    doc.text("Selected Filters", 14, 36);
+
+    const filterRows = [
+      ["From Date", fromDate],
+      ["To Date", toDate],
+      ["Channel", analysisChannel || "All"],
+      ["Retailer", analysisRetailer || "All"],
+      ["Category", analysisCategory || "All"],
+      ["Product / Design", analysisProduct || "All"],
+      ["Custom / Stock", analysisOrderType || "All"],
+      ["Metal", analysisMetal || "All"],
+      ["Purity", analysisPurity || "All"],
+      ["Stone", analysisStone || "All"],
+    ];
+
+    autoTable(doc, {
+      startY: 40,
+      head: [["Filter", "Selected Value"]],
+      body: filterRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // OVERVIEW
+    let y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Overview", 14, y);
+
+    const overviewRows = [
+      [
+        "Total Orders",
+        analysisData?.overview?.total_orders ?? 0,
+      ],
+      [
+        "Website Orders",
+        analysisData?.overview?.website_orders ?? 0,
+      ],
+      [
+        "WhatsApp Orders",
+        analysisData?.overview?.whatsapp_orders ?? 0,
+      ],
+      [
+        "Total Products",
+        analysisData?.overview?.total_products ?? 0,
+      ],
+      [
+        "Average Orders / Day",
+        analysisData?.overview?.average_orders_per_day ?? 0,
+      ],
+    ];
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [["Metric", "Value"]],
+      body: overviewRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // CATEGORY PERFORMANCE
+    y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Category Performance", 14, y);
+
+    const categoryRows =
+      (analysisByCategory || []).map(
+        (item) => [
+          item?.category ||
+            item?.name ||
+            "Unknown",
+
+          Number(
+            item?.orders ||
+            item?.order_count ||
+            item?.count ||
+            0
+          ),
+
+          Number(
+            item?.percentage ||
+            item?.order_percentage ||
+            0
+          ),
+        ]
+      );
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [
+        ["Category", "Orders", "Order %"],
+      ],
+      body: categoryRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // PRODUCT PERFORMANCE
+    y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Product Performance", 14, y);
+
+    const productRows =
+      (analysisByProducts || []).map(
+        (item) => [
+          item?.design_number ||
+            item?.product_id ||
+            item?.name ||
+            "Unknown",
+
+          item?.category ||
+            "Unknown",
+
+          Number(
+            item?.orders ||
+            item?.order_count ||
+            item?.count ||
+            0
+          ),
+        ]
+      );
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [
+        [
+          "Product / Design",
+          "Category",
+          "Orders",
+        ],
+      ],
+      body: productRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // RETAILER PERFORMANCE
+    y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Retailer Performance", 14, y);
+
+    const retailerRows =
+      (analysisByRetailer || []).map(
+        (item) => [
+          item?.retailer_name ||
+            item?.name ||
+            "Unknown",
+
+          Number(
+            item?.total_orders || 0
+          ),
+
+          Number(
+            item?.custom_orders ||
+            item?.custom ||
+            0
+          ),
+
+          Number(
+            item?.stock_orders ||
+            item?.stock ||
+            0
+          ),
+        ]
+      );
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [
+        [
+          "Retailer",
+          "Total Orders",
+          "Custom",
+          "Stock",
+        ],
+      ],
+      body: retailerRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // METAL
+    y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Metal Analysis", 14, y);
+
+    const metalRows =
+      (analysisByMetal || []).map(
+        (item) => [
+          item?.metal ||
+            item?.name ||
+            item?.value ||
+            "Unknown",
+
+          Number(
+            item?.orders ||
+            item?.order_count ||
+            item?.count ||
+            0
+          ),
+        ]
+      );
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [["Metal", "Orders"]],
+      body: metalRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // STONE
+    y =
+      doc.lastAutoTable.finalY + 12;
+
+    doc.setFontSize(12);
+    doc.text("Stone Analysis", 14, y);
+
+    const stoneRows =
+      (analysisByStone || []).map(
+        (item) => [
+          item?.stone ||
+            item?.stone_type ||
+            item?.name ||
+            item?.value ||
+            "Unknown",
+
+          Number(
+            item?.orders ||
+            item?.order_count ||
+            item?.count ||
+            0
+          ),
+        ]
+      );
+
+    autoTable(doc, {
+      startY: y + 4,
+      head: [["Stone", "Orders"]],
+      body: stoneRows,
+      theme: "grid",
+      styles: {
+        fontSize: 8,
+      },
+    });
+
+    // SAVE
+    doc.save(
+      `Business_Analysis_${fromDate}_to_${toDate}.pdf`
+    );
+
+    toast.success(
+      "Analysis PDF downloaded successfully"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Analysis PDF export error:",
+      error
+    );
+
+    toast.error(
+      "Failed to export analysis PDF"
+    );
+
+  }
+};
+
+
+// ======================================================
 // WHATSAPP ORDER ANALYSIS
 // ======================================================
 
-const analysisTotalOrders =
-  analysisData.kpis.total_orders;
 
-const analysisUniqueCustomers =
-  analysisData.kpis.unique_customers;
+{/* =====================================================
+    AUTOMATIC BUSINESS INSIGHTS
+===================================================== */}
 
-const analysisCustomOrders =
-  analysisData.kpis.custom_orders;
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mb-6">
 
-const analysisCatalogueOrders =
-  analysisData.kpis.catalogue_orders;
+<div className="mb-5">
+  <h3 className="font-semibold text-lg">
+    Automatic Business Insights
+  </h3>
 
-const analysisDelivered =
-  analysisData.kpis.delivered_orders;
+  <p className="text-sm text-gray-500 mt-1">
+    Key observations from your current analysis
+  </p>
+</div>
 
-const analysisUrgent =
-  analysisData.kpis.urgent_orders;
+{automaticInsights.length === 0 ? (
 
-const analysisOverdue =
-  analysisData.kpis.overdue_orders;
+  <p className="text-sm text-gray-500">
+    No automatic insights available for the selected filters.
+  </p>
+
+) : (
+
+  <div className="space-y-3">
+
+    {automaticInsights.map((insight, index) => (
+
+      <div
+        key={`insight-${index}`}
+        className="flex items-start gap-3 border border-gray-100 rounded-lg p-4"
+      >
+
+        <div
+          className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+            insight.type === "positive"
+              ? "bg-green-500"
+              : insight.type === "warning"
+              ? "bg-red-500"
+              : "bg-blue-500"
+          }`}
+        />
+
+        <p className="text-sm text-gray-700 leading-6">
+          {insight.text}
+        </p>
+
+      </div>
+
+    ))}
+
+  </div>
+
+)}
+
+</div>
+
+{/* =====================================================
+    OVERVIEW
+===================================================== */}
+
+<div className="space-y-4">
+
+  {/* DATE FILTER */}
+<div className="flex flex-col sm:flex-row gap-3">
+
+<div>
+  <label className="block text-sm font-medium text-[#374151] mb-1">
+    From Date
+  </label>
+
+  <input
+    type="date"
+    value={analysisFromDate}
+    onChange={(e) => setAnalysisFromDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
+  />
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-[#374151] mb-1">
+    To Date
+  </label>
+
+  <input
+    type="date"
+    value={analysisToDate}
+    onChange={(e) => setAnalysisToDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-lg px-3 py-2 text-sm"
+  />
+</div>
+
+</div>
+
+<div>
+  <h3 className="text-lg font-heading font-semibold text-[#0A0A0A]">
+    Overview
+  </h3>
+
+  <p className="text-sm text-[#6B7280] mt-1">
+    Combined Website + WhatsApp performance
+  </p>
+
+  <div className="flex justify-end mb-4">
+  <div className="flex gap-2">
+
+  <Button
+    onClick={exportAnalysisCSV}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export CSV
+  </Button>
+
+  <Button
+    onClick={exportAnalysisExcel}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export Excel
+  </Button>
+
+  <Button
+    onClick={exportAnalysisPDF}
+    className="bg-[#359E58] hover:bg-[#2e884c] text-white"
+  >
+    Export PDF
+  </Button>
+
+</div>
+</div>
+</div>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+
+  {/* TOTAL ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Total Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.total_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Website + WhatsApp
+    </p>
+  </div>
+
+
+  {/* WEBSITE ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Website Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.website_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Website channel
+    </p>
+  </div>
+
+
+  {/* WHATSAPP ORDERS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      WhatsApp Orders
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.whatsapp_orders ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      WhatsApp channel
+    </p>
+  </div>
+
+
+  {/* TOTAL PRODUCTS */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Total Products
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.total_products ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Products ordered
+    </p>
+  </div>
+
+
+  {/* AVERAGE ORDERS / DAY */}
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
+    <p className="text-sm text-[#6B7280]">
+      Average Orders/Day
+    </p>
+
+    <p className="text-3xl font-semibold text-[#0A0A0A] mt-2">
+      {analysisData?.overview?.average_orders_per_day ?? 0}
+    </p>
+
+    <p className="text-xs text-[#9CA3AF] mt-1">
+      Based on selected dates
+    </p>
+  </div>
+
+</div>
+
+</div>
 
 const analysisByStatus =
-  analysisData.status;
+  analysisData?.status || [];
 
 const analysisByCategory =
-  analysisData.category;
+  analysisData?.category || [];
+
+const analysisCategoryProductDrilldown =
+  analysisData?.category_product_drilldown || {};
+
+const analysisByCategoryMonthly =
+  analysisData?.category_monthly || [];
+
+const analysisByProducts =
+  analysisData?.products || [];
+
+const analysisProductIntelligence =
+  analysisData?.product_intelligence || {
+    best_sellers: [],
+    underperforming: [],
+    never_ordered: [],
+  };
+
+const analysisByRetailer =
+  analysisData?.retailers || [];
 
 const analysisByMetal =
-  analysisData.metal;
+  analysisData?.metal || [];
 
-const analysisByGoldKT =
-  analysisData.gold_kt;
+const analysisByCategoryMetal =
+  analysisData?.category_metal || [];
+
+const analysisByPurity =
+  analysisData?.purity || [];
+
+const analysisByGoldColour =
+  analysisData?.gold_colour || [];
 
 const analysisByStone =
-  analysisData.stone;
+  analysisData?.stone || [];
 
-const analysisByCustomer =
-  analysisData.customers;
+const analysisDueDates =
+  analysisData?.due_dates || {};
 
-const analysisByDate =
-  analysisData.daily_trend;
+const categoryMonthlyChartData = useMemo(() => {
+  const months = analysisByCategoryMonthly || [];
 
-const maxAnalysisDateCount = Math.max(
-  ...analysisByDate.map((item) => item.count),
-  1
-);
+  return months.map((monthData) => {
+    const row = {
+      month: monthData?.month || "",
+    };
 
-const maxAnalysisStatusCount = Math.max(
-  ...analysisByStatus.map((item) => item.count),
-  1
-);
+    Object.entries(monthData?.categories || {}).forEach(
+      ([categoryName, categoryInfo]) => {
+        row[categoryName] = Number(
+          categoryInfo?.orders || 0
+        );
+      }
+    );
 
-const maxAnalysisCategoryCount = Math.max(
-  ...analysisByCategory.map((item) => item.count),
-  1
-);
+    return row;
+  });
+}, [analysisByCategoryMonthly]);
 
-const maxAnalysisCustomerCount = Math.max(
-  ...analysisByCustomer.map((item) => item.count),
-  1
-);
+
+// ======================================================
+// AUTOMATIC BUSINESS INSIGHTS
+// ======================================================
+
+const automaticInsights = useMemo(() => {
+  const insights = [];
+
+  // ------------------------------------------
+  // 1. TOP CATEGORY
+  // ------------------------------------------
+
+  if (analysisByCategory?.length > 0) {
+    const sortedCategories = [...analysisByCategory].sort(
+      (a, b) =>
+        Number(b?.orders || b?.order_count || b?.count || 0) -
+        Number(a?.orders || a?.order_count || a?.count || 0)
+    );
+
+    const topCategory = sortedCategories[0];
+
+    const categoryName =
+      topCategory?.category ||
+      topCategory?.name ||
+      "Unknown";
+
+    const categoryOrders =
+      Number(
+        topCategory?.orders ||
+        topCategory?.order_count ||
+        topCategory?.count ||
+        0
+      );
+
+    const categoryPercentage =
+      Number(
+        topCategory?.percentage ||
+        topCategory?.order_percentage ||
+        0
+      );
+
+    if (categoryOrders > 0) {
+      insights.push({
+        type: "positive",
+        text: `${categoryName} is your top category with ${categoryOrders} orders (${categoryPercentage.toFixed(1)}% of total category orders).`,
+      });
+    }
+  }
+
+
+  // ------------------------------------------
+  // 2. TOP PRODUCT
+  // ------------------------------------------
+
+  if (analysisByProducts?.length > 0) {
+    const sortedProducts = [...analysisByProducts].sort(
+      (a, b) =>
+        Number(b?.orders || b?.order_count || b?.count || 0) -
+        Number(a?.orders || a?.order_count || a?.count || 0)
+    );
+
+    const topProduct = sortedProducts[0];
+
+    const productName =
+      topProduct?.design_number ||
+      topProduct?.product_number ||
+      topProduct?.product_name ||
+      topProduct?.name ||
+      topProduct?.product_id ||
+      "Unknown";
+
+    const productOrders =
+      Number(
+        topProduct?.orders ||
+        topProduct?.order_count ||
+        topProduct?.count ||
+        0
+      );
+
+    if (productOrders > 0) {
+      insights.push({
+        type: "positive",
+        text: `${productName} is currently your best-performing design with ${productOrders} orders.`,
+      });
+    }
+  }
+
+
+  // ------------------------------------------
+  // 3. RETAILER
+  // ------------------------------------------
+
+  if (analysisByRetailer?.length > 0) {
+    const sortedRetailers = [...analysisByRetailer].sort(
+      (a, b) =>
+        Number(b?.total_orders || 0) -
+        Number(a?.total_orders || 0)
+    );
+
+    const topRetailer = sortedRetailers[0];
+
+    const retailerName =
+      topRetailer?.retailer_name ||
+      topRetailer?.name ||
+      "Unknown";
+
+    const retailerOrders =
+      Number(topRetailer?.total_orders || 0);
+
+    if (retailerOrders > 0) {
+      insights.push({
+        type: "info",
+        text: `${retailerName} is your highest-ordering retailer with ${retailerOrders} orders.`,
+      });
+    }
+  }
+
+
+  // ------------------------------------------
+  // 4. PRODUCT CATALOGUE
+  // ------------------------------------------
+
+  const neverOrdered =
+    analysisProductIntelligence?.never_ordered?.length || 0;
+
+  if (neverOrdered > 0) {
+    insights.push({
+      type: "warning",
+      text: `${neverOrdered} catalogue design${neverOrdered === 1 ? "" : "s"} have never been ordered.`,
+    });
+  }
+
+
+  // ------------------------------------------
+  // 5. MONTHLY GROWTH / DECLINE
+  // ------------------------------------------
+
+  if (analysisByCategoryMonthly?.length > 0) {
+    const latestMonth =
+      analysisByCategoryMonthly[
+        analysisByCategoryMonthly.length - 1
+      ];
+
+    const categories =
+      latestMonth?.categories || {};
+
+    const growthCategories = [];
+    const declineCategories = [];
+
+    Object.entries(categories).forEach(
+      ([categoryName, categoryInfo]) => {
+        const growth =
+          Number(
+            categoryInfo?.growth_percentage || 0
+          );
+
+        const status =
+          categoryInfo?.growth_status ||
+          "unchanged";
+
+        if (status === "growth" && growth > 0) {
+          growthCategories.push({
+            categoryName,
+            growth,
+          });
+        }
+
+        if (status === "decline" && growth < 0) {
+          declineCategories.push({
+            categoryName,
+            growth,
+          });
+        }
+      }
+    );
+
+
+    if (growthCategories.length > 0) {
+      growthCategories.sort(
+        (a, b) => b.growth - a.growth
+      );
+
+      const strongest =
+        growthCategories[0];
+
+      insights.push({
+        type: "positive",
+        text: `${strongest.categoryName} showed the strongest growth in the latest month at ${strongest.growth.toFixed(1)}%.`,
+      });
+    }
+
+
+    if (declineCategories.length > 0) {
+      declineCategories.sort(
+        (a, b) => a.growth - b.growth
+      );
+
+      const weakest =
+        declineCategories[0];
+
+      insights.push({
+        type: "warning",
+        text: `${weakest.categoryName} declined ${Math.abs(weakest.growth).toFixed(1)}% in the latest month.`,
+      });
+    }
+  }
+
+
+  // ------------------------------------------
+  // 6. CHANNEL MIX
+  // ------------------------------------------
+
+  const totalOrders =
+    Number(
+      analysisData?.overview?.total_orders || 0
+    );
+
+  const websiteOrders =
+    Number(
+      analysisData?.overview?.website_orders || 0
+    );
+
+  const whatsappOrders =
+    Number(
+      analysisData?.overview?.whatsapp_orders || 0
+    );
+
+  if (totalOrders > 0) {
+    const whatsappPercentage =
+      (whatsappOrders / totalOrders) * 100;
+
+    const websitePercentage =
+      (websiteOrders / totalOrders) * 100;
+
+    if (whatsappPercentage > websitePercentage) {
+      insights.push({
+        type: "info",
+        text: `WhatsApp is currently the larger order channel at ${whatsappPercentage.toFixed(1)}% of total orders.`,
+      });
+    } else if (websitePercentage > whatsappPercentage) {
+      insights.push({
+        type: "info",
+        text: `Website is currently the larger order channel at ${websitePercentage.toFixed(1)}% of total orders.`,
+      });
+    }
+  }
+
+
+  return insights.slice(0, 6);
+
+}, [
+  analysisByCategory,
+  analysisByProducts,
+  analysisByRetailer,
+  analysisProductIntelligence,
+  analysisByCategoryMonthly,
+  analysisData,
+]);
+
+
 
   return (
     <>
@@ -2460,36 +3958,160 @@ const maxAnalysisCustomerCount = Math.max(
 
       {/* DATE FILTER */}
       <div className="flex flex-wrap gap-2">
+      <select
+  value={analysisChannel}
+  onChange={(e) => setAnalysisChannel(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">Combined</option>
+  <option value="website">Website</option>
+  <option value="whatsapp">WhatsApp</option>
+</select>
 
-        <select
-          value={analysisRange}
-          onChange={(e) => setAnalysisRange(e.target.value)}
-          className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
-        >
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-          <option value="7days">Last 7 Days</option>
-          <option value="30days">Last 30 Days</option>
-          <option value="custom">Custom Range</option>
-        </select>
+<select
+  value={analysisRetailer}
+  onChange={(e) => setAnalysisRetailer(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Retailers</option>
 
-        {analysisRange === "custom" && (
-          <>
-            <input
-              type="date"
-              value={analysisFromDate}
-              onChange={(e) => setAnalysisFromDate(e.target.value)}
-              className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm"
-            />
+  {(analysisData?.retailers || []).map((retailer) => (
+    <option
+      key={retailer.retailer_id || retailer.retailer_name}
+      value={retailer.retailer_id || retailer.retailer_name}
+    >
+      {retailer.retailer_name || "Unknown"}
+    </option>
+  ))}
+</select>
 
-            <input
-              type="date"
-              value={analysisToDate}
-              onChange={(e) => setAnalysisToDate(e.target.value)}
-              className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm"
-            />
-          </>
-        )}
+
+<select
+  value={analysisCategory}
+  onChange={(e) => setAnalysisCategory(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Categories</option>
+
+  {(analysisData?.category || []).map((category) => {
+    const categoryName =
+      typeof category === "string"
+        ? category
+        : category.category;
+
+    return (
+      <option
+        key={categoryName}
+        value={categoryName}
+      >
+        {categoryName}
+      </option>
+    );
+  })}
+</select>
+
+<select
+  value={analysisProduct}
+  onChange={(e) => setAnalysisProduct(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Products / Designs</option>
+
+  {(analysisData?.products || []).map((product) => {
+    const productId =
+      product.product_id ||
+      product.id ||
+      product.design_number ||
+      product.product_number;
+
+    const productName =
+      product.design_number ||
+      product.product_number ||
+      product.name ||
+      product.product_name ||
+      productId;
+
+    return (
+      <option
+        key={productId}
+        value={productId}
+      >
+        {productName}
+      </option>
+    );
+  })}
+</select>
+
+<select
+  value={analysisOrderType}
+  onChange={(e) => setAnalysisOrderType(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">Custom + Stock</option>
+  <option value="custom">Custom</option>
+  <option value="stock">Stock</option>
+</select>
+
+<select
+  value={analysisMetal}
+  onChange={(e) => setAnalysisMetal(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Metals</option>
+  <option value="gold">Gold</option>
+  <option value="platinum">Platinum</option>
+  <option value="gold_platinum">Gold + Platinum</option>
+</select>
+
+<select
+  value={analysisPurity}
+  onChange={(e) => setAnalysisPurity(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Purity</option>
+  <option value="24K">24K</option>
+  <option value="22K">22K</option>
+  <option value="18K">18K</option>
+  <option value="14K">14K</option>
+  <option value="9K">9K</option>
+</select>
+
+<select
+  value={analysisStone}
+  onChange={(e) => setAnalysisStone(e.target.value)}
+  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
+>
+  <option value="all">All Stones</option>
+  <option value="Natural Diamond">Natural Diamond</option>
+  <option value="Lab Grown">Lab Grown</option>
+  <option value="CZ">CZ</option>
+  <option value="Colour Stones">Colour Stones</option>
+  <option value="Precious Stones">Precious Stones</option>
+</select>
+
+      <div className="flex items-center gap-2">
+  <span className="text-sm text-[#4B5563]">
+    From
+  </span>
+
+  <input
+    type="date"
+    value={analysisFromDate}
+    onChange={(e) => setAnalysisFromDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white"
+  />
+
+  <span className="text-sm text-[#4B5563]">
+    To
+  </span>
+
+  <input
+    type="date"
+    value={analysisToDate}
+    onChange={(e) => setAnalysisToDate(e.target.value)}
+    className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white"
+  />
+</div>
 
 <button
   onClick={loadWhatsappAnalysis}
@@ -2507,58 +4129,44 @@ const maxAnalysisCustomerCount = Math.max(
         KPI CARDS
     ================================================= */}
 
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4">
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Total Orders</p>
-        <p className="text-3xl font-semibold mt-2">
-          {analysisTotalOrders}
-        </p>
-      </div>
+<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+  <p className="text-sm text-[#6B7280]">Total Orders</p>
+  <p className="text-2xl font-semibold text-[#111827] mt-1">
+    {analysisData?.overview?.total_orders || 0}
+  </p>
+</div>
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Customers</p>
-        <p className="text-3xl font-semibold mt-2">
-          {analysisUniqueCustomers}
-        </p>
-      </div>
+<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+  <p className="text-sm text-[#6B7280]">Website Orders</p>
+  <p className="text-2xl font-semibold text-[#111827] mt-1">
+    {analysisData?.overview?.website_orders || 0}
+  </p>
+</div>
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Custom</p>
-        <p className="text-3xl font-semibold mt-2">
-          {analysisCustomOrders}
-        </p>
-      </div>
+<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+  <p className="text-sm text-[#6B7280]">WhatsApp Orders</p>
+  <p className="text-2xl font-semibold text-[#111827] mt-1">
+    {analysisData?.overview?.whatsapp_orders || 0}
+  </p>
+</div>
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Catalogue</p>
-        <p className="text-3xl font-semibold mt-2">
-          {analysisCatalogueOrders}
-        </p>
-      </div>
+<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+  <p className="text-sm text-[#6B7280]">Total Products</p>
+  <p className="text-2xl font-semibold text-[#111827] mt-1">
+    {analysisData?.overview?.total_products || 0}
+  </p>
+</div>
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Delivered</p>
-        <p className="text-3xl font-semibold mt-2 text-[#359E58]">
-          {analysisDelivered}
-        </p>
-      </div>
+<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+  <p className="text-sm text-[#6B7280]">Average Orders/Day</p>
+  <p className="text-2xl font-semibold text-[#111827] mt-1">
+    {analysisData?.overview?.average_orders_per_day || 0}
+  </p>
+</div>
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Urgent</p>
-        <p className="text-3xl font-semibold mt-2 text-red-600">
-          {analysisUrgent}
-        </p>
-      </div>
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-5">
-        <p className="text-xs text-[#6B7280]">Overdue</p>
-        <p className="text-3xl font-semibold mt-2 text-orange-600">
-          {analysisOverdue}
-        </p>
-      </div>
-
-    </div>
+</div>
 
 
     {/* =================================================
@@ -2754,58 +4362,2118 @@ const maxAnalysisCustomerCount = Math.max(
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
 
-      {/* PRODUCT CATEGORY */}
+    {/* =====================================================
+    PRODUCT CATALOGUE INTELLIGENCE
+===================================================== */}
 
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
 
-        <h3 className="font-semibold text-lg mb-5">
-          Orders by Product Category
-        </h3>
+<div className="mb-6">
+  <h3 className="font-semibold text-lg">
+    Product Catalogue Intelligence
+  </h3>
 
-        <div className="space-y-4">
+  <p className="text-sm text-gray-500 mt-1">
+    Best sellers, underperforming and never-ordered designs
+  </p>
+</div>
 
-          {analysisByCategory.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No category data available.
-            </p>
+{/* PRODUCT PERFORMANCE BAR CHART */}
+
+{analysisByProducts?.length > 0 && (
+  <div className="mb-8">
+
+    <div className="mb-4">
+      <h4 className="font-semibold text-base">
+        Product / Design Orders
+      </h4>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Order volume across the catalogue
+      </p>
+    </div>
+
+    <div className="w-full h-[380px]">
+
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+      >
+
+        <BarChart
+          data={[...analysisByProducts]
+            .sort(
+              (a, b) =>
+                Number(
+                  b?.orders ||
+                  b?.order_count ||
+                  b?.count ||
+                  0
+                ) -
+                Number(
+                  a?.orders ||
+                  a?.order_count ||
+                  a?.count ||
+                  0
+                )
+            )
+            .slice(0, 15)
+            .map((item) => ({
+              name:
+                item?.design_number ||
+                item?.product_number ||
+                item?.product_id ||
+                item?.name ||
+                "Unknown",
+
+              orders: Number(
+                item?.orders ||
+                item?.order_count ||
+                item?.count ||
+                0
+              ),
+            }))}
+
+          layout="vertical"
+
+          margin={{
+            top: 10,
+            right: 20,
+            left: 20,
+            bottom: 10,
+          }}
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            type="number"
+            allowDecimals={false}
+          />
+
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={100}
+            tick={{ fontSize: 11 }}
+          />
+
+          <Tooltip />
+
+          <Bar
+            dataKey="orders"
+            name="Orders"
+            radius={[0, 4, 4, 0]}
+          />
+
+        </BarChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+  </div>
+)}
+
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  {/* BEST SELLERS */}
+
+  <div className="border border-gray-100 rounded-xl p-5">
+
+    <h4 className="font-semibold text-base mb-4">
+      Best Sellers
+    </h4>
+
+    {analysisProductIntelligence.best_sellers?.length === 0 ? (
+
+      <p className="text-sm text-gray-500">
+        No best-selling products found.
+      </p>
+
+    ) : (
+
+      <div className="space-y-3">
+
+        {analysisProductIntelligence.best_sellers.map(
+          (product, index) => {
+
+            const productName =
+              product.design_number ||
+              product.product_number ||
+              product.product_name ||
+              product.name ||
+              product.product_id ||
+              "Unknown";
+
+            const category =
+              product.category ||
+              product.product_category ||
+              "—";
+
+            const orders =
+              Number(
+                product.orders ||
+                product.order_count ||
+                product.count ||
+                0
+              );
+
+            return (
+              <div
+                key={`best-${productName}-${index}`}
+                className="flex items-center justify-between gap-3"
+              >
+
+                <div className="min-w-0">
+
+                  <p className="text-sm font-medium truncate">
+                    {productName}
+                  </p>
+
+                  <p className="text-xs text-gray-500 truncate">
+                    {category}
+                  </p>
+
+                </div>
+
+                <span className="text-sm font-semibold shrink-0">
+                  {orders}
+                </span>
+
+              </div>
+            );
+
+          }
+        )}
+
+      </div>
+
+    )}
+
+  {/* =====================================================
+    RETAILER ANALYSIS
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+<div className="mb-6">
+  <h3 className="font-semibold text-lg">
+    Retailer Analysis
+  </h3>
+
+  <p className="text-sm text-gray-500 mt-1">
+    Understand who is buying what
+  </p>
+
+  <div className="flex items-center justify-between mt-4">
+  <span className="text-xs text-gray-500">
+    Sort retailers by
+  </span>
+
+  <select
+    value={retailerAnalysisSort}
+    onChange={(e) =>
+      setRetailerAnalysisSort(e.target.value)
+    }
+    className="border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
+  >
+    <option value="orders_desc">
+      Highest Orders
+    </option>
+
+    <option value="orders_asc">
+      Lowest Orders
+    </option>
+
+    <option value="name_asc">
+      Retailer Name
+    </option>
+  </select>
+</div>
+</div>
+
+{/* RETAILER ORDER VOLUME BAR CHART */}
+
+{analysisByRetailer?.length > 0 && (
+  <div className="mb-8">
+
+    <div className="mb-4">
+      <h4 className="font-semibold text-base">
+        Retailer Order Volume
+      </h4>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Total orders by retailer, split by Custom and Stock
+      </p>
+    </div>
+
+    <div className="w-full h-[380px]">
+
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+      >
+
+        <BarChart
+          layout="vertical"
+          data={[...(analysisByRetailer || [])]
+            .sort(
+              (a, b) =>
+                Number(b?.total_orders || 0) -
+                Number(a?.total_orders || 0)
+            )
+            .slice(0, 15)
+            .map((retailer) => ({
+              name:
+                retailer?.retailer_name ||
+                retailer?.name ||
+                "Unknown Retailer",
+
+              custom: Number(
+                retailer?.custom_orders || 0
+              ),
+
+              stock: Number(
+                retailer?.stock_orders || 0
+              ),
+
+              total: Number(
+                retailer?.total_orders || 0
+              ),
+            }))}
+
+          margin={{
+            top: 10,
+            right: 20,
+            left: 20,
+            bottom: 10,
+          }}
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            type="number"
+            allowDecimals={false}
+          />
+
+          <YAxis
+            type="category"
+            dataKey="name"
+            width={120}
+            tick={{ fontSize: 11 }}
+          />
+
+          <Tooltip />
+
+          <Legend />
+
+          <Bar
+            dataKey="custom"
+            name="Custom Orders"
+            stackId="orders"
+          />
+
+          <Bar
+            dataKey="stock"
+            name="Stock Orders"
+            stackId="orders"
+          />
+
+        </BarChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+  </div>
+)}
+
+{analysisByRetailer.length === 0 ? (
+
+  <p className="text-sm text-gray-500">
+    No retailer data available.
+  </p>
+
+) : (
+
+  <div className="overflow-x-auto border border-gray-100 rounded-xl">
+
+    <table className="w-full text-sm">
+
+      <thead className="bg-gray-50 border-b border-gray-100">
+
+        <tr>
+
+          <th className="text-left px-4 py-3 font-semibold">
+            Retailer
+          </th>
+
+          <th className="text-right px-4 py-3 font-semibold">
+            Total Orders
+          </th>
+
+          <th className="text-right px-4 py-3 font-semibold">
+            Custom
+          </th>
+
+          <th className="text-right px-4 py-3 font-semibold">
+            Stock
+          </th>
+
+          <th className="text-left px-4 py-3 font-semibold">
+            Top Categories
+          </th>
+
+        </tr>
+
+      </thead>
+
+      <tbody className="divide-y divide-gray-100">
+
+      {[...analysisByRetailer]
+  .sort((a, b) => {
+
+    const aName =
+      a.retailer_name ||
+      a.name ||
+      "";
+
+    const bName =
+      b.retailer_name ||
+      b.name ||
+      "";
+
+    const aOrders =
+      Number(a.total_orders || 0);
+
+    const bOrders =
+      Number(b.total_orders || 0);
+
+    if (retailerAnalysisSort === "orders_asc") {
+      return aOrders - bOrders;
+    }
+
+    if (retailerAnalysisSort === "name_asc") {
+      return aName.localeCompare(bName);
+    }
+
+    return bOrders - aOrders;
+  })
+  .map((retailer, index) => {
+
+          const retailerName =
+            retailer.retailer_name ||
+            retailer.name ||
+            "Unknown Retailer";
+
+          const totalOrders =
+            Number(retailer.total_orders || 0);
+
+          const customOrders =
+            Number(retailer.custom_orders || 0);
+
+          const stockOrders =
+            Number(retailer.stock_orders || 0);
+
+          const categories =
+            retailer.categories || {};
+
+          const topCategories =
+            Object.entries(categories)
+              .sort((a, b) => Number(b[1]) - Number(a[1]))
+              .slice(0, 3);
+
+              return (
+                <>
+                  <tr
+                    key={`retailer-${retailer.retailer_id || retailerName}-${index}`}
+                    onClick={() =>
+                      setExpandedAnalysisRetailer(
+                        expandedAnalysisRetailer ===
+                          (retailer.retailer_id || retailerName)
+                          ? null
+                          : (retailer.retailer_id || retailerName)
+                      )
+                    }
+                    className="hover:bg-gray-50 cursor-pointer"
+                  >
+              
+                    ...YOUR EXISTING CELLS...
+              
+                  </tr>
+              
+                  {/* RETAILER CATEGORY + PRODUCT DRILL-DOWN */}
+              
+                  {expandedAnalysisRetailer ===
+                    (retailer.retailer_id || retailerName) && (
+              
+                    <tr>
+                      <td
+                        colSpan="5"
+                        className="px-4 py-5 bg-gray-50"
+                      >
+              
+                        <div className="space-y-4">
+              
+                          {Object.entries(
+                            retailer.category_details || {}
+                          )
+                            .sort(
+                              (a, b) =>
+                                Number(b[1]?.orders || 0) -
+                                Number(a[1]?.orders || 0)
+                            )
+                            .map(
+                              ([categoryName, categoryInfo]) => (
+              
+                                <div
+  key={categoryName}
+  onClick={(e) => {
+    e.stopPropagation();
+    setAnalysisCategory(categoryName);
+  }}
+  className="bg-white border border-gray-100 rounded-lg p-4 cursor-pointer hover:bg-gray-50"
+>
+              
+                                  <div className="flex items-center justify-between mb-3">
+              
+                                    <p className="font-medium text-sm">
+                                      {categoryName}
+                                    </p>
+              
+                                    <span className="text-xs text-gray-500">
+                                      {Number(categoryInfo?.orders || 0)} orders
+                                    </span>
+              
+                                  </div>
+              
+                                  <div className="space-y-2">
+              
+                                    {(categoryInfo?.products || []).map(
+                                      (product, productIndex) => {
+              
+                                        const design =
+                                          product.design_number ||
+                                          product.product_id ||
+                                          product.name ||
+                                          "Unknown";
+              
+                                        return (
+                                          <div
+                                            key={`${categoryName}-${design}-${productIndex}`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+              
+                                              const productId =
+                                                product.product_id ||
+                                                product.design_number;
+              
+                                              if (productId) {
+                                                setAnalysisProduct(
+                                                  String(productId)
+                                                );
+                                              }
+                                            }}
+                                            className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-gray-50 cursor-pointer"
+                                          >
+              
+                                            <div className="min-w-0">
+              
+                                              <p className="text-sm font-medium truncate">
+                                                {design}
+                                              </p>
+              
+                                              {product.name &&
+                                                product.name !== design && (
+                                                  <p className="text-xs text-gray-500 truncate">
+                                                    {product.name}
+                                                  </p>
+                                                )}
+              
+                                            </div>
+              
+                                            <span className="text-sm font-semibold shrink-0">
+                                              {Number(product.orders || 0)}
+                                            </span>
+              
+                                          </div>
+                                        );
+                                      }
+                                    )}
+              
+                                  </div>
+              
+                                </div>
+                              )
+                            )}
+              
+                        </div>
+              
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+
+        })}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+)}
+
+</div>
+
+{/* =====================================================
+    RETAILER × CATEGORY
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+  <div className="mb-6">
+    <h3 className="font-semibold text-lg">
+      Retailer × Category
+    </h3>
+
+    <p className="text-sm text-gray-500 mt-1">
+      Category purchasing pattern by retailer
+    </p>
+  </div>
+
+  {analysisByRetailer.length === 0 ? (
+
+    <p className="text-sm text-gray-500">
+      No retailer/category data available.
+    </p>
+
+  ) : (
+
+    <div className="overflow-x-auto">
+
+      <table className="w-full text-sm border-collapse">
+
+        <thead>
+
+          <tr className="border-b border-gray-100">
+
+            <th className="text-left px-3 py-3 font-semibold sticky left-0 bg-white">
+              Retailer
+            </th>
+
+            {[
+              ...new Set(
+                analysisByRetailer.flatMap(
+                  (retailer) =>
+                    Object.keys(
+                      retailer.categories || {}
+                    )
+                )
+              ),
+            ].map((categoryName) => (
+
+              <th
+                key={categoryName}
+                className="px-3 py-3 font-semibold text-center whitespace-nowrap"
+              >
+                {categoryName}
+              </th>
+
+            ))}
+
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {analysisByRetailer.map(
+            (retailer, retailerIndex) => {
+
+              const retailerName =
+                retailer.retailer_name ||
+                retailer.name ||
+                "Unknown Retailer";
+
+              const maxCategoryOrders = Math.max(
+                  1,
+                  ...analysisByRetailer.flatMap((r) =>
+                    Object.values(r.categories || {}).map(
+                      (value) => Number(value || 0)
+                    )
+                  )
+              );
+
+              
+
+              const categories =
+                retailer.categories || {};
+
+              return (
+
+                <tr
+                  key={`heatmap-${retailer.retailer_id || retailerName}-${retailerIndex}`}
+                  className="border-b border-gray-50"
+                >
+
+                  <td className="px-3 py-3 font-medium whitespace-nowrap sticky left-0 bg-white">
+                    {retailerName}
+                  </td>
+
+                  {[
+                    ...new Set(
+                      analysisByRetailer.flatMap(
+                        (r) =>
+                          Object.keys(
+                            r.categories || {}
+                          )
+                      )
+                    ),
+                  ].map((categoryName) => {
+
+                    const orders =
+                      Number(
+                        categories[categoryName] || 0
+                      );
+
+                    return (
+
+                      <td
+                        key={`${retailerName}-${categoryName}`}
+                        onClick={() => {
+                          if (orders > 0) {
+                            setAnalysisRetailer(
+                              retailer.retailer_id ||
+                              retailerName
+                            );
+
+                            setAnalysisCategory(
+                              categoryName
+                            );
+                          }
+                        }}
+                        className={`px-3 py-3 text-center ${
+                          orders > 0
+                            ? "cursor-pointer hover:bg-gray-300"
+                            : "bg-gray-50"
+                        }`}
+                        style={{
+                          backgroundColor:
+                            orders > 0
+                              ? `rgba(0, 0, 0, ${0.05 + (orders / maxCategoryOrders) * 0.20})`
+                              : undefined,
+                        }}
+                      >
+
+                        <span className="font-medium">
+                          {orders}
+                        </span>
+
+                      </td>
+
+                    );
+
+                  })}
+
+                </tr>
+
+              );
+
+            }
           )}
 
-          {analysisByCategory.slice(0, 10).map((item) => (
+        </tbody>
 
-            <div key={item.name}>
+      </table>
 
-              <div className="flex justify-between text-sm mb-1">
+    </div>
 
-                <span className="truncate pr-3">
-                  {item.name}
-                </span>
+  )}
 
-                <span className="font-semibold">
-                  {item.count}
-                </span>
+</div>
 
-              </div>
+{/* =====================================================
+    CATEGORY × METAL
+===================================================== */}
 
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mt-6">
 
-                <div
-                  className="h-full bg-[#359E58] rounded-full"
-                  style={{
-                    width: `${
-                      (item.count / maxAnalysisCategoryCount) * 100
-                    }%`
-                  }}
-                />
+  <div className="mb-6">
+    <h3 className="font-semibold text-lg">
+      Category × Metal
+    </h3>
 
-              </div>
+    <p className="text-sm text-gray-500 mt-1">
+      Metal preference across product categories
+    </p>
+  </div>
+
+  {analysisByCategoryMetal.length === 0 ? (
+
+    <p className="text-sm text-gray-500">
+      No category data available.
+    </p>
+
+  ) : (
+
+    <div className="overflow-x-auto">
+
+      <table className="w-full text-sm">
+
+        <thead className="bg-gray-50 border-b border-gray-100">
+
+          <tr>
+
+            <th className="text-left px-4 py-3 font-semibold">
+              Category
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Gold
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Platinum
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Gold + Platinum
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Combined
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody className="divide-y divide-gray-100">
+
+          {analysisByCategoryMetal.map(
+            (categoryItem, index) => {
+
+              const categoryName =
+                categoryItem?.name ||
+                categoryItem?.category ||
+                "Unknown";
+
+              const metalData =
+                categoryItem?.metal ||
+                categoryItem?.metals ||
+                {};
+
+              const gold =
+                Number(
+                  metalData?.Gold ||
+                  metalData?.gold ||
+                  0
+                );
+
+              const platinum =
+                Number(
+                  metalData?.Platinum ||
+                  metalData?.platinum ||
+                  0
+                );
+
+              const goldPlatinum =
+                Number(
+                  metalData?.["Gold + Platinum"] ||
+                  metalData?.gold_platinum ||
+                  0
+                );
+
+              const combined =
+                gold +
+                platinum +
+                goldPlatinum;
+
+              return (
+
+                <tr
+                  key={`category-metal-${categoryName}-${index}`}
+                  className="hover:bg-gray-50"
+                >
+
+                  <td className="px-4 py-3 font-medium">
+                    {categoryName}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {gold}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {platinum}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {goldPlatinum}
+                  </td>
+
+                  <td className="px-4 py-3 text-right font-semibold">
+                    {combined}
+                  </td>
+
+                </tr>
+
+              );
+
+            }
+          )}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  )}
+
+</div>
+
+{/* =====================================================
+    GOLD PURITY + GOLD COLOUR
+===================================================== */}
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
+  {/* GOLD PURITY */}
+
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+    <div className="mb-5">
+      <h3 className="font-semibold text-lg">
+        Gold Purity
+      </h3>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Orders by gold purity
+      </p>
+    </div>
+
+    {analysisByPurity.length === 0 ? (
+
+      <p className="text-sm text-gray-500">
+        No gold purity data available.
+      </p>
+
+    ) : (
+
+      <div className="space-y-3">
+
+        {analysisByPurity.map((item, index) => {
+
+          const purity =
+            item?.name ||
+            item?.purity ||
+            item?.value ||
+            "Unknown";
+
+          const orders =
+            Number(
+              item?.orders ||
+              item?.order_count ||
+              item?.count ||
+              0
+            );
+
+          return (
+
+            <div
+              key={`purity-${purity}-${index}`}
+              className="flex items-center justify-between"
+            >
+
+              <span className="text-sm">
+                {purity}
+              </span>
+
+              <span className="text-sm font-semibold">
+                {orders}
+              </span>
 
             </div>
 
-          ))}
+          );
+
+        })}
+
+      </div>
+
+    )}
+
+  </div>
+
+
+  {/* GOLD COLOUR */}
+
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+    <div className="mb-5">
+      <h3 className="font-semibold text-lg">
+        Gold Colour
+      </h3>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Orders by gold colour
+      </p>
+    </div>
+
+    {analysisByGoldColour.length === 0 ? (
+
+      <p className="text-sm text-gray-500">
+        No gold colour data available.
+      </p>
+
+    ) : (
+
+      <div className="space-y-3">
+
+        {analysisByGoldColour.map((item, index) => {
+
+          const colour =
+            item?.name ||
+            item?.gold_colour ||
+            item?.colour ||
+            item?.value ||
+            "Unknown";
+
+          const orders =
+            Number(
+              item?.orders ||
+              item?.order_count ||
+              item?.count ||
+              0
+            );
+
+          return (
+
+            <div
+              key={`gold-colour-${colour}-${index}`}
+              className="flex items-center justify-between"
+            >
+
+              <span className="text-sm">
+                {colour}
+              </span>
+
+              <span className="text-sm font-semibold">
+                {orders}
+              </span>
+
+            </div>
+
+          );
+
+        })}
+
+      </div>
+
+    )}
+
+  </div>
+
+</div>
+
+
+{/* =====================================================
+    CATEGORY × STONE
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mt-6">
+
+  <div className="mb-6">
+    <h3 className="font-semibold text-lg">
+      Category × Stone
+    </h3>
+
+    <p className="text-sm text-gray-500 mt-1">
+      Stone preference across product categories
+    </p>
+  </div>
+
+  {analysisByStone.length === 0 ? (
+
+    <p className="text-sm text-gray-500">
+      No stone data available.
+    </p>
+
+  ) : (
+
+    <div className="overflow-x-auto">
+
+      <table className="w-full text-sm">
+
+        <thead className="bg-gray-50 border-b border-gray-100">
+
+          <tr>
+
+            <th className="text-left px-4 py-3 font-semibold">
+              Stone
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Orders
+            </th>
+
+            <th className="text-right px-4 py-3 font-semibold">
+              Order %
+            </th>
+
+          </tr>
+
+        </thead>
+
+        <tbody className="divide-y divide-gray-100">
+
+          {[...analysisByStone]
+            .sort(
+              (a, b) =>
+                Number(
+                  b?.orders ||
+                  b?.order_count ||
+                  b?.count ||
+                  0
+                ) -
+                Number(
+                  a?.orders ||
+                  a?.order_count ||
+                  a?.count ||
+                  0
+                )
+            )
+            .map((stoneItem, index) => {
+
+              const stoneName =
+                stoneItem?.name ||
+                stoneItem?.stone ||
+                stoneItem?.stone_type ||
+                stoneItem?.value ||
+                "Unknown";
+
+              const orders =
+                Number(
+                  stoneItem?.orders ||
+                  stoneItem?.order_count ||
+                  stoneItem?.count ||
+                  0
+                );
+
+              const percentage =
+                Number(
+                  stoneItem?.percentage ||
+                  stoneItem?.order_percentage ||
+                  0
+                );
+
+              return (
+
+                <tr
+                  key={`stone-${stoneName}-${index}`}
+                  onClick={() => {
+                    setAnalysisStone(stoneName);
+                  }}
+                  className="hover:bg-gray-50 cursor-pointer"
+                >
+
+                  <td className="px-4 py-3 font-medium">
+                    {stoneName}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {orders}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {percentage.toFixed(1)}%
+                  </td>
+
+                </tr>
+
+              );
+
+            })}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  )}
+
+</div>
+
+{/* =====================================================
+    DUE DATE + ORDER STATUS
+===================================================== */}
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+
+  {/* DUE DATE ANALYSIS */}
+
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+    <div className="mb-5">
+      <h3 className="font-semibold text-lg">
+        Due Date Analysis
+      </h3>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Orders based on due-date performance
+      </p>
+    </div>
+
+    <div className="grid grid-cols-2 gap-3">
+
+      {[
+        ["Due This Week", "due_this_week"],
+        ["Due Next Week", "due_next_week"],
+        ["Overdue", "overdue"],
+        ["Completed On Time", "completed_on_time"],
+        ["Delayed", "delayed"],
+      ].map(([label, key]) => (
+
+        <div
+          key={key}
+          className="border border-gray-100 rounded-lg p-4"
+        >
+
+          <p className="text-xs text-gray-500">
+            {label}
+          </p>
+
+          <p className="text-2xl font-semibold mt-1">
+            {Number(
+              analysisDueDates?.[key] || 0
+            )}
+          </p>
 
         </div>
 
+      ))}
+
+    </div>
+
+  </div>
+
+
+  {/* ORDER STATUS */}
+
+  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+    <div className="mb-5">
+      <h3 className="font-semibold text-lg">
+        Order Status
+      </h3>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Statuses currently available in the database
+      </p>
+    </div>
+
+    {Array.isArray(analysisByStatus) &&
+    analysisByStatus.length > 0 ? (
+
+      <div className="space-y-3">
+
+        {analysisByStatus.map((item, index) => {
+
+          const status =
+            item?.status ||
+            item?.name ||
+            item?.value ||
+            "Unknown";
+
+          const orders =
+            Number(
+              item?.orders ||
+              item?.order_count ||
+              item?.count ||
+              0
+            );
+
+          return (
+
+            <div
+              key={`${status}-${index}`}
+              className="flex items-center justify-between border-b border-gray-100 pb-3"
+            >
+
+              <span className="text-sm font-medium">
+                {status}
+              </span>
+
+              <span className="text-sm font-semibold">
+                {orders}
+              </span>
+
+            </div>
+
+          );
+
+        })}
+
       </div>
+
+    ) : (
+
+      <p className="text-sm text-gray-500">
+        No order status data available.
+      </p>
+
+    )}
+
+  </div>
+
+</div>
+
+  {/* =====================================================
+    FULL PRODUCT CATALOGUE
+===================================================== */}
+
+<div className="mt-8">
+
+<div className="flex items-center justify-between mb-4">
+  <div>
+    <h4 className="font-semibold text-base">
+      Full Product Catalogue
+    </h4>
+
+    <p className="text-sm text-gray-500 mt-1">
+      Complete catalogue performance
+    </p>
+  </div>
+
+  <span className="text-sm text-gray-500">
+    {analysisByProducts.length} products
+  </span>
+</div>
+
+<select
+  value={productPerformanceSort}
+  onChange={(e) =>
+    setProductPerformanceSort(e.target.value)
+  }
+  className="border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
+>
+  <option value="orders_desc">
+    Highest Orders
+  </option>
+
+  <option value="orders_asc">
+    Lowest Orders
+  </option>
+
+  <option value="name_asc">
+    Product / Design
+  </option>
+</select>
+
+{analysisByProducts.length === 0 ? (
+
+  <p className="text-sm text-gray-500 py-6">
+    No product data available.
+  </p>
+
+) : (
+
+  <div className="overflow-x-auto border border-gray-100 rounded-xl">
+
+    <table className="w-full text-sm">
+
+      <thead className="bg-gray-50 border-b border-gray-100">
+
+        <tr>
+
+          <th className="text-left px-4 py-3 font-semibold">
+            Product / Design
+          </th>
+
+          <th className="text-left px-4 py-3 font-semibold">
+            Category
+          </th>
+
+          <th className="text-right px-4 py-3 font-semibold">
+            Orders
+          </th>
+
+        </tr>
+
+      </thead>
+
+      <tbody className="divide-y divide-gray-100">
+
+      {[...analysisByProducts]
+  .sort((a, b) => {
+
+    const aName =
+      a.design_number ||
+      a.product_number ||
+      a.product_name ||
+      a.name ||
+      a.product_id ||
+      "";
+
+    const bName =
+      b.design_number ||
+      b.product_number ||
+      b.product_name ||
+      b.name ||
+      b.product_id ||
+      "";
+
+    const aOrders =
+      Number(
+        a.orders ||
+        a.order_count ||
+        a.count ||
+        0
+      );
+
+    const bOrders =
+      Number(
+        b.orders ||
+        b.order_count ||
+        b.count ||
+        0
+      );
+
+    if (productPerformanceSort === "orders_asc") {
+      return aOrders - bOrders;
+    }
+
+    if (productPerformanceSort === "name_asc") {
+      return aName.localeCompare(bName);
+    }
+
+    return bOrders - aOrders;
+  })
+  .map((product, index) => {
+
+          const productName =
+            product.design_number ||
+            product.product_number ||
+            product.product_name ||
+            product.name ||
+            product.product_id ||
+            "Unknown";
+
+          const category =
+            product.category ||
+            product.product_category ||
+            "—";
+
+          const orders =
+            Number(
+              product.orders ||
+              product.order_count ||
+              product.count ||
+              0
+            );
+
+          return (
+
+            <tr
+  key={`catalogue-${productName}-${index}`}
+  onClick={() => {
+    const productId =
+      product.product_id ||
+      product.id ||
+      product.design_number ||
+      product.product_number;
+
+    if (productId) {
+      setAnalysisProduct(String(productId));
+    }
+  }}
+  className="hover:bg-gray-50 cursor-pointer"
+>
+
+              <td className="px-4 py-3 font-medium">
+                {productName}
+              </td>
+
+              <td className="px-4 py-3 text-gray-600">
+                {category}
+              </td>
+
+              <td className="px-4 py-3 text-right font-semibold">
+                {orders}
+              </td>
+
+            </tr>
+
+          );
+
+        })}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+)}
+
+</div>
+
+  </div>
+
+
+  {/* UNDERPERFORMING */}
+
+  <div className="border border-gray-100 rounded-xl p-5">
+
+    <h4 className="font-semibold text-base mb-4">
+      Underperforming
+    </h4>
+
+    {analysisProductIntelligence.underperforming?.length === 0 ? (
+
+      <p className="text-sm text-gray-500">
+        No underperforming products found.
+      </p>
+
+    ) : (
+
+      <div className="space-y-3">
+
+        {analysisProductIntelligence.underperforming.map(
+          (product, index) => {
+
+            const productName =
+              product.design_number ||
+              product.product_number ||
+              product.product_name ||
+              product.name ||
+              product.product_id ||
+              "Unknown";
+
+            const category =
+              product.category ||
+              product.product_category ||
+              "—";
+
+            const orders =
+              Number(
+                product.orders ||
+                product.order_count ||
+                product.count ||
+                0
+              );
+
+            return (
+              <div
+                key={`under-${productName}-${index}`}
+                className="flex items-center justify-between gap-3"
+              >
+
+                <div className="min-w-0">
+
+                  <p className="text-sm font-medium truncate">
+                    {productName}
+                  </p>
+
+                  <p className="text-xs text-gray-500 truncate">
+                    {category}
+                  </p>
+
+                </div>
+
+                <span className="text-sm font-semibold shrink-0">
+                  {orders}
+                </span>
+
+              </div>
+            );
+
+          }
+        )}
+
+      </div>
+
+    )}
+
+  </div>
+
+
+  {/* NEVER ORDERED */}
+
+  <div className="border border-gray-100 rounded-xl p-5">
+
+    <h4 className="font-semibold text-base mb-4">
+      Never Ordered
+    </h4>
+
+    {analysisProductIntelligence.never_ordered?.length === 0 ? (
+
+      <p className="text-sm text-gray-500">
+        No never-ordered products found.
+      </p>
+
+    ) : (
+
+      <div className="space-y-3">
+
+        {analysisProductIntelligence.never_ordered.map(
+          (product, index) => {
+
+            const productName =
+              product.design_number ||
+              product.product_number ||
+              product.product_name ||
+              product.name ||
+              product.product_id ||
+              "Unknown";
+
+            const category =
+              product.category ||
+              product.product_category ||
+              "—";
+
+            return (
+              <div
+                key={`never-${productName}-${index}`}
+                className="flex items-center justify-between gap-3"
+              >
+
+                <div className="min-w-0">
+
+                  <p className="text-sm font-medium truncate">
+                    {productName}
+                  </p>
+
+                  <p className="text-xs text-gray-500 truncate">
+                    {category}
+                  </p>
+
+                </div>
+
+                <span className="text-xs font-medium text-gray-500 shrink-0">
+                  0 orders
+                </span>
+
+              </div>
+            );
+
+          }
+        )}
+
+      </div>
+
+    )}
+
+  </div>
+
+</div>
+
+</div>
+
+
+      {/* =====================================================
+    CATEGORY PERFORMANCE
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
+
+  <div>
+    <h3 className="font-semibold text-lg">
+      Category Performance
+    </h3>
+
+    <p className="text-sm text-gray-500 mt-1">
+      Orders, share and monthly category growth
+    </p>
+  </div>
+
+  <div className="text-sm text-gray-500">
+    Combined Orders:{" "}
+    <span className="font-semibold text-gray-900">
+      {analysisData?.overview?.combined_orders ?? 0}
+    </span>
+  </div>
+
+</div>
+
+
+{/* CATEGORY SUMMARY */}
+
+{analysisByCategory.length === 0 ? (
+
+  <p className="text-sm text-gray-500">
+    No category data available.
+  </p>
+
+) : (
+
+  <div className="space-y-4">
+
+    {analysisByCategory.map((item) => {
+
+      const orderPercentage =
+        Number(item.percentage || 0);
+
+      const orderCount =
+        Number(item.count || 0);
+
+      return (
+
+        <div
+  key={item.name}
+  onClick={() =>
+    setSelectedCategoryDrilldown(
+      selectedCategoryDrilldown === item.name
+        ? null
+        : item.name
+    )
+  }
+  className="border border-gray-100 rounded-lg p-4 cursor-pointer hover:border-gray-300 transition"
+>
+
+          <div className="flex items-center justify-between gap-4 mb-2">
+
+            <div className="min-w-0">
+
+              <p className="font-medium text-sm truncate">
+                {item.name}
+              </p>
+
+              <p className="text-xs text-gray-500 mt-1">
+                {orderPercentage.toFixed(1)}% of orders
+              </p>
+
+            </div>
+
+            <div className="text-right shrink-0">
+
+              <p className="font-semibold text-sm">
+                {orderCount}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                orders
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {/* ORDER SHARE BAR */}
+
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+
+            <div
+              className="h-full bg-[#359E58] rounded-full transition-all"
+              style={{
+                width: `${Math.min(
+                  Math.max(orderPercentage, 0),
+                  100
+                )}%`
+              }}
+            />
+
+          </div>
+
+        </div>
+
+      );
+
+    })}
+
+  </div>
+
+)}
+
+</div>
+
+{selectedCategoryDrilldown && (
+  <div className="mt-6 border border-gray-200 rounded-lg p-5">
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h4 className="font-semibold text-base">
+          {selectedCategoryDrilldown} — Designs / Products
+        </h4>
+        <p className="text-sm text-gray-500 mt-1">
+          Orders by design/product
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setSelectedCategoryDrilldown(null)}
+        className="text-sm text-gray-500 hover:text-gray-900"
+      >
+        Close
+      </button>
+    </div>
+
+    <div className="space-y-2">
+      {(analysisCategoryProductDrilldown[selectedCategoryDrilldown] || []).map(
+        (product, index) => (
+          <div
+            key={product?.product_id || product?.design_number || index}
+            className="flex items-center justify-between border-b border-gray-100 py-3"
+          >
+            <div>
+              <p className="font-medium text-sm">
+                {product?.design_number ||
+                  product?.product_name ||
+                  product?.name ||
+                  "Unknown Design"}
+              </p>
+            </div>
+
+            <div className="text-right">
+              <p className="font-semibold text-sm">
+                {Number(product?.orders || product?.count || 0)}
+              </p>
+              <p className="text-xs text-gray-500">
+                orders
+              </p>
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  </div>
+)}
+
+{/* CATEGORY PERFORMANCE LINE CHART */}
+
+{categoryMonthlyChartData.length > 0 && (
+  <div className="mb-8">
+
+    <div className="mb-4">
+      <h4 className="font-semibold text-base">
+        Category Orders Over Time
+      </h4>
+
+      <p className="text-sm text-gray-500 mt-1">
+        Monthly order performance by category
+      </p>
+
+
+      <div className="flex flex-wrap gap-2 mt-4">
+
+        <button
+  type="button"
+  onClick={() => setSelectedAnalysisCategories([])}
+  className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-400 transition"
+>
+  Clear
+</button>
+
+{analysisByCategory.map((categoryItem) => {
+
+  const categoryName =
+    categoryItem?.name;
+
+  if (!categoryName) {
+    return null;
+  }
+
+  const isSelected =
+    selectedAnalysisCategories.includes(
+      categoryName
+    );
+
+  return (
+    <button
+      key={categoryName}
+      type="button"
+      onClick={() => {
+        setSelectedAnalysisCategories((current) => {
+
+          if (current.includes(categoryName)) {
+            return current.filter(
+              (name) => name !== categoryName
+            );
+          }
+
+          return [
+            ...current,
+            categoryName
+          ];
+        });
+      }}
+      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
+        isSelected
+          ? "bg-gray-900 text-white border-gray-900"
+          : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+      }`}
+    >
+      {categoryName}
+    </button>
+  );
+})}
+
+</div>
+    </div>
+
+    <div className="w-full h-[380px]">
+
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+      >
+
+        <LineChart
+          data={categoryMonthlyChartData}
+          margin={{
+            top: 10,
+            right: 20,
+            left: 0,
+            bottom: 10,
+          }}
+        >
+
+          <CartesianGrid
+            strokeDasharray="3 3"
+          />
+
+          <XAxis
+            dataKey="month"
+            tick={{ fontSize: 12 }}
+          />
+
+          <YAxis
+            allowDecimals={false}
+            tick={{ fontSize: 12 }}
+          />
+
+          <Tooltip />
+
+          <Legend />
+
+          {analysisByCategory
+  .filter((categoryItem) => {
+    const categoryName =
+      categoryItem?.name;
+
+    return (
+      categoryName &&
+      (
+        selectedAnalysisCategories.length === 0 ||
+        selectedAnalysisCategories.includes(categoryName)
+      )
+    );
+  })
+  .map((categoryItem) => {
+
+    const categoryName =
+      categoryItem?.name;
+
+    return (
+      <Line
+        key={categoryName}
+        type="monotone"
+        dataKey={categoryName}
+        strokeWidth={2}
+        dot={{ r: 3 }}
+        activeDot={{ r: 5 }}
+      />
+    );
+  })}
+
+        </LineChart>
+
+      </ResponsiveContainer>
+
+    </div>
+
+  </div>
+)}
+
+
+{/* =====================================================
+    MONTHLY CATEGORY PERFORMANCE
+===================================================== */}
+
+<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+
+  <div className="mb-6">
+    <h3 className="font-semibold text-lg">
+      Monthly Category Performance
+    </h3>
+
+    <p className="text-sm text-gray-500 mt-1">
+      Month-by-month orders and growth / decline by category
+    </p>
+  </div>
+
+  {analysisByCategoryMonthly.length === 0 ? (
+
+    <p className="text-sm text-gray-500">
+      No monthly category data available.
+    </p>
+
+  ) : (
+
+    <div className="space-y-6">
+
+      {analysisByCategoryMonthly.map((monthData) => {
+
+        const month =
+          monthData?.month || "";
+
+        const categories =
+          monthData?.categories || {};
+
+        const categoryEntries =
+          Object.entries(categories);
+
+        return (
+
+          <div
+            key={month}
+            className="border border-gray-100 rounded-xl overflow-hidden"
+          >
+
+            {/* MONTH HEADER */}
+
+            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
+
+              <p className="font-semibold text-sm text-gray-900">
+                {month}
+              </p>
+
+              <p className="text-xs text-gray-500">
+                {categoryEntries.length} categories
+              </p>
+
+            </div>
+
+
+            {/* CATEGORY ROWS */}
+
+            <div className="divide-y divide-gray-100">
+
+              {categoryEntries.length === 0 ? (
+
+                <div className="px-4 py-4 text-sm text-gray-500">
+                  No category orders this month.
+                </div>
+
+              ) : (
+
+                categoryEntries.map(
+                  ([categoryName, categoryInfo]) => {
+
+                    const orders =
+                      Number(
+                        categoryInfo?.orders || 0
+                      );
+
+                    const growth =
+                      Number(
+                        categoryInfo?.growth_percentage || 0
+                      );
+
+                    const status =
+                      categoryInfo?.growth_status ||
+                      "unchanged";
+
+                    return (
+
+                      <div
+                        key={`${month}-${categoryName}`}
+                        className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-3"
+                      >
+
+                        {/* CATEGORY */}
+
+                        <div className="flex-1 min-w-0">
+
+                          <p className="text-sm font-medium truncate">
+                            {categoryName}
+                          </p>
+
+                        </div>
+
+
+                        {/* ORDERS */}
+
+                        <div className="md:w-24">
+
+                          <p className="text-sm font-semibold">
+                            {orders}
+                          </p>
+
+                          <p className="text-xs text-gray-500">
+                            orders
+                          </p>
+
+                        </div>
+
+
+                        {/* GROWTH */}
+
+                        <div className="md:w-32">
+
+                          {status === "growth" ? (
+
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                              ↑ {growth.toFixed(1)}%
+                            </span>
+
+                          ) : status === "decline" ? (
+
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                              ↓ {Math.abs(growth).toFixed(1)}%
+                            </span>
+
+                          ) : status === "new" ? (
+
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                              New
+                            </span>
+
+                          ) : (
+
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
+                              — 0%
+                            </span>
+
+                          )}
+
+                        </div>
+
+                      </div>
+
+                    );
+
+                  }
+                )
+
+              )}
+
+            </div>
+
+          </div>
+
+        );
+
+      })}
+
+    </div>
+
+  )}
+
+</div>
 
 
       {/* TOP CUSTOMERS */}

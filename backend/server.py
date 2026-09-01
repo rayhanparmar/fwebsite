@@ -5,6 +5,7 @@ from whatsapp_service import send_flow, send_text_message, send_document
 from flow_crypto import decrypt_request, encrypt_response
 from cloudinary.uploader import destroy
 from io import BytesIO
+import csv
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font
@@ -35,6 +36,19 @@ from cloudinary_service import (
     upload_whatsapp_video,
 )
 from pdf_service import create_order_pdf
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    PageBreak
+)
 
 AWS_BUCKET_NAME = os.getenv("AWS_BUCKET_NAME")
 AWS_REGION = os.getenv("AWS_REGION")
@@ -1107,6 +1121,18 @@ async def admin_combined_analysis(
 ):
     await get_admin_user(request)
 
+# --------------------------------------------------------
+# VALIDATE DATE RANGE
+# --------------------------------------------------------
+
+    if from_date and to_date:
+
+        if from_date > to_date:
+            raise HTTPException(
+                status_code=400,
+                detail="From date cannot be after To date."
+            )
+
     # --------------------------------------------------------
     # HELPERS
     # --------------------------------------------------------
@@ -1115,6 +1141,15 @@ async def admin_combined_analysis(
         if value is None:
             return ""
         return str(value).strip()
+    
+    def normalize_analysis_value(value):
+        value = clean(value)
+
+        if not value:
+            return ""
+
+        return " ".join(value.split()).strip().lower()
+        
 
     def normalize_channel(value):
         value = clean(value).lower()
@@ -1344,12 +1379,17 @@ async def admin_combined_analysis(
         order_date = clean(order.get("order_date"))
 
         # Date
-        if from_date and order_date:
-            if order_date < from_date:
+        if from_date or to_date:
+
+            # If a date filter is selected, orders without
+            # a valid order date must not be included.
+            if not order_date:
                 continue
 
-        if to_date and order_date:
-            if order_date > to_date:
+            if from_date and order_date < from_date:
+                continue
+
+            if to_date and order_date > to_date:
                 continue
 
         # Channel
@@ -1376,27 +1416,79 @@ async def admin_combined_analysis(
         for item in order.get("items", []):
 
             if category and category.lower() != "all":
-                if clean(item.get("category")) != category:
+
+                if normalize_analysis_value(
+                    item.get("category")
+                ) != normalize_analysis_value(category):
                     continue
 
             if product_id and product_id.lower() != "all":
+
+                requested_product = normalize_analysis_value(
+                    product_id
+                )
+
+                item_product_id = normalize_analysis_value(
+                    item.get("product_id")
+                )
+
+                item_design_number = normalize_analysis_value(
+                    item.get("design_number")
+                )
+
                 if (
-                    clean(item.get("product_id")) != product_id
-                    and clean(item.get("design_number")) != product_id
+                    item_product_id != requested_product
+                    and item_design_number != requested_product
                 ):
                     continue
 
             if metal and metal.lower() != "all":
-                if clean(item.get("metal")).lower() != metal.lower():
+
+                requested_metal = normalize_analysis_value(
+                    metal
+                )
+
+                item_metal = normalize_analysis_value(
+                    item.get("metal")
+                )
+
+                if "gold" in requested_metal and "platinum" in requested_metal:
+
+                    if not (
+                        "gold" in item_metal
+                        and "platinum" in item_metal
+                    ):
+                        continue
+
+                elif requested_metal == "gold":
+
+                    if (
+                        "gold" not in item_metal
+                        or "platinum" in item_metal
+                    ):
+                        continue
+
+                elif requested_metal == "platinum":
+
+                    if "platinum" not in item_metal:
+                        continue
+
+                elif item_metal != requested_metal:
                     continue
 
             if purity and purity.lower() != "all":
-                if clean(item.get("purity")).lower() != purity.lower():
-                    continue
+
+                if normalize_analysis_value(
+                    item.get("purity")
+                ) != normalize_analysis_value(purity):
+                        continue
 
             if stone and stone.lower() != "all":
-                if clean(item.get("stone")).lower() != stone.lower():
-                    continue
+
+                if normalize_analysis_value(
+                    item.get("stone")
+                ) != normalize_analysis_value(stone):
+                        continue
 
             matching_items.append(item)
 
@@ -1425,6 +1517,7 @@ async def admin_combined_analysis(
     # --------------------------------------------------------
 
     total_orders = len(orders)
+    combined_orders = total_orders
 
     website_order_count = sum(
         1
@@ -1504,13 +1597,170 @@ async def admin_combined_analysis(
     # 8. PRODUCT / DESIGN
     # --------------------------------------------------------
 
-    product_data = group_items("product_id")
+    product_counts = {}
 
-    # --------------------------------------------------------
-    # 9. METAL
+    for order in orders:
+        for item in order.get("items", []):
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = normalize_analysis_value(
+    product_id or design_number
+)
+
+            if not product_key:
+                continue
+
+            if product_key not in product_counts:
+                product_counts[product_key] = {
+                    "product_id": product_id,
+                    "design_number": design_number,
+                    "category": clean(item.get("category")),
+                    "orders": 0,
+                }
+
+            product_counts[product_key]["orders"] += 1
+
+
+    # Get the COMPLETE catalogue
+    catalogue_products = await db.products.find(
+        {},
+        {"_id": 0}
+    ).to_list(length=None)
+
+
+    product_performance = []
+
+    for product in catalogue_products:
+
+        product_id = clean(
+            product.get("product_id")
+            or product.get("design_number")
+        )
+
+        design_number = clean(
+            product.get("design_number")
+            or product.get("product_id")
+        )
+
+        product_key = product_id or design_number
+
+        if not product_key:
+            continue
+
+        ordered = product_counts.get(product_key)
+
+        product_performance.append({
+            "product_id": product_id,
+            "design_number": design_number,
+            "name": clean(product.get("name")),
+            "category": clean(product.get("category")),
+            "orders": ordered["orders"] if ordered else 0,
+        })
+
+
+    # Best sellers
+    best_sellers = sorted(
+        product_performance,
+        key=lambda x: x["orders"],
+        reverse=True
+    )
+
+
+        # Underperforming = products that have orders,
+    # but are among the lowest-selling products.
+    ordered_products = [
+        product
+        for product in product_performance
+        if product["orders"] > 0
+    ]
+
+    ordered_products.sort(
+        key=lambda x: x["orders"]
+    )
+
+    underperforming_products = ordered_products[:20]
+
+
+    # Never ordered
+    never_ordered_products = [
+        product
+        for product in product_performance
+        if product["orders"] == 0
+    ]
+
+
+    # Keep the complete product list available
+    product_data = sorted(
+        product_performance,
+        key=lambda x: x["orders"],
+        reverse=True
+    )
+
+        # --------------------------------------------------------
+    # METAL ANALYSIS
     # --------------------------------------------------------
 
-    metal_data = group_items("metal")
+    metal_counts = {}
+
+    for order in orders:
+        for item in order.get("items", []):
+
+            raw_metal = normalize_analysis_value(
+                item.get("metal")
+            )
+
+            if not raw_metal:
+                continue
+
+            # Normalize all common variations
+            if "gold" in raw_metal and "platinum" in raw_metal:
+                metal_name = "Gold + Platinum"
+
+            elif "platinum" in raw_metal:
+                metal_name = "Platinum"
+
+            elif "gold" in raw_metal:
+                metal_name = "Gold"
+
+            else:
+                # Keep unexpected values rather than losing data
+                metal_name = clean(item.get("metal"))
+
+            metal_counts[metal_name] = (
+                metal_counts.get(metal_name, 0) + 1
+            )
+
+    metal_data = [
+        {
+            "name": metal_name,
+            "orders": order_count
+        }
+        for metal_name, order_count
+        in metal_counts.items()
+    ]
+
+    # Keep the requested metal groups in a consistent order
+    metal_order = {
+        "Gold": 1,
+        "Platinum": 2,
+        "Gold + Platinum": 3
+    }
+
+    metal_data.sort(
+        key=lambda x: (
+            metal_order.get(x["name"], 99),
+            x["name"]
+        )
+    )
 
     # --------------------------------------------------------
     # 10. PURITY
@@ -1525,10 +1775,351 @@ async def admin_combined_analysis(
     gold_colour_data = group_items("gold_colour")
 
     # --------------------------------------------------------
-    # 12. STONE
+    # STONE ANALYSIS
     # --------------------------------------------------------
 
-    stone_data = group_items("stone")
+    stone_counts = {}
+
+    for order in orders:
+        for item in order.get("items", []):
+
+            raw_stone = normalize_analysis_value(
+                item.get("stone")
+            )
+
+            if not raw_stone:
+                continue
+
+            # Normalize common stone variations
+            if (
+                "natural" in raw_stone
+                and "diamond" in raw_stone
+            ):
+                stone_name = "Natural Diamond"
+
+            elif (
+                "lab" in raw_stone
+                and "diamond" in raw_stone
+            ):
+                stone_name = "Lab Grown"
+
+            elif raw_stone in {
+                "cz",
+                "c.z.",
+                "cubic zirconia",
+                "cubic zircon",
+            }:
+                stone_name = "CZ"
+
+            elif (
+                "colour stone" in raw_stone
+                or "color stone" in raw_stone
+                or "coloured stone" in raw_stone
+                or "colored stone" in raw_stone
+            ):
+                stone_name = "Colour Stones"
+
+            elif "precious stone" in raw_stone:
+                stone_name = "Precious Stones"
+
+            else:
+                # Preserve unknown values
+                stone_name = clean(item.get("stone"))
+
+            stone_counts[stone_name] = (
+                stone_counts.get(stone_name, 0) + 1
+            )
+
+    stone_data = [
+        {
+            "name": stone_name,
+            "orders": order_count
+        }
+        for stone_name, order_count
+        in stone_counts.items()
+    ]
+
+    stone_data.sort(
+        key=lambda x: x["orders"],
+        reverse=True
+    )
+
+
+        # --------------------------------------------------------
+    # 12A. CATEGORY -> PRODUCT / DESIGN DRILL-DOWN
+    # --------------------------------------------------------
+
+    category_product_map = {}
+
+    # First build the complete catalogue structure
+    # so products with zero orders are also available.
+
+    for product in products:
+
+        category_name = normalize_analysis_value(
+            product.get("category")
+        )
+
+        if not category_name:
+            continue
+
+        product_id = clean(
+            product.get("product_id")
+            or product.get("id")
+            or product.get("design_number")
+        )
+
+        design_number = clean(
+            product.get("design_number")
+            or product.get("product_id")
+            or product.get("id")
+        )
+
+        product_key = product_id or design_number
+
+        if not product_key:
+            continue
+
+        category_product_map.setdefault(
+            category_name,
+            {}
+        )
+
+        category_product_map[category_name].setdefault(
+            product_key,
+            {
+                "product_id": product_id,
+                "design_number": design_number,
+                "orders": 0
+            }
+        )
+
+
+    # Now add actual orders
+
+    for order in orders:
+
+        for item in order.get("items", []):
+
+            category_name = normalize_analysis_value(
+                item.get("category")
+            )
+
+            if not category_name:
+                continue
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = product_id or design_number
+
+            if not product_key:
+                continue
+
+            category_product_map.setdefault(
+                category_name,
+                {}
+            )
+
+            category_product_map[category_name].setdefault(
+                product_key,
+                {
+                    "product_id": product_id,
+                    "design_number": design_number,
+                    "orders": 0
+                }
+            )
+
+            category_product_map[category_name][
+                product_key
+            ]["orders"] += 1
+
+
+    # Convert dictionaries into frontend-friendly arrays
+
+    category_product_data = {}
+
+    for category_name, products_map in category_product_map.items():
+
+        category_product_data[category_name] = sorted(
+            products_map.values(),
+            key=lambda x: (
+                -x["orders"],
+                x["product_id"] or x["design_number"]
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # 12B. CATEGORY × METAL
+    # --------------------------------------------------------
+
+    category_metal_map = {}
+
+    for order in orders:
+        for item in order.get("items", []):
+
+            category_name = normalize_analysis_value(
+    item.get("category")
+)
+
+            metal_name = clean(
+                item.get("metal")
+            )
+
+            if not category_name or not metal_name:
+                continue
+
+            category_metal_map.setdefault(
+                category_name,
+                {}
+            )
+
+            category_metal_map[category_name].setdefault(
+                metal_name,
+                {
+                    "orders": 0,
+                    "products": {}
+                }
+            )
+
+            metal_data_item = category_metal_map[
+                category_name
+            ][metal_name]
+
+            metal_data_item["orders"] += 1
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = product_id or design_number
+
+            if product_key:
+
+                if product_key not in metal_data_item["products"]:
+                    metal_data_item["products"][product_key] = {
+                        "product_id": product_id,
+                        "design_number": design_number,
+                        "orders": 0
+                    }
+
+                metal_data_item["products"][product_key]["orders"] += 1
+
+
+    category_metal_data = {}
+
+    for category_name, metals in category_metal_map.items():
+
+        category_metal_data[category_name] = {}
+
+        for metal_name, metal_info in metals.items():
+
+            category_metal_data[category_name][metal_name] = {
+                "orders": metal_info["orders"],
+                "products": sorted(
+                    metal_info["products"].values(),
+                    key=lambda x: x["orders"],
+                    reverse=True
+                )
+            }
+
+
+    # --------------------------------------------------------
+    # 12C. CATEGORY × STONE
+    # --------------------------------------------------------
+
+    category_stone_map = {}
+
+    for order in orders:
+        for item in order.get("items", []):
+
+            category_name = normalize_analysis_value(
+    item.get("category")
+)
+
+            stone_name = clean(
+                item.get("stone")
+            )
+
+            if not category_name or not stone_name:
+                continue
+
+            category_stone_map.setdefault(
+                category_name,
+                {}
+            )
+
+            category_stone_map[category_name].setdefault(
+                stone_name,
+                {
+                    "orders": 0,
+                    "products": {}
+                }
+            )
+
+            stone_data_item = category_stone_map[
+                category_name
+            ][stone_name]
+
+            stone_data_item["orders"] += 1
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = normalize_analysis_value(
+    product_id or design_number
+)
+
+            if product_key:
+
+                if product_key not in stone_data_item["products"]:
+                    stone_data_item["products"][product_key] = {
+                        "product_id": product_id,
+                        "design_number": design_number,
+                        "orders": 0
+                    }
+
+                stone_data_item["products"][product_key]["orders"] += 1
+
+
+    category_stone_data = {}
+
+    for category_name, stones in category_stone_map.items():
+
+        category_stone_data[category_name] = {}
+
+        for stone_name, stone_info in stones.items():
+
+            category_stone_data[category_name][stone_name] = {
+                "orders": stone_info["orders"],
+                "products": sorted(
+                    stone_info["products"].values(),
+                    key=lambda x: x["orders"],
+                    reverse=True
+                )
+            }
+
 
     # --------------------------------------------------------
     # 13. STATUS
@@ -1567,15 +2158,21 @@ async def admin_combined_analysis(
 
         category_item["percentage"] = (
             round(
-                (category_item["count"] / total_products) * 100,
+                (
+                    category_item["count"]
+                    / total_orders
+                ) * 100,
                 2
             )
-            if total_products
+            if total_orders
             else 0
         )
 
-    # --------------------------------------------------------
-    # 15. MONTHLY CATEGORY PERFORMANCE
+    # Combined Website + WhatsApp orders
+    combined_orders = total_orders
+
+        # --------------------------------------------------------
+    # 15. MONTHLY CATEGORY PERFORMANCE + GROWTH
     # --------------------------------------------------------
 
     monthly_category = {}
@@ -1591,35 +2188,151 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = clean(
-                item.get("category")
-            )
+            category_name = normalize_analysis_value(
+    item.get("category")
+)
 
             if not category_name:
                 continue
 
-            monthly_category.setdefault(
-                month,
-                {}
-            )
+            monthly_category.setdefault(month, {})
 
             monthly_category[month][category_name] = (
-                monthly_category[month].get(
-                    category_name,
-                    0
-                ) + 1
+                monthly_category[month].get(category_name, 0) + 1
             )
+
+
+    # --------------------------------------------------------
+    # ALL CATEGORIES
+    # --------------------------------------------------------
+
+    all_categories = set()
+
+    for month_data in monthly_category.values():
+        all_categories.update(month_data.keys())
+
+
+    # --------------------------------------------------------
+    # MONTHLY DATA + GROWTH %
+    # --------------------------------------------------------
 
     category_monthly = []
 
-    for month in sorted(monthly_category):
+    previous_month_data = {}
+
+        # Build a continuous month range so months with zero orders
+    # are also included in the category growth chart.
+
+    months_sorted = sorted(monthly_category)
+
+    if months_sorted:
+
+        first_month = datetime.strptime(
+            months_sorted[0],
+            "%Y-%m"
+        )
+
+        last_month = datetime.strptime(
+            months_sorted[-1],
+            "%Y-%m"
+        )
+
+        all_months = []
+
+        current_month = first_month
+
+        while current_month <= last_month:
+
+            all_months.append(
+                current_month.strftime("%Y-%m")
+            )
+
+            if current_month.month == 12:
+
+                current_month = current_month.replace(
+                    year=current_month.year + 1,
+                    month=1
+                )
+
+            else:
+
+                current_month = current_month.replace(
+                    month=current_month.month + 1
+                )
+
+    else:
+
+        all_months = []
+
+
+    for month in all_months:
+
+        current_month_data = monthly_category.get(
+    month,
+    {}
+)
+
+        month_categories = {}
+
+        for category_name in sorted(all_categories):
+
+            current_orders = current_month_data.get(
+                category_name,
+                0
+            )
+
+            previous_orders = previous_month_data.get(
+                category_name,
+                0
+            )
+
+            # ---------------------------------------------
+            # GROWTH / DECLINE
+            # ---------------------------------------------
+
+            if previous_orders == 0 and current_orders > 0:
+
+                growth_percentage = None
+                growth_status = "new"
+
+            elif previous_orders == 0 and current_orders == 0:
+
+                growth_percentage = None
+                growth_status = "no_orders"
+
+            else:
+
+                growth_percentage = round(
+                    (
+                        (current_orders - previous_orders)
+                        / previous_orders
+                    ) * 100,
+                    2
+                )
+
+                if growth_percentage > 0:
+                    growth_status = "growth"
+
+                elif growth_percentage < 0:
+                    growth_status = "decline"
+
+                else:
+                    growth_status = "unchanged"
+
+            month_categories[category_name] = {
+                "orders": current_orders,
+                "growth_percentage": growth_percentage,
+                "growth_status": growth_status
+            }
 
         category_monthly.append({
             "month": month,
-            "categories": monthly_category[month]
+            "categories": month_categories
         })
 
-    # --------------------------------------------------------
+        previous_month_data = current_month_data.copy()
+
+        # --------------------------------------------------------
     # 16. RETAILER ANALYSIS
     # --------------------------------------------------------
 
@@ -1643,30 +2356,50 @@ async def admin_combined_analysis(
             retailer_map[retailer_key] = {
                 "retailer_id": retailer_key,
                 "retailer_name": retailer_name,
+
                 "total_orders": 0,
                 "custom_orders": 0,
                 "stock_orders": 0,
-                "categories": {}
+
+                # Existing category summary
+                "categories": {},
+
+                # New category -> product/design drill-down
+                "category_details": {}
             }
 
         retailer = retailer_map[retailer_key]
 
+        # ---------------------------------------------
+        # TOTAL / CUSTOM / STOCK ORDERS
+        # ---------------------------------------------
+
         retailer["total_orders"] += 1
 
-        if order.get("order_type") == "custom":
+        order_type_value = normalize_order_type(
+            order.get("order_type")
+        )
+
+        if order_type_value == "custom":
             retailer["custom_orders"] += 1
-        elif order.get("order_type") == "stock":
+
+        elif order_type_value == "stock":
             retailer["stock_orders"] += 1
+
+        # ---------------------------------------------
+        # CATEGORY + PRODUCT / DESIGN
+        # ---------------------------------------------
 
         for item in order.get("items", []):
 
-            category_name = clean(
-                item.get("category")
-            )
+            category_name = normalize_analysis_value(
+    item.get("category")
+)
 
             if not category_name:
                 continue
 
+            # Existing category count
             retailer["categories"][category_name] = (
                 retailer["categories"].get(
                     category_name,
@@ -1674,14 +2407,337 @@ async def admin_combined_analysis(
                 ) + 1
             )
 
-    retailer_data = list(
-        retailer_map.values()
-    )
+            # Create category detail
+            if category_name not in retailer["category_details"]:
+
+                retailer["category_details"][category_name] = {
+                    "orders": 0,
+                    "products": {}
+                }
+
+            category_detail = retailer["category_details"][
+                category_name
+            ]
+
+            category_detail["orders"] += 1
+
+            # Product / Design number
+            product_id = clean(
+                item.get("product_id")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+            )
+
+            product_key = normalize_analysis_value(
+                design_number
+                or product_id
+            )
+
+            if not product_key:
+                product_key = "unknown"
+
+            # Create product/design entry
+            if product_key not in category_detail["products"]:
+
+                category_detail["products"][product_key] = {
+                    "product_id": product_id,
+                    "design_number": design_number,
+                    "name": clean(
+                        item.get("name")
+                    ),
+                    "orders": 0
+                }
+
+            category_detail["products"][product_key]["orders"] += 1
+
+    # ---------------------------------------------
+    # CONVERT CATEGORY DETAILS TO FRONTEND-FRIENDLY
+    # ARRAYS
+    # ---------------------------------------------
+
+    retailer_data = []
+
+    for retailer in retailer_map.values():
+
+        category_details = {}
+
+        for category_name, category_info in retailer[
+            "category_details"
+        ].items():
+
+            products = list(
+                category_info["products"].values()
+            )
+
+            products.sort(
+                key=lambda x: x["orders"],
+                reverse=True
+            )
+
+            category_details[category_name] = {
+                "orders": category_info["orders"],
+                "products": products
+            }
+
+        retailer["category_details"] = category_details
+
+        retailer_data.append(retailer)
+
+    # ---------------------------------------------
+    # SORT RETAILERS BY TOTAL ORDERS
+    # ---------------------------------------------
 
     retailer_data.sort(
         key=lambda x: x["total_orders"],
         reverse=True
     )
+
+        # --------------------------------------------------------
+    # 16A. CATEGORY × METAL
+    # --------------------------------------------------------
+
+    category_metal_map = {}
+
+    for order in orders:
+
+        for item in order.get("items", []):
+
+            category_name = normalize_analysis_value(
+                item.get("category")
+            )
+
+            metal_name = normalize_analysis_value(
+                item.get("metal")
+            )
+
+            if not category_name or not metal_name:
+                continue
+
+            # Keep the same metal grouping used in Metal Analysis
+            if "gold" in metal_name and "platinum" in metal_name:
+                metal_name = "Gold + Platinum"
+
+            elif "platinum" in metal_name:
+                metal_name = "Platinum"
+
+            elif "gold" in metal_name:
+                metal_name = "Gold"
+
+            else:
+                metal_name = clean(item.get("metal"))
+
+            category_metal_map.setdefault(
+                category_name,
+                {}
+            )
+
+            category_metal_map[category_name].setdefault(
+                metal_name,
+                {
+                    "orders": 0,
+                    "products": {}
+                }
+            )
+
+            metal_detail = category_metal_map[
+                category_name
+            ][metal_name]
+
+            metal_detail["orders"] += 1
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = normalize_analysis_value(
+                design_number
+                or product_id
+            )
+
+            if not product_key:
+                product_key = "unknown"
+
+            if product_key not in metal_detail["products"]:
+
+                metal_detail["products"][product_key] = {
+                    "product_id": product_id,
+                    "design_number": design_number,
+                    "name": clean(item.get("name")),
+                    "orders": 0
+                }
+
+            metal_detail["products"][
+                product_key
+            ]["orders"] += 1
+
+
+    # Convert to frontend-friendly arrays
+
+    category_metal_data = {}
+
+    for category_name, metals in category_metal_map.items():
+
+        category_metal_data[category_name] = {}
+
+        for metal_name, metal_info in metals.items():
+
+            products = list(
+                metal_info["products"].values()
+            )
+
+            products.sort(
+                key=lambda x: x["orders"],
+                reverse=True
+            )
+
+            category_metal_data[
+                category_name
+            ][metal_name] = {
+                "orders": metal_info["orders"],
+                "products": products
+            }
+
+
+    # --------------------------------------------------------
+    # 16B. CATEGORY × STONE
+    # --------------------------------------------------------
+
+    category_stone_map = {}
+
+    for order in orders:
+
+        for item in order.get("items", []):
+
+            category_name = normalize_analysis_value(
+                item.get("category")
+            )
+
+            stone_name = normalize_analysis_value(
+                item.get("stone")
+            )
+
+            if not category_name or not stone_name:
+                continue
+
+            # Normalize common stone names
+            if (
+                "natural" in stone_name
+                and "diamond" in stone_name
+            ):
+                stone_name = "Natural Diamond"
+
+            elif (
+                "lab" in stone_name
+                and "diamond" in stone_name
+            ):
+                stone_name = "Lab Grown"
+
+            elif stone_name in {
+                "cz",
+                "c.z.",
+                "cubic zirconia",
+                "cubic zircon"
+            }:
+                stone_name = "CZ"
+
+            elif (
+                "colour stone" in stone_name
+                or "color stone" in stone_name
+                or "coloured stone" in stone_name
+                or "colored stone" in stone_name
+            ):
+                stone_name = "Colour Stones"
+
+            elif "precious stone" in stone_name:
+                stone_name = "Precious Stones"
+
+            else:
+                stone_name = clean(item.get("stone"))
+
+            category_stone_map.setdefault(
+                category_name,
+                {}
+            )
+
+            category_stone_map[category_name].setdefault(
+                stone_name,
+                {
+                    "orders": 0,
+                    "products": {}
+                }
+            )
+
+            stone_detail = category_stone_map[
+                category_name
+            ][stone_name]
+
+            stone_detail["orders"] += 1
+
+            product_id = clean(
+                item.get("product_id")
+                or item.get("design_number")
+            )
+
+            design_number = clean(
+                item.get("design_number")
+                or item.get("product_id")
+            )
+
+            product_key = normalize_analysis_value(
+                design_number
+                or product_id
+            )
+
+            if not product_key:
+                product_key = "unknown"
+
+            if product_key not in stone_detail["products"]:
+
+                stone_detail["products"][product_key] = {
+                    "product_id": product_id,
+                    "design_number": design_number,
+                    "name": clean(item.get("name")),
+                    "orders": 0
+                }
+
+            stone_detail["products"][
+                product_key
+            ]["orders"] += 1
+
+
+    # Convert to frontend-friendly arrays
+
+    category_stone_data = {}
+
+    for category_name, stones in category_stone_map.items():
+
+        category_stone_data[category_name] = {}
+
+        for stone_name, stone_info in stones.items():
+
+            products = list(
+                stone_info["products"].values()
+            )
+
+            products.sort(
+                key=lambda x: x["orders"],
+                reverse=True
+            )
+
+            category_stone_data[
+                category_name
+            ][stone_name] = {
+                "orders": stone_info["orders"],
+                "products": products
+            }
 
     # --------------------------------------------------------
     # 17. DUE DATE ANALYSIS
@@ -1696,10 +2752,9 @@ async def admin_combined_analysis(
     delayed = 0
 
     completed_statuses = {
-        "delivered",
-        "completed",
-        "rejected"
-    }
+    "delivered",
+    "completed"
+}
 
     for order in orders:
 
@@ -1728,17 +2783,18 @@ async def admin_combined_analysis(
 
         if status in completed_statuses:
 
-            order_date_string = clean(
-                order.get("order_date")
-            )
+            completed_at = order.get("completedAt")
 
-            if order_date_string:
+            if completed_at:
 
                 try:
-                    completed_date = datetime.strptime(
-                        order_date_string[:10],
-                        "%Y-%m-%d"
-                    ).date()
+                    if hasattr(completed_at, "date"):
+                        completed_date = completed_at.date()
+                    else:
+                        completed_date = datetime.strptime(
+                            str(completed_at)[:10],
+                            "%Y-%m-%d"
+                        ).date()
 
                     if completed_date <= due_date_value:
                         completed_on_time += 1
@@ -1763,6 +2819,181 @@ async def admin_combined_analysis(
     # 18. RETURN
     # --------------------------------------------------------
 
+        # --------------------------------------------------------
+    # 18. AUTOMATIC BUSINESS INSIGHTS
+    # --------------------------------------------------------
+
+    automatic_insights = []
+
+
+    # 1. Top category
+    if category_data:
+
+        top_category = max(
+            category_data,
+            key=lambda x: x.get("count", 0)
+        )
+
+        automatic_insights.append({
+            "type": "top_category",
+            "title": "Top Category",
+            "message": (
+                f"{top_category.get('name')} is your "
+                f"most ordered category with "
+                f"{top_category.get('count', 0)} orders."
+            ),
+            "data": {
+                "category": top_category.get("name"),
+                "orders": top_category.get("count", 0)
+            }
+        })
+
+
+    # 2. Best-selling product
+    if best_sellers:
+
+        top_product = best_sellers[0]
+
+        if top_product.get("orders", 0) > 0:
+
+            product_name = (
+                top_product.get("design_number")
+                or top_product.get("product_id")
+                or top_product.get("name")
+                or "Unknown Product"
+            )
+
+            automatic_insights.append({
+                "type": "best_seller",
+                "title": "Best-Selling Design",
+                "message": (
+                    f"{product_name} is the top-selling design "
+                    f"with {top_product.get('orders', 0)} orders."
+                ),
+                "data": {
+                    "product_id": top_product.get("product_id"),
+                    "design_number": top_product.get("design_number"),
+                    "orders": top_product.get("orders", 0)
+                }
+            })
+
+
+    # 3. Never ordered products
+    never_ordered_count = len(
+        never_ordered_products
+    )
+
+    if never_ordered_count > 0:
+
+        automatic_insights.append({
+            "type": "never_ordered",
+            "title": "Catalogue Opportunity",
+            "message": (
+                f"{never_ordered_count} catalogue "
+                f"designs have never been ordered."
+            ),
+            "data": {
+                "count": never_ordered_count
+            }
+        })
+
+
+    # 4. Top retailer
+    if retailer_data:
+
+        top_retailer = retailer_data[0]
+
+        automatic_insights.append({
+            "type": "top_retailer",
+            "title": "Top Retailer",
+            "message": (
+                f"{top_retailer.get('retailer_name', 'Unknown')} "
+                f"has placed the most orders with "
+                f"{top_retailer.get('total_orders', 0)} orders."
+            ),
+            "data": {
+                "retailer_id": top_retailer.get("retailer_id"),
+                "retailer_name": top_retailer.get("retailer_name"),
+                "orders": top_retailer.get("total_orders", 0)
+            }
+        })
+
+
+    # 5. Overdue orders
+    if overdue > 0:
+
+        automatic_insights.append({
+            "type": "overdue",
+            "title": "Overdue Orders",
+            "message": (
+                f"{overdue} orders are currently overdue."
+            ),
+            "data": {
+                "count": overdue
+            }
+        })
+
+
+    # 6. Latest category growth / decline
+    if category_monthly:
+
+        latest_month = category_monthly[-1]
+
+        growth_items = []
+
+        for category_name, category_info in (
+            latest_month.get("categories", {}).items()
+        ):
+
+            growth = category_info.get(
+                "growth_percentage"
+            )
+
+            if growth is not None:
+                growth_items.append({
+                    "category": category_name,
+                    "growth_percentage": growth,
+                    "orders": category_info.get("orders", 0)
+                })
+
+        if growth_items:
+
+            highest_growth = max(
+                growth_items,
+                key=lambda x: x["growth_percentage"]
+            )
+
+            lowest_growth = min(
+                growth_items,
+                key=lambda x: x["growth_percentage"]
+            )
+
+            if highest_growth["growth_percentage"] > 0:
+
+                automatic_insights.append({
+                    "type": "category_growth",
+                    "title": "Fastest Growing Category",
+                    "message": (
+                        f"{highest_growth['category']} grew by "
+                        f"{highest_growth['growth_percentage']}% "
+                        f"in {latest_month.get('month')}."
+                    ),
+                    "data": highest_growth
+                })
+
+            if lowest_growth["growth_percentage"] < 0:
+
+                automatic_insights.append({
+                    "type": "category_decline",
+                    "title": "Category Decline",
+                    "message": (
+                        f"{lowest_growth['category']} declined by "
+                        f"{abs(lowest_growth['growth_percentage'])}% "
+                        f"in {latest_month.get('month')}."
+                    ),
+                    "data": lowest_growth
+                })
+
     return {
         "success": True,
 
@@ -1781,6 +3012,7 @@ async def admin_combined_analysis(
 
         "overview": {
             "total_orders": total_orders,
+            "combined_orders": combined_orders,
             "website_orders": website_order_count,
             "whatsapp_orders": whatsapp_order_count,
             "total_products": total_products,
@@ -1789,9 +3021,17 @@ async def admin_combined_analysis(
 
         "category": category_data,
 
-        "category_monthly": category_monthly,
+"category_product_drilldown": category_product_data,
 
-        "products": product_data,
+"category_monthly": category_monthly,
+
+"products": product_data,
+
+        "product_intelligence": {
+        "best_sellers": best_sellers[:20],
+        "underperforming": underperforming_products[:20],
+        "never_ordered": never_ordered_products,
+        },
 
         "retailers": retailer_data,
 
@@ -1803,7 +3043,12 @@ async def admin_combined_analysis(
 
         "stone": stone_data,
 
-        "status": status_data,
+"cross_analysis": {
+    "category_metal": category_metal_data,
+    "category_stone": category_stone_data
+},
+
+"status": status_data,
 
         "due_dates": {
             "due_this_week": due_this_week,
@@ -1812,8 +3057,2051 @@ async def admin_combined_analysis(
             "completed_on_time": completed_on_time,
             "delayed": delayed,
         },
+        "automatic_insights": automatic_insights,
     }
 
+# ============================================================
+# ANALYSIS EXPORT — CSV
+# ============================================================
+
+@api_router.get("/admin/analysis/export/csv")
+async def export_analysis_csv(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    channel: Optional[str] = None,
+    retailer_id: Optional[str] = None,
+    category: Optional[str] = None,
+    product_id: Optional[str] = None,
+    order_type: Optional[str] = None,
+    metal: Optional[str] = None,
+    purity: Optional[str] = None,
+    stone: Optional[str] = None,
+):
+    # Get the exact same filtered Analysis data
+    analysis = await admin_combined_analysis(
+        request=request,
+        from_date=from_date,
+        to_date=to_date,
+        channel=channel,
+        retailer_id=retailer_id,
+        category=category,
+        product_id=product_id,
+        order_type=order_type,
+        metal=metal,
+        purity=purity,
+        stone=stone,
+    )
+
+    output = BytesIO()
+
+    # UTF-8 BOM so Excel opens the CSV correctly
+    output.write("\ufeff".encode("utf-8"))
+
+    # Convert bytes buffer into text writer
+    import io
+
+    text_output = io.TextIOWrapper(
+        output,
+        encoding="utf-8",
+        newline=""
+    )
+
+    writer = csv.writer(text_output)
+
+    # --------------------------------------------------------
+    # FILTERS
+    # --------------------------------------------------------
+
+    writer.writerow(["ANALYSIS REPORT"])
+    writer.writerow([])
+
+    writer.writerow(["FILTERS"])
+    writer.writerow(["From Date", analysis["filters"]["from_date"]])
+    writer.writerow(["To Date", analysis["filters"]["to_date"]])
+    writer.writerow(["Channel", analysis["filters"]["channel"]])
+    writer.writerow(["Retailer", analysis["filters"]["retailer_id"]])
+    writer.writerow(["Category", analysis["filters"]["category"]])
+    writer.writerow(["Product / Design", analysis["filters"]["product_id"]])
+    writer.writerow(["Custom / Stock", analysis["filters"]["order_type"]])
+    writer.writerow(["Metal", analysis["filters"]["metal"]])
+    writer.writerow(["Purity", analysis["filters"]["purity"]])
+    writer.writerow(["Stone", analysis["filters"]["stone"]])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # OVERVIEW
+    # --------------------------------------------------------
+
+    writer.writerow(["OVERVIEW"])
+
+    overview = analysis["overview"]
+
+    writer.writerow([
+        "Metric",
+        "Value"
+    ])
+
+    writer.writerow([
+        "Total Orders",
+        overview["total_orders"]
+    ])
+
+    writer.writerow([
+        "Combined Orders",
+        overview["combined_orders"]
+    ])
+
+    writer.writerow([
+        "Website Orders",
+        overview["website_orders"]
+    ])
+
+    writer.writerow([
+        "WhatsApp Orders",
+        overview["whatsapp_orders"]
+    ])
+
+    writer.writerow([
+        "Total Products",
+        overview["total_products"]
+    ])
+
+    writer.writerow([
+        "Average Orders / Day",
+        overview["average_orders_per_day"]
+    ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # CATEGORY PERFORMANCE
+    # --------------------------------------------------------
+
+    writer.writerow(["CATEGORY PERFORMANCE"])
+
+    writer.writerow([
+        "Category",
+        "Orders",
+        "Order %"
+    ])
+
+    for item in analysis.get("category", []):
+
+        writer.writerow([
+            item.get("name", ""),
+            item.get("count", 0),
+            item.get("percentage", 0)
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # MONTHLY CATEGORY PERFORMANCE
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "MONTHLY CATEGORY PERFORMANCE"
+    ])
+
+    writer.writerow([
+        "Month",
+        "Category",
+        "Orders",
+        "Growth %",
+        "Growth Status"
+    ])
+
+    for month_data in analysis.get(
+        "category_monthly",
+        []
+    ):
+
+        month = month_data.get(
+            "month",
+            ""
+        )
+
+        for category_name, category_info in (
+            month_data.get(
+                "categories",
+                {}
+            ).items()
+        ):
+
+            writer.writerow([
+                month,
+                category_name,
+                category_info.get(
+                    "orders",
+                    0
+                ),
+                category_info.get(
+                    "growth_percentage",
+                    0
+                ),
+                category_info.get(
+                    "growth_status",
+                    ""
+                )
+            ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # PRODUCT INTELLIGENCE
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "PRODUCT INTELLIGENCE"
+    ])
+
+    writer.writerow([
+        "Type",
+        "Product ID",
+        "Design Number",
+        "Name",
+        "Category",
+        "Orders"
+    ])
+
+    for product in analysis.get(
+        "product_intelligence",
+        {}
+    ).get(
+        "best_sellers",
+        []
+    ):
+
+        writer.writerow([
+            "Best Seller",
+            product.get("product_id", ""),
+            product.get("design_number", ""),
+            product.get("name", ""),
+            product.get("category", ""),
+            product.get("orders", 0)
+        ])
+
+    for product in analysis.get(
+        "product_intelligence",
+        {}
+    ).get(
+        "underperforming",
+        []
+    ):
+
+        writer.writerow([
+            "Underperforming",
+            product.get("product_id", ""),
+            product.get("design_number", ""),
+            product.get("name", ""),
+            product.get("category", ""),
+            product.get("orders", 0)
+        ])
+
+    for product in analysis.get(
+        "product_intelligence",
+        {}
+    ).get(
+        "never_ordered",
+        []
+    ):
+
+        writer.writerow([
+            "Never Ordered",
+            product.get("product_id", ""),
+            product.get("design_number", ""),
+            product.get("name", ""),
+            product.get("category", ""),
+            product.get("orders", 0)
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # RETAILERS
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "RETAILER ANALYSIS"
+    ])
+
+    writer.writerow([
+        "Retailer",
+        "Total Orders",
+        "Custom Orders",
+        "Stock Orders"
+    ])
+
+    for retailer in analysis.get(
+        "retailers",
+        []
+    ):
+
+        writer.writerow([
+            retailer.get(
+                "retailer_name",
+                ""
+            ),
+            retailer.get(
+                "total_orders",
+                0
+            ),
+            retailer.get(
+                "custom_orders",
+                0
+            ),
+            retailer.get(
+                "stock_orders",
+                0
+            )
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # METAL
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "METAL ANALYSIS"
+    ])
+
+    writer.writerow([
+        "Metal",
+        "Orders"
+    ])
+
+    for item in analysis.get(
+        "metal",
+        []
+    ):
+
+        writer.writerow([
+            item.get("name", ""),
+            item.get("count", 0)
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # STONE
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "STONE ANALYSIS"
+    ])
+
+    writer.writerow([
+        "Stone",
+        "Orders"
+    ])
+
+    for item in analysis.get(
+        "stone",
+        []
+    ):
+
+        writer.writerow([
+            item.get("name", ""),
+            item.get("count", 0)
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # STATUS
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "ORDER STATUS"
+    ])
+
+    writer.writerow([
+        "Status",
+        "Orders"
+    ])
+
+    for item in analysis.get(
+        "status",
+        []
+    ):
+
+        writer.writerow([
+            item.get("name", ""),
+            item.get("count", 0)
+        ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # DUE DATE
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "DUE DATE ANALYSIS"
+    ])
+
+    due_dates = analysis.get(
+        "due_dates",
+        {}
+    )
+
+    writer.writerow([
+        "Due This Week",
+        due_dates.get(
+            "due_this_week",
+            0
+        )
+    ])
+
+    writer.writerow([
+        "Due Next Week",
+        due_dates.get(
+            "due_next_week",
+            0
+        )
+    ])
+
+    writer.writerow([
+        "Overdue",
+        due_dates.get(
+            "overdue",
+            0
+        )
+    ])
+
+    writer.writerow([
+        "Completed On Time",
+        due_dates.get(
+            "completed_on_time",
+            0
+        )
+    ])
+
+    writer.writerow([
+        "Delayed",
+        due_dates.get(
+            "delayed",
+            0
+        )
+    ])
+
+    writer.writerow([])
+
+    # --------------------------------------------------------
+    # AUTOMATIC INSIGHTS
+    # --------------------------------------------------------
+
+    writer.writerow([
+        "AUTOMATIC BUSINESS INSIGHTS"
+    ])
+
+    writer.writerow([
+        "Type",
+        "Title",
+        "Insight"
+    ])
+
+    for insight in analysis.get(
+        "automatic_insights",
+        []
+    ):
+
+        writer.writerow([
+            insight.get("type", ""),
+            insight.get("title", ""),
+            insight.get("message", "")
+        ])
+
+    text_output.flush()
+
+    # Detach the text wrapper so it doesn't close BytesIO
+    text_output.detach()
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="analysis_report.csv"'
+        }
+    )
+
+# ============================================================
+# ANALYSIS EXPORT — EXCEL
+# ============================================================
+
+@api_router.get("/admin/analysis/export/excel")
+async def export_analysis_excel(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    channel: Optional[str] = None,
+    retailer_id: Optional[str] = None,
+    category: Optional[str] = None,
+    product_id: Optional[str] = None,
+    order_type: Optional[str] = None,
+    metal: Optional[str] = None,
+    purity: Optional[str] = None,
+    stone: Optional[str] = None,
+):
+    # Get the exact same filtered Analysis data
+    analysis = await admin_combined_analysis(
+        request=request,
+        from_date=from_date,
+        to_date=to_date,
+        channel=channel,
+        retailer_id=retailer_id,
+        category=category,
+        product_id=product_id,
+        order_type=order_type,
+        metal=metal,
+        purity=purity,
+        stone=stone,
+    )
+
+    wb = Workbook()
+
+    # ========================================================
+    # HELPER
+    # ========================================================
+
+    def setup_sheet(ws, title):
+
+        ws.title = title
+
+        ws.freeze_panes = "A2"
+
+    def add_header(ws, row):
+
+        for cell in row:
+
+            cell.font = Font(
+                bold=True
+            )
+
+    # ========================================================
+    # 1. OVERVIEW
+    # ========================================================
+
+    ws = wb.active
+
+    setup_sheet(
+        ws,
+        "Overview"
+    )
+
+    ws.append([
+        "ANALYSIS REPORT"
+    ])
+
+    ws["A1"].font = Font(
+        bold=True
+    )
+
+    ws.append([])
+
+    ws.append([
+        "FILTER",
+        "VALUE"
+    ])
+
+    add_header(
+        ws,
+        ws[4]
+    )
+
+    filters = analysis.get(
+        "filters",
+        {}
+    )
+
+    filter_rows = [
+        (
+            "From Date",
+            filters.get("from_date")
+        ),
+        (
+            "To Date",
+            filters.get("to_date")
+        ),
+        (
+            "Channel",
+            filters.get("channel")
+        ),
+        (
+            "Retailer",
+            filters.get("retailer_id")
+        ),
+        (
+            "Category",
+            filters.get("category")
+        ),
+        (
+            "Product / Design",
+            filters.get("product_id")
+        ),
+        (
+            "Custom / Stock",
+            filters.get("order_type")
+        ),
+        (
+            "Metal",
+            filters.get("metal")
+        ),
+        (
+            "Purity",
+            filters.get("purity")
+        ),
+        (
+            "Stone",
+            filters.get("stone")
+        ),
+    ]
+
+    for row in filter_rows:
+
+        ws.append([
+            row[0],
+            row[1]
+        ])
+
+    ws.append([])
+
+    ws.append([
+        "METRIC",
+        "VALUE"
+    ])
+
+    add_header(
+        ws,
+        ws[17]
+    )
+
+    overview = analysis.get(
+        "overview",
+        {}
+    )
+
+    overview_rows = [
+        (
+            "Total Orders",
+            overview.get(
+                "total_orders",
+                0
+            )
+        ),
+        (
+            "Combined Orders",
+            overview.get(
+                "combined_orders",
+                0
+            )
+        ),
+        (
+            "Website Orders",
+            overview.get(
+                "website_orders",
+                0
+            )
+        ),
+        (
+            "WhatsApp Orders",
+            overview.get(
+                "whatsapp_orders",
+                0
+            )
+        ),
+        (
+            "Total Products",
+            overview.get(
+                "total_products",
+                0
+            )
+        ),
+        (
+            "Average Orders / Day",
+            overview.get(
+                "average_orders_per_day",
+                0
+            )
+        ),
+    ]
+
+    for row in overview_rows:
+
+        ws.append([
+            row[0],
+            row[1]
+        ])
+
+    ws.column_dimensions["A"].width = 28
+    ws.column_dimensions["B"].width = 25
+
+    # ========================================================
+    # 2. CATEGORIES
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Categories"
+    )
+
+    setup_sheet(
+        ws,
+        "Categories"
+    )
+
+    ws.append([
+        "Category",
+        "Orders",
+        "Order %"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for item in analysis.get(
+        "category",
+        []
+    ):
+
+        ws.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            ),
+            item.get(
+                "percentage",
+                0
+            )
+        ])
+
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 15
+    ws.column_dimensions["C"].width = 15
+
+    # ========================================================
+    # 3. MONTHLY PERFORMANCE
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Monthly Performance"
+    )
+
+    setup_sheet(
+        ws,
+        "Monthly Performance"
+    )
+
+    ws.append([
+        "Month",
+        "Category",
+        "Orders",
+        "Growth %",
+        "Growth Status"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for month_data in analysis.get(
+        "category_monthly",
+        []
+    ):
+
+        month = month_data.get(
+            "month",
+            ""
+        )
+
+        for category_name, category_info in (
+            month_data.get(
+                "categories",
+                {}
+            ).items()
+        ):
+
+            ws.append([
+                month,
+                category_name,
+                category_info.get(
+                    "orders",
+                    0
+                ),
+                category_info.get(
+                    "growth_percentage",
+                    0
+                ),
+                category_info.get(
+                    "growth_status",
+                    ""
+                )
+            ])
+
+    for column in ["A", "B", "C", "D", "E"]:
+        ws.column_dimensions[column].width = 22
+
+    # ========================================================
+    # 4. PRODUCTS
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Products"
+    )
+
+    setup_sheet(
+        ws,
+        "Products"
+    )
+
+    ws.append([
+        "Type",
+        "Product ID",
+        "Design Number",
+        "Name",
+        "Category",
+        "Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    intelligence = analysis.get(
+        "product_intelligence",
+        {}
+    )
+
+    for product in intelligence.get(
+        "best_sellers",
+        []
+    ):
+
+        ws.append([
+            "Best Seller",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    for product in intelligence.get(
+        "underperforming",
+        []
+    ):
+
+        ws.append([
+            "Underperforming",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    for product in intelligence.get(
+        "never_ordered",
+        []
+    ):
+
+        ws.append([
+            "Never Ordered",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    for column in ["A", "B", "C", "D", "E", "F"]:
+        ws.column_dimensions[column].width = 24
+
+    # ========================================================
+    # 5. RETAILERS
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Retailers"
+    )
+
+    setup_sheet(
+        ws,
+        "Retailers"
+    )
+
+    ws.append([
+        "Retailer",
+        "Total Orders",
+        "Custom Orders",
+        "Stock Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for retailer in analysis.get(
+        "retailers",
+        []
+    ):
+
+        ws.append([
+            retailer.get(
+                "retailer_name",
+                ""
+            ),
+            retailer.get(
+                "total_orders",
+                0
+            ),
+            retailer.get(
+                "custom_orders",
+                0
+            ),
+            retailer.get(
+                "stock_orders",
+                0
+            )
+        ])
+
+    for column in ["A", "B", "C", "D"]:
+        ws.column_dimensions[column].width = 25
+
+    # ========================================================
+    # 6. METAL
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Metal"
+    )
+
+    setup_sheet(
+        ws,
+        "Metal"
+    )
+
+    ws.append([
+        "Metal",
+        "Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for item in analysis.get(
+        "metal",
+        []
+    ):
+
+        ws.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 15
+
+    # ========================================================
+    # 7. STONE
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Stone"
+    )
+
+    setup_sheet(
+        ws,
+        "Stone"
+    )
+
+    ws.append([
+        "Stone",
+        "Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for item in analysis.get(
+        "stone",
+        []
+    ):
+
+        ws.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    ws.column_dimensions["A"].width = 30
+    ws.column_dimensions["B"].width = 15
+
+    # ========================================================
+    # 8. STATUS
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Status"
+    )
+
+    setup_sheet(
+        ws,
+        "Status"
+    )
+
+    ws.append([
+        "Status",
+        "Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for item in analysis.get(
+        "status",
+        []
+    ):
+
+        ws.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 15
+
+    # ========================================================
+    # 9. DUE DATES
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Due Dates"
+    )
+
+    setup_sheet(
+        ws,
+        "Due Dates"
+    )
+
+    ws.append([
+        "Metric",
+        "Orders"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    due_dates = analysis.get(
+        "due_dates",
+        {}
+    )
+
+    due_rows = [
+        (
+            "Due This Week",
+            due_dates.get(
+                "due_this_week",
+                0
+            )
+        ),
+        (
+            "Due Next Week",
+            due_dates.get(
+                "due_next_week",
+                0
+            )
+        ),
+        (
+            "Overdue",
+            due_dates.get(
+                "overdue",
+                0
+            )
+        ),
+        (
+            "Completed On Time",
+            due_dates.get(
+                "completed_on_time",
+                0
+            )
+        ),
+        (
+            "Delayed",
+            due_dates.get(
+                "delayed",
+                0
+            )
+        ),
+    ]
+
+    for row in due_rows:
+
+        ws.append([
+            row[0],
+            row[1]
+        ])
+
+    ws.column_dimensions["A"].width = 28
+    ws.column_dimensions["B"].width = 15
+
+    # ========================================================
+    # 10. INSIGHTS
+    # ========================================================
+
+    ws = wb.create_sheet(
+        "Business Insights"
+    )
+
+    setup_sheet(
+        ws,
+        "Business Insights"
+    )
+
+    ws.append([
+        "Type",
+        "Title",
+        "Insight"
+    ])
+
+    add_header(
+        ws,
+        ws[1]
+    )
+
+    for insight in analysis.get(
+        "automatic_insights",
+        []
+    ):
+
+        ws.append([
+            insight.get(
+                "type",
+                ""
+            ),
+            insight.get(
+                "title",
+                ""
+            ),
+            insight.get(
+                "message",
+                ""
+            )
+        ])
+
+    ws.column_dimensions["A"].width = 25
+    ws.column_dimensions["B"].width = 30
+    ws.column_dimensions["C"].width = 80
+
+    # ========================================================
+    # CREATE FILE
+    # ========================================================
+
+    output = BytesIO()
+
+    wb.save(output)
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition":
+                'attachment; filename="analysis_report.xlsx"'
+        }
+    )
+
+
+# ============================================================
+# ANALYSIS EXPORT — PDF
+# ============================================================
+
+@api_router.get("/admin/analysis/export/pdf")
+async def export_analysis_pdf(
+    request: Request,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    channel: Optional[str] = None,
+    retailer_id: Optional[str] = None,
+    category: Optional[str] = None,
+    product_id: Optional[str] = None,
+    order_type: Optional[str] = None,
+    metal: Optional[str] = None,
+    purity: Optional[str] = None,
+    stone: Optional[str] = None,
+):
+    # Get the exact same filtered Analysis data
+    analysis = await admin_combined_analysis(
+        request=request,
+        from_date=from_date,
+        to_date=to_date,
+        channel=channel,
+        retailer_id=retailer_id,
+        category=category,
+        product_id=product_id,
+        order_type=order_type,
+        metal=metal,
+        purity=purity,
+        stone=stone,
+    )
+
+    output = BytesIO()
+
+    doc = SimpleDocTemplate(
+        output,
+        pagesize=landscape(A4),
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=12 * mm,
+        bottomMargin=12 * mm,
+    )
+
+    styles = getSampleStyleSheet()
+
+    title_style = styles["Title"]
+    heading_style = styles["Heading2"]
+    normal_style = styles["BodyText"]
+
+    story = []
+
+    # ========================================================
+    # HELPER FUNCTIONS
+    # ========================================================
+
+    def add_heading(text):
+
+        story.append(
+            Paragraph(
+                str(text),
+                heading_style
+            )
+        )
+
+        story.append(
+            Spacer(
+                1,
+                5
+            )
+        )
+
+    def add_table(headers, rows):
+
+        table_data = [
+            headers
+        ] + rows
+
+        table = Table(
+            table_data,
+            repeatRows=1
+        )
+
+        table.setStyle(
+            TableStyle([
+                (
+                    "BACKGROUND",
+                    (0, 0),
+                    (-1, 0),
+                    colors.lightgrey
+                ),
+                (
+                    "FONTNAME",
+                    (0, 0),
+                    (-1, 0),
+                    "Helvetica-Bold"
+                ),
+                (
+                    "GRID",
+                    (0, 0),
+                    (-1, -1),
+                    0.5,
+                    colors.grey
+                ),
+                (
+                    "VALIGN",
+                    (0, 0),
+                    (-1, -1),
+                    "TOP"
+                ),
+                (
+                    "FONTSIZE",
+                    (0, 0),
+                    (-1, -1),
+                    8
+                ),
+                (
+                    "LEFTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    5
+                ),
+                (
+                    "RIGHTPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    5
+                ),
+                (
+                    "TOPPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    4
+                ),
+                (
+                    "BOTTOMPADDING",
+                    (0, 0),
+                    (-1, -1),
+                    4
+                ),
+            ])
+        )
+
+        story.append(table)
+
+        story.append(
+            Spacer(
+                1,
+                10
+            )
+        )
+
+    # ========================================================
+    # TITLE
+    # ========================================================
+
+    story.append(
+        Paragraph(
+            "Business Analysis Report",
+            title_style
+        )
+    )
+
+    story.append(
+        Spacer(
+            1,
+            10
+        )
+    )
+
+    # ========================================================
+    # FILTERS
+    # ========================================================
+
+    add_heading(
+        "Selected Filters"
+    )
+
+    filters = analysis.get(
+        "filters",
+        {}
+    )
+
+    filter_rows = [
+        [
+            "From Date",
+            filters.get(
+                "from_date"
+            ) or "All"
+        ],
+        [
+            "To Date",
+            filters.get(
+                "to_date"
+            ) or "All"
+        ],
+        [
+            "Channel",
+            filters.get(
+                "channel"
+            ) or "All"
+        ],
+        [
+            "Retailer",
+            filters.get(
+                "retailer_id"
+            ) or "All"
+        ],
+        [
+            "Category",
+            filters.get(
+                "category"
+            ) or "All"
+        ],
+        [
+            "Product / Design",
+            filters.get(
+                "product_id"
+            ) or "All"
+        ],
+        [
+            "Custom / Stock",
+            filters.get(
+                "order_type"
+            ) or "All"
+        ],
+        [
+            "Metal",
+            filters.get(
+                "metal"
+            ) or "All"
+        ],
+        [
+            "Purity",
+            filters.get(
+                "purity"
+            ) or "All"
+        ],
+        [
+            "Stone",
+            filters.get(
+                "stone"
+            ) or "All"
+        ],
+    ]
+
+    add_table(
+        [
+            "Filter",
+            "Value"
+        ],
+        filter_rows
+    )
+
+    # ========================================================
+    # OVERVIEW
+    # ========================================================
+
+    add_heading(
+        "Overview"
+    )
+
+    overview = analysis.get(
+        "overview",
+        {}
+    )
+
+    overview_rows = [
+        [
+            "Total Orders",
+            overview.get(
+                "total_orders",
+                0
+            )
+        ],
+        [
+            "Combined Orders",
+            overview.get(
+                "combined_orders",
+                0
+            )
+        ],
+        [
+            "Website Orders",
+            overview.get(
+                "website_orders",
+                0
+            )
+        ],
+        [
+            "WhatsApp Orders",
+            overview.get(
+                "whatsapp_orders",
+                0
+            )
+        ],
+        [
+            "Total Products",
+            overview.get(
+                "total_products",
+                0
+            )
+        ],
+        [
+            "Average Orders / Day",
+            overview.get(
+                "average_orders_per_day",
+                0
+            )
+        ],
+    ]
+
+    add_table(
+        [
+            "Metric",
+            "Value"
+        ],
+        overview_rows
+    )
+
+    # ========================================================
+    # CATEGORY PERFORMANCE
+    # ========================================================
+
+    story.append(
+        PageBreak()
+    )
+
+    add_heading(
+        "Category Performance"
+    )
+
+    category_rows = []
+
+    for item in analysis.get(
+        "category",
+        []
+    ):
+
+        category_rows.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            ),
+            item.get(
+                "percentage",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Category",
+            "Orders",
+            "Order %"
+        ],
+        category_rows
+    )
+
+    # ========================================================
+    # MONTHLY CATEGORY GROWTH
+    # ========================================================
+
+    add_heading(
+        "Monthly Category Performance"
+    )
+
+    monthly_rows = []
+
+    for month_data in analysis.get(
+        "category_monthly",
+        []
+    ):
+
+        month = month_data.get(
+            "month",
+            ""
+        )
+
+        for category_name, category_info in (
+            month_data.get(
+                "categories",
+                {}
+            ).items()
+        ):
+
+            monthly_rows.append([
+                month,
+                category_name,
+                category_info.get(
+                    "orders",
+                    0
+                ),
+                category_info.get(
+                    "growth_percentage",
+                    0
+                ),
+                category_info.get(
+                    "growth_status",
+                    ""
+                )
+            ])
+
+    add_table(
+        [
+            "Month",
+            "Category",
+            "Orders",
+            "Growth %",
+            "Status"
+        ],
+        monthly_rows
+    )
+
+    # ========================================================
+    # PRODUCT INTELLIGENCE
+    # ========================================================
+
+    story.append(
+        PageBreak()
+    )
+
+    add_heading(
+        "Product Catalogue Intelligence"
+    )
+
+    product_rows = []
+
+    intelligence = analysis.get(
+        "product_intelligence",
+        {}
+    )
+
+    for product in intelligence.get(
+        "best_sellers",
+        []
+    ):
+
+        product_rows.append([
+            "Best Seller",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    for product in intelligence.get(
+        "underperforming",
+        []
+    ):
+
+        product_rows.append([
+            "Underperforming",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    for product in intelligence.get(
+        "never_ordered",
+        []
+    ):
+
+        product_rows.append([
+            "Never Ordered",
+            product.get(
+                "product_id",
+                ""
+            ),
+            product.get(
+                "design_number",
+                ""
+            ),
+            product.get(
+                "name",
+                ""
+            ),
+            product.get(
+                "category",
+                ""
+            ),
+            product.get(
+                "orders",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Type",
+            "Product ID",
+            "Design",
+            "Name",
+            "Category",
+            "Orders"
+        ],
+        product_rows
+    )
+
+    # ========================================================
+    # RETAILER ANALYSIS
+    # ========================================================
+
+    add_heading(
+        "Retailer Analysis"
+    )
+
+    retailer_rows = []
+
+    for retailer in analysis.get(
+        "retailers",
+        []
+    ):
+
+        retailer_rows.append([
+            retailer.get(
+                "retailer_name",
+                ""
+            ),
+            retailer.get(
+                "total_orders",
+                0
+            ),
+            retailer.get(
+                "custom_orders",
+                0
+            ),
+            retailer.get(
+                "stock_orders",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Retailer",
+            "Total Orders",
+            "Custom",
+            "Stock"
+        ],
+        retailer_rows
+    )
+
+    # ========================================================
+    # METAL ANALYSIS
+    # ========================================================
+
+    add_heading(
+        "Metal Analysis"
+    )
+
+    metal_rows = []
+
+    for item in analysis.get(
+        "metal",
+        []
+    ):
+
+        metal_rows.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Metal",
+            "Orders"
+        ],
+        metal_rows
+    )
+
+    # ========================================================
+    # STONE ANALYSIS
+    # ========================================================
+
+    add_heading(
+        "Stone Analysis"
+    )
+
+    stone_rows = []
+
+    for item in analysis.get(
+        "stone",
+        []
+    ):
+
+        stone_rows.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Stone",
+            "Orders"
+        ],
+        stone_rows
+    )
+
+    # ========================================================
+    # STATUS
+    # ========================================================
+
+    add_heading(
+        "Order Status"
+    )
+
+    status_rows = []
+
+    for item in analysis.get(
+        "status",
+        []
+    ):
+
+        status_rows.append([
+            item.get(
+                "name",
+                ""
+            ),
+            item.get(
+                "count",
+                0
+            )
+        ])
+
+    add_table(
+        [
+            "Status",
+            "Orders"
+        ],
+        status_rows
+    )
+
+    # ========================================================
+    # DUE DATES
+    # ========================================================
+
+    add_heading(
+        "Due Date Analysis"
+    )
+
+    due_dates = analysis.get(
+        "due_dates",
+        {}
+    )
+
+    due_rows = [
+        [
+            "Due This Week",
+            due_dates.get(
+                "due_this_week",
+                0
+            )
+        ],
+        [
+            "Due Next Week",
+            due_dates.get(
+                "due_next_week",
+                0
+            )
+        ],
+        [
+            "Overdue",
+            due_dates.get(
+                "overdue",
+                0
+            )
+        ],
+        [
+            "Completed On Time",
+            due_dates.get(
+                "completed_on_time",
+                0
+            )
+        ],
+        [
+            "Delayed",
+            due_dates.get(
+                "delayed",
+                0
+            )
+        ],
+    ]
+
+    add_table(
+        [
+            "Metric",
+            "Orders"
+        ],
+        due_rows
+    )
+
+    # ========================================================
+    # AUTOMATIC INSIGHTS
+    # ========================================================
+
+    story.append(
+        PageBreak()
+    )
+
+    add_heading(
+        "Automatic Business Insights"
+    )
+
+    insight_rows = []
+
+    for insight in analysis.get(
+        "automatic_insights",
+        []
+    ):
+
+        insight_rows.append([
+            insight.get(
+                "type",
+                ""
+            ),
+            insight.get(
+                "title",
+                ""
+            ),
+            insight.get(
+                "message",
+                ""
+            )
+        ])
+
+    add_table(
+        [
+            "Type",
+            "Title",
+            "Insight"
+        ],
+        insight_rows
+    )
+
+    # ========================================================
+    # BUILD PDF
+    # ========================================================
+
+    doc.build(
+        story
+    )
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition":
+                'attachment; filename="analysis_report.pdf"'
+        }
+    )
 
 @api_router.get("/admin/whatsapp-orders/{order_id}")
 async def admin_get_whatsapp_order(
@@ -2428,8 +5716,18 @@ async def admin_update_whatsapp_order(
             status_code=400,
             detail="No data to update."
         )
+    
+        # Store the actual completion time when an order
+    # is moved to a completed/delivered status.
+    new_status = update_data.get("status")
 
-    update_data["updatedAt"] = datetime.now(timezone.utc)
+    if new_status:
+        normalized_status = str(new_status).strip().lower()
+
+        if normalized_status in {"completed", "delivered"}:
+            update_data["completedAt"] = datetime.now(timezone.utc)
+
+        update_data["updatedAt"] = datetime.now(timezone.utc)
 
     result = await whatsapp_orders.update_one(
         {"orderId": order_id},
