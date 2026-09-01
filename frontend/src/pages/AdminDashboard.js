@@ -85,9 +85,10 @@ const [analysisData, setAnalysisData] = useState({
   },
 
   category: [],
-  category_monthly: [],
+category_monthly: [],
+by_date: [],
 
-  products: [],
+products: [],
 
   product_intelligence: {
     best_sellers: [],
@@ -272,12 +273,15 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
         },
       
         category: response.data.category || [],
-      
-        category_monthly:
-          response.data.category_monthly || [],
-      
-        products:
-          response.data.products || [],
+
+category_monthly:
+  response.data.category_monthly || [],
+
+by_date:
+  response.data.by_date || [],
+
+products:
+  response.data.products || [],
       
         product_intelligence:
           response.data.product_intelligence || {
@@ -1928,6 +1932,27 @@ const analysisCatalogueOrders =
 const analysisByStatus =
   analysisData?.status || [];
 
+const maxAnalysisStatusCount =
+  Math.max(
+    ...analysisByStatus.map((item) =>
+      Number(item?.count || item?.orders || 0)
+    ),
+    1
+  );
+
+const analysisByCustomer =
+  analysisData?.customers || [];
+
+const maxAnalysisCustomerCount =
+  Math.max(
+    ...analysisByCustomer.map((item) =>
+      Number(item?.count || item?.orders || 0)
+    ),
+    1
+  );
+
+
+
 const analysisByCategory =
   analysisData?.category || [];
 
@@ -1939,6 +1964,17 @@ const analysisByCategoryMonthly =
 
 const analysisByProducts =
   analysisData?.products || [];
+
+const analysisByDate =
+  analysisData?.by_date || [];
+
+const maxAnalysisDateCount =
+  Math.max(
+    ...analysisByDate.map((item) =>
+      Number(item?.count || 0)
+    ),
+    1
+  );
 
 const analysisProductIntelligence =
   analysisData?.product_intelligence || {

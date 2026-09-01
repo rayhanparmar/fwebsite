@@ -2122,6 +2122,34 @@ async def admin_combined_analysis(
 
 
     # --------------------------------------------------------
+    # DAILY ORDER ANALYSIS
+    # --------------------------------------------------------
+
+    by_date_counts = {}
+
+    for order in orders:
+        order_date = clean(order.get("order_date"))
+
+        if not order_date:
+            continue
+
+        by_date_counts[order_date] = (
+            by_date_counts.get(order_date, 0) + 1
+        )
+
+    by_date = [
+        {
+            "date": date,
+            "count": count
+        }
+        for date, count in sorted(
+            by_date_counts.items(),
+            key=lambda x: x[0]
+        )
+    ]
+
+
+    # --------------------------------------------------------
     # 13. STATUS
     # --------------------------------------------------------
 
@@ -3011,15 +3039,17 @@ async def admin_combined_analysis(
         },
 
         "overview": {
-            "total_orders": total_orders,
-            "combined_orders": combined_orders,
-            "website_orders": website_order_count,
-            "whatsapp_orders": whatsapp_order_count,
-            "total_products": total_products,
-            "average_orders_per_day": average_orders_per_day,
-        },
+    "total_orders": total_orders,
+    "combined_orders": combined_orders,
+    "website_orders": website_order_count,
+    "whatsapp_orders": whatsapp_order_count,
+    "total_products": total_products,
+    "average_orders_per_day": average_orders_per_day,
+},
 
-        "category": category_data,
+"by_date": by_date,
+
+"category": category_data,
 
 "category_product_drilldown": category_product_data,
 
