@@ -290,13 +290,77 @@ class EnquiryRequest(BaseModel):
     notes: Optional[str] = ""
 
 class CustomisationRequest(BaseModel):
-    metal_type: str
-    stone_changes: str
-    size_changes: str
-    special_notes: str
-    reference_description: Optional[str] = ""
-    file_url: Optional[str] = ""
-    file_name: Optional[str] = ""
+    order_type: str = "custom"
+    customer_name: str = ""
+
+    metal: str = ""
+    gold_kt: str = ""
+    gold_colour: str = ""
+    gold_colour_other: str = ""
+
+    platinum_purity: str = ""
+    metal_colour_platinum: str = ""
+
+    metal_purity_combo: str = ""
+    metal_colour_combo: str = ""
+    metal_colour_combo_other: str = ""
+
+    order_date: str = ""
+    party_reference_order_id: str = ""
+
+    product_category: str = ""
+
+    bali_size: str = ""
+
+    bangle_kada_size1: str = ""
+    bangle_kada_size2: str = ""
+
+    bracelet_size: str = ""
+
+    need_multilayer: str = ""
+    multilayer_chain_size: str = ""
+    chain_size: str = ""
+
+    cufflink_size: str = ""
+    brooch_size: str = ""
+    earring_size: str = ""
+    haathpaan_size: str = ""
+    maang_tikka_size: str = ""
+
+    mangalsutra_size: str = ""
+    necklace_size: str = ""
+    nose_pin_size: str = ""
+
+    pendant_chain_size: str = ""
+    pendant_size_optional: str = ""
+
+    ring_size: str = ""
+    tops_size: str = ""
+    watch_belt_size: str = ""
+
+    full_set_choice_1: str = ""
+    full_set_choice_2: str = ""
+    full_set_chain_size: str = ""
+    full_set_necklace_size: str = ""
+    full_set_tops_size: str = ""
+    full_set_earring_size: str = ""
+
+    approx_weight: str = ""
+
+    stone_type: str = ""
+    stone_type_other: str = ""
+
+    finish_type: str = ""
+    finish_type_other: str = ""
+
+    hallmark_required: str = ""
+    need_call: str = ""
+
+    due_date: str = ""
+    remarks: str = ""
+    reference_link: str = ""
+
+    design_images: List[Dict] = []
 
 class ContactRequest(BaseModel):
     name: str
@@ -1110,16 +1174,19 @@ async def admin_get_enquiries(request: Request):
 async def admin_get_customisations(request: Request):
     await get_admin_user(request)
 
+    result = []
+
+    # ============================================================
+    # WEBSITE CUSTOMISATION REQUESTS
+    # ============================================================
+
     customs = await db.customisation_requests.find(
         {},
         {"_id": 0}
     ).sort("created_at", -1).to_list(500)
 
-    result = []
-
     for custom in customs:
         retailer = None
-
         user_id = custom.get("user_id")
 
         if user_id:
@@ -1136,9 +1203,90 @@ async def admin_get_customisations(request: Request):
                 retailer = None
 
         custom["retailer"] = retailer
+        custom["channel"] = "Website"
+
         result.append(custom)
 
-    return {"customisations": result}
+    # ============================================================
+    # WHATSAPP FLOW CUSTOMISATION / ORDERS
+    # ============================================================
+
+    whatsapp_customisations = await whatsapp_orders.find(
+        {
+            "order_type": "custom"
+        },
+        {
+            "_id": 0
+        }
+    ).sort("createdAt", -1).to_list(500)
+
+    for order in whatsapp_customisations:
+
+        custom = order.copy()
+
+        # Convert WhatsApp order fields to the same
+        # structure used by the Admin Customisations page.
+
+        custom["custom_id"] = custom.get(
+            "orderId",
+            f"WA-{str(custom.get('createdAt', ''))[:10]}"
+        )
+
+        custom["channel"] = "WhatsApp"
+
+        custom["status"] = custom.get(
+            "status",
+            "Pending"
+        )
+
+        custom["created_at"] = custom.get(
+            "createdAt",
+            ""
+        )
+
+        custom["user_name"] = custom.get(
+            "customer_name",
+            ""
+        )
+
+        custom["user_phone"] = custom.get(
+            "customer_whatsapp",
+            ""
+        )
+
+        custom["user_email"] = custom.get(
+            "customer_email",
+            ""
+        )
+
+        custom["retailer"] = None
+
+        result.append(custom)
+
+    # ============================================================
+    # SORT BOTH SOURCES TOGETHER
+    # ============================================================
+
+    def sort_date(item):
+        value = (
+            item.get("created_at")
+            or item.get("createdAt")
+            or ""
+        )
+
+        if hasattr(value, "isoformat"):
+            return value.isoformat()
+
+        return str(value)
+
+    result.sort(
+        key=sort_date,
+        reverse=True
+    )
+
+    return {
+        "customisations": result
+    }
 
 @api_router.get("/admin/whatsapp-orders")
 async def admin_get_whatsapp_orders(request: Request):
