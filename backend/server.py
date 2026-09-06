@@ -527,10 +527,40 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
 @api_router.get("/files/{path:path}")
 async def download_file(path: str):
     try:
-        data, content_type = get_object(path)
-        return Response(content=data, media_type=content_type)
-    except Exception:
-        raise HTTPException(404, "File not found")
+        import io
+        from urllib.parse import unquote
+
+        path = unquote(path)
+
+        # Download file directly from S3
+        obj = s3.get_object(
+            Bucket=AWS_BUCKET_NAME,
+            Key=path
+        )
+
+        data = obj["Body"].read()
+        content_type = obj.get(
+            "ContentType",
+            "application/octet-stream"
+        )
+
+        filename = path.split("/")[-1]
+
+        return Response(
+            content=data,
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"File download error: {e}")
+        raise HTTPException(
+            status_code=404,
+            detail="File not found"
+        )
+    
 
 # ──── CUSTOMISATION ────
 @api_router.post("/customisation")

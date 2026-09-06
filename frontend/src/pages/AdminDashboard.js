@@ -58,6 +58,31 @@ export default function AdminDashboard() {
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [customisations, setCustomisations] = useState([]);
   const [selectedCustomisation, setSelectedCustomisation] = useState(null);
+  const downloadCustomisationFile = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+  
+      if (!response.ok) {
+        throw new Error("Failed to download file");
+      }
+  
+      const blob = await response.blob();
+  
+      const blobUrl = window.URL.createObjectURL(blob);
+  
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName || "customisation-file";
+      document.body.appendChild(link);
+      link.click();
+  
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Unable to download file");
+    }
+  };
   const [whatsappOrders, setWhatsappOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   // =========================
@@ -3859,31 +3884,32 @@ const automaticInsights = useMemo(() => {
       Attached File
     </p>
 
-    <a
-      href={`${process.env.REACT_APP_BACKEND_URL}${selectedCustomisation.file_url}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      download={selectedCustomisation.file_name}
-      className="mt-2 flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4 hover:bg-[#359E58]/10 transition-colors"
-    >
+    <button
+  type="button"
+  onClick={() =>
+    downloadCustomisationFile(
+      selectedCustomisation.file_url,
+      selectedCustomisation.file_name
+    )
+  }
+  className="mt-2 w-full flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4 hover:bg-[#359E58]/10 transition-colors text-left"
+>
+  <FileUp className="w-5 h-5 text-[#359E58] shrink-0" />
 
-      <FileUp className="w-5 h-5 text-[#359E58]" />
+  <div className="flex-1 min-w-0">
+    <p className="text-sm font-medium text-[#359E58] truncate">
+      {selectedCustomisation.file_name}
+    </p>
 
-      <div className="flex-1">
-        <p className="text-sm font-medium text-[#359E58]">
-          {selectedCustomisation.file_name}
-        </p>
+    <p className="text-xs text-gray-500 mt-1">
+      Click to download file
+    </p>
+  </div>
 
-        <p className="text-xs text-gray-500 mt-1">
-          Click to open / download file
-        </p>
-      </div>
-
-      <span className="text-xs font-medium text-[#359E58]">
-        Download →
-      </span>
-
-    </a>
+  <span className="text-sm font-medium text-[#359E58]">
+    Download →
+  </span>
+</button>
 
   </div>
 )}
