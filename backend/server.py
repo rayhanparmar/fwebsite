@@ -5868,6 +5868,77 @@ async def admin_delete_whatsapp_order(
         "success": True
     }
 
+# ============================================================
+# SEND ORDER STATUS TO CUSTOMER ON WHATSAPP
+# ============================================================
+
+@api_router.post("/admin/whatsapp-orders/{order_id}/send-status")
+async def send_order_status_to_customer(
+    order_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    order = await whatsapp_orders.find_one(
+        {"orderId": order_id},
+        {"_id": 0}
+    )
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail="Order not found."
+        )
+
+    customer_whatsapp = order.get("customer_whatsapp")
+
+    if not customer_whatsapp:
+        raise HTTPException(
+            status_code=400,
+            detail="Customer WhatsApp number not found."
+        )
+
+    customer_name = order.get("customer_name") or "Customer"
+    status = order.get("status") or "Pending"
+
+    status_messages = {
+        "Pending": f"Hi {customer_name}, your order #{order_id} is currently pending. We’ll keep you updated on the next steps.",
+
+        "Approved": f"Hi {customer_name}, your order #{order_id} has been approved and is now moving ahead for production.",
+
+        "In Production": f"Hi {customer_name}, your order #{order_id} is now in production.",
+
+        "Ready": f"Hi {customer_name}, your order #{order_id} is ready. Please let us know if you need any further assistance.",
+
+        "Delivered": f"Hi {customer_name}, your order #{order_id} has been delivered. Thank you for choosing us."
+    }
+
+    message = status_messages.get(status)
+
+    if not message:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid order status: {status}"
+        )
+
+    try:
+        send_text_message(
+            customer_whatsapp,
+            message
+        )
+
+        return {
+            "success": True,
+            "message": "Status message sent successfully."
+        }
+
+    except Exception as e:
+        print("WhatsApp status message error:", str(e))
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to send WhatsApp status message."
+        )
 
 
 # ──── SEEDING ────
@@ -6472,6 +6543,7 @@ Our team will contact you."""
                 order = form_data.copy()
                 order["design_images"] = cloudinary_images
                 order["orderId"] = await get_next_order_id()
+                order["customer_whatsapp"] = message["from"]
                 order["status"] = "New"
                 order["priority"] = "Normal"
                 order["assignedTo"] = ""

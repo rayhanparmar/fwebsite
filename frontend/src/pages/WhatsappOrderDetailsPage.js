@@ -33,6 +33,7 @@ const [status, setStatus] = useState("");
 const [priority, setPriority] = useState("");
 const [assignedTo, setAssignedTo] = useState("");
 const [adminNotes, setAdminNotes] = useState("");
+const [statusSaved, setStatusSaved] = useState(false);
 
   useEffect(() => {
     loadOrder();
@@ -72,8 +73,8 @@ setAdminNotes(res.data.admin_notes || "");
         });
 
         alert("Order updated successfully!");
-
-        loadOrder();
+setStatusSaved(true);
+loadOrder();
 
     } catch (err) {
 
@@ -83,6 +84,17 @@ setAdminNotes(res.data.admin_notes || "");
 
     }
 
+};
+
+const sendStatusMessage = async () => {
+    try {
+        await api.post(`/admin/whatsapp-orders/${orderId}/send-status`);
+
+        alert("Status message sent successfully!");
+    } catch (err) {
+        console.error(err);
+        alert("Unable to send status message.");
+    }
 };
 
 
@@ -528,7 +540,10 @@ type="video/mp4"
 
             <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => {
+                    setStatus(e.target.value);
+                    setStatusSaved(false);
+                }}
                 className="w-full border rounded-lg p-3"
             >
 
@@ -609,6 +624,15 @@ type="video/mp4"
     >
         Save Changes
     </button>
+
+    {statusSaved && (
+    <button
+        onClick={sendStatusMessage}
+        className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg transition"
+    >
+        Message Status to Customer
+    </button>
+)}
 
     <button
         onClick={downloadExcel}
