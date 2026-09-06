@@ -3853,24 +3853,40 @@ const automaticInsights = useMemo(() => {
 
         {/* Attached File */}
         {selectedCustomisation.file_name && (
-          <div className="mt-5">
+  <div className="mt-5">
 
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Attached File
-            </p>
+    <p className="text-xs text-gray-500 uppercase tracking-wider">
+      Attached File
+    </p>
 
-            <div className="mt-2 flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4">
+    <a
+      href={`${process.env.REACT_APP_BACKEND_URL}${selectedCustomisation.file_url}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={selectedCustomisation.file_name}
+      className="mt-2 flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4 hover:bg-[#359E58]/10 transition-colors"
+    >
 
-              <FileUp className="w-5 h-5 text-[#359E58]" />
+      <FileUp className="w-5 h-5 text-[#359E58]" />
 
-              <p className="text-sm font-medium text-[#359E58]">
-                {selectedCustomisation.file_name}
-              </p>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-[#359E58]">
+          {selectedCustomisation.file_name}
+        </p>
 
-            </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Click to open / download file
+        </p>
+      </div>
 
-          </div>
-        )}
+      <span className="text-xs font-medium text-[#359E58]">
+        Download →
+      </span>
+
+    </a>
+
+  </div>
+)}
 
       </div>
 
