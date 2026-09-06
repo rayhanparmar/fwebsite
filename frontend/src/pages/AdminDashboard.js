@@ -57,6 +57,7 @@ export default function AdminDashboard() {
   const [enquiries, setEnquiries] = useState([]);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [customisations, setCustomisations] = useState([]);
+  const [selectedCustomisation, setSelectedCustomisation] = useState(null);
   const [whatsappOrders, setWhatsappOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   // =========================
@@ -3655,29 +3656,385 @@ const automaticInsights = useMemo(() => {
 )}
 
 {/* Customisations */}
-          <TabsContent value="customisations">
-            <div className="space-y-4">
-              {customisations.map(c => (
-                <div key={c.custom_id} className="border border-[#E5E7EB] bg-white p-4 sm:p-5" data-testid={`custom-${c.custom_id}`}>
-                  <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
-                    <div>
-                      <p className="font-medium text-[#0A0A0A] font-body">{c.custom_id}</p>
-                      <p className="text-xs text-[#4B5563] font-body">{c.user_name} | {c.user_email}</p>
-                    </div>
-                    <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 font-body shrink-0">{c.status}</span>
-                  </div>
-                  {c.product_id && <p className="text-sm text-[#4B5563] font-body">Product: {c.product_id}</p>}
-                  {c.file_name && <p className="text-sm text-[#359E58] font-body">Attached File: {c.file_name}</p>}
-                  <p className="text-sm text-[#4B5563] font-body">Metal: {c.metal_type}</p>
-                  <p className="text-sm text-[#4B5563] font-body">Stone: {c.stone_changes}</p>
-                  <p className="text-sm text-[#4B5563] font-body">Size: {c.size_changes}</p>
-                  {c.special_notes && <p className="text-sm text-[#4B5563] font-body">Notes: {c.special_notes}</p>}
-                  <p className="text-xs text-gray-400 mt-2 font-body">{new Date(c.created_at).toLocaleString()}</p>
-                </div>
-              ))}
-              {customisations.length === 0 && <p className="text-[#4B5563] text-sm py-8 text-center font-body">No customisation requests yet</p>}
+<TabsContent value="customisations">
+  <div className="space-y-4">
+
+    {customisations.map((c) => (
+      <div
+        key={c.custom_id}
+        onClick={() => setSelectedCustomisation(c)}
+        className="border border-[#E5E7EB] bg-white p-5 cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all rounded-lg"
+        data-testid={`custom-${c.custom_id}`}
+      >
+
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+
+          <div>
+            <p className="font-medium text-[#0A0A0A] font-body">
+              {c.custom_id}
+            </p>
+
+            <p className="text-sm text-[#4B5563] mt-1">
+              {c.retailer?.business_name || c.user_name || "Unknown Retailer"}
+            </p>
+
+            <p className="text-xs text-[#6B7280] mt-1">
+              {c.retailer?.name || c.user_name || "-"}
+              {" • "}
+              {c.retailer?.phone || c.user_phone || "-"}
+            </p>
+          </div>
+
+          <span className="text-xs bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full shrink-0">
+            {c.status || "pending"}
+          </span>
+
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+
+          <div className="bg-[#FAFAFA] p-3 rounded">
+            <p className="text-xs text-gray-500">Metal Type</p>
+            <p className="font-medium mt-1">
+              {c.metal_type || "-"}
+            </p>
+          </div>
+
+          <div className="bg-[#FAFAFA] p-3 rounded">
+            <p className="text-xs text-gray-500">Stone Changes</p>
+            <p className="font-medium mt-1 truncate">
+              {c.stone_changes || "-"}
+            </p>
+          </div>
+
+          <div className="bg-[#FAFAFA] p-3 rounded">
+            <p className="text-xs text-gray-500">Size Changes</p>
+            <p className="font-medium mt-1">
+              {c.size_changes || "-"}
+            </p>
+          </div>
+
+        </div>
+
+        <p className="text-xs text-gray-400 mt-4">
+          {new Date(c.created_at).toLocaleString()}
+        </p>
+
+        <p className="text-xs text-[#359E58] mt-2">
+          Click to view full request →
+        </p>
+
+      </div>
+    ))}
+
+    {customisations.length === 0 && (
+      <p className="text-[#4B5563] text-sm py-8 text-center font-body">
+        No customisation requests yet
+      </p>
+    )}
+
+  </div>
+</TabsContent>
+
+{/* Customisation Details Popup */}
+{selectedCustomisation && (
+  <div
+    className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
+    onClick={() => setSelectedCustomisation(null)}
+  >
+
+    <div
+      className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-5 border-b">
+
+        <div>
+          <h2 className="text-xl font-semibold text-[#0A0A0A]">
+            Customisation Request
+          </h2>
+
+          <p className="text-sm text-[#4B5563] mt-1">
+            {selectedCustomisation.custom_id}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setSelectedCustomisation(null)}
+          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-black text-xl"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      {/* =========================================
+          CUSTOMISATION DETAILS
+      ========================================= */}
+
+      <div className="p-6 border-b">
+
+        <h3 className="text-base font-semibold mb-5">
+          Customisation Details
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+          {/* Metal */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Metal Type
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.metal_type || "-"}
+            </p>
+          </div>
+
+
+          {/* Stone */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Stone Changes
+            </p>
+
+            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
+              {selectedCustomisation.stone_changes || "-"}
+            </p>
+          </div>
+
+
+          {/* Size */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Size Changes
+            </p>
+
+            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
+              {selectedCustomisation.size_changes || "-"}
+            </p>
+          </div>
+
+
+          {/* Reference */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Reference Description
+            </p>
+
+            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
+              {selectedCustomisation.reference_description || "-"}
+            </p>
+          </div>
+
+        </div>
+
+
+        {/* Special Notes */}
+        <div className="mt-5">
+
+          <p className="text-xs text-gray-500 uppercase tracking-wider">
+            Special Notes
+          </p>
+
+          <div className="mt-2 bg-[#FAFAFA] border border-gray-100 rounded-lg p-4">
+
+            <p className="text-sm text-[#374151] whitespace-pre-wrap">
+              {selectedCustomisation.special_notes || "-"}
+            </p>
+
+          </div>
+
+        </div>
+
+
+        {/* Attached File */}
+        {selectedCustomisation.file_name && (
+          <div className="mt-5">
+
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Attached File
+            </p>
+
+            <div className="mt-2 flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4">
+
+              <FileUp className="w-5 h-5 text-[#359E58]" />
+
+              <p className="text-sm font-medium text-[#359E58]">
+                {selectedCustomisation.file_name}
+              </p>
+
             </div>
-          </TabsContent>
+
+          </div>
+        )}
+
+      </div>
+
+
+      {/* =========================================
+          RETAILER DETAILS
+      ========================================= */}
+
+      <div className="p-6 border-b">
+
+        <h3 className="text-base font-semibold mb-5">
+          Retailer Details
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+
+          {/* Full Name */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Full Name
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.name ||
+                selectedCustomisation.user_name ||
+                "-"}
+            </p>
+          </div>
+
+
+          {/* Business Name */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Business Name
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.business_name || "-"}
+            </p>
+          </div>
+
+
+          {/* Email */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Email
+            </p>
+
+            <p className="text-sm font-medium mt-1 break-all">
+              {selectedCustomisation.retailer?.email ||
+                selectedCustomisation.user_email ||
+                "-"}
+            </p>
+          </div>
+
+
+          {/* Phone */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Contact Number
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.phone ||
+                selectedCustomisation.user_phone ||
+                "-"}
+            </p>
+          </div>
+
+
+          {/* GST */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              GST Number
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.gst_number || "-"}
+            </p>
+          </div>
+
+
+          {/* State */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              State
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.state || "-"}
+            </p>
+          </div>
+
+
+          {/* City */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              City
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.city || "-"}
+            </p>
+          </div>
+
+
+          {/* Pincode */}
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Pincode
+            </p>
+
+            <p className="text-sm font-medium mt-1">
+              {selectedCustomisation.retailer?.pincode || "-"}
+            </p>
+          </div>
+
+        </div>
+
+
+        {/* Business Address */}
+        <div className="mt-5">
+
+          <p className="text-xs text-gray-500 uppercase tracking-wider">
+            Business Address
+          </p>
+
+          <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
+            {selectedCustomisation.retailer?.business_address || "-"}
+          </p>
+
+        </div>
+
+      </div>
+
+
+      {/* =========================================
+          REQUEST META
+      ========================================= */}
+
+      <div className="px-6 py-4 bg-[#FAFAFA] flex flex-col sm:flex-row justify-between gap-2">
+
+        <p className="text-xs text-gray-500">
+          Request ID:{" "}
+          <span className="font-medium text-gray-700">
+            {selectedCustomisation.custom_id}
+          </span>
+        </p>
+
+        <p className="text-xs text-gray-500">
+          Submitted:{" "}
+          <span className="font-medium text-gray-700">
+            {new Date(
+              selectedCustomisation.created_at
+            ).toLocaleString()}
+          </span>
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
           <TabsContent value="whatsapp">
           <div className="space-y-4">
 

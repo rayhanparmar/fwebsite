@@ -1079,8 +1079,36 @@ async def admin_get_enquiries(request: Request):
 @api_router.get("/admin/customisations")
 async def admin_get_customisations(request: Request):
     await get_admin_user(request)
-    customs = await db.customisation_requests.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
-    return {"customisations": customs}
+
+    customs = await db.customisation_requests.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+
+    result = []
+
+    for custom in customs:
+        retailer = None
+
+        user_id = custom.get("user_id")
+
+        if user_id:
+            try:
+                retailer = await db.users.find_one(
+                    {"_id": ObjectId(user_id)},
+                    {"password_hash": 0}
+                )
+
+                if retailer:
+                    retailer["_id"] = str(retailer["_id"])
+
+            except Exception:
+                retailer = None
+
+        custom["retailer"] = retailer
+        result.append(custom)
+
+    return {"customisations": result}
 
 @api_router.get("/admin/whatsapp-orders")
 async def admin_get_whatsapp_orders(request: Request):
