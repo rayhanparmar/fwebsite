@@ -163,6 +163,8 @@ const [productPerformanceSort, setProductPerformanceSort] =
   useState("orders_desc");
 const [filteredOrders, setFilteredOrders] = useState([]);
 const [statusFilter, setStatusFilter] = useState("All");
+const [urgentFromDate, setUrgentFromDate] = useState("");
+const [urgentToDate, setUrgentToDate] = useState("");
 const [showExcelMenu, setShowExcelMenu] = useState(false);
 const [selectedExcelDate, setSelectedExcelDate] = useState("");
 const [downloadByDate, setDownloadByDate] = useState(false);
@@ -394,14 +396,35 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
     }
 
-    // Status Filter
-    if (statusFilter !== "All") {
+        // Status / Priority Filter
+        if (statusFilter === "Urgent") {
 
-        filtered = filtered.filter(
-            (order) => order.status === statusFilter
-        );
+          filtered = filtered.filter(
+              (order) => order.priority === "Urgent"
+          );
+  
+      } else if (statusFilter !== "All") {
+  
+          filtered = filtered.filter(
+              (order) => order.status === statusFilter
+          );
+  
+      }
 
-    }
+          // Urgent Date Filter
+    if (statusFilter === "Urgent" && urgentFromDate) {
+      filtered = filtered.filter((order) => {
+          const dueDate = order.due_date?.slice(0, 10);
+          return dueDate >= urgentFromDate;
+      });
+  }
+
+  if (statusFilter === "Urgent" && urgentToDate) {
+      filtered = filtered.filter((order) => {
+          const dueDate = order.due_date?.slice(0, 10);
+          return dueDate <= urgentToDate;
+      });
+  }
 
     setFilteredOrders(filtered);
 
@@ -416,7 +439,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     
     setCustomers(uniqueCustomers);
 
-}, [searchTerm, statusFilter, whatsappOrders, api]);
+  }, [searchTerm, statusFilter, whatsappOrders, urgentFromDate, urgentToDate, api]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
@@ -4095,7 +4118,7 @@ const automaticInsights = useMemo(() => {
           <TabsContent value="whatsapp">
           <div className="space-y-4">
 
-<div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+<div className="grid grid-cols-2 lg:grid-cols-8 gap-4">
 
 <div
     onClick={() => setStatusFilter("All")}
@@ -4108,6 +4131,44 @@ const automaticInsights = useMemo(() => {
         <p className="text-xs text-gray-500">Total</p>
         <h2 className="text-3xl font-bold">
             {whatsappOrders.length}
+        </h2>
+    </div>
+
+    <div
+    onClick={() => setStatusFilter("Normal")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "Normal"
+            ? "bg-blue-200 border-blue-600"
+            : "bg-blue-50"
+    }`}
+>
+    <p className="text-xs text-gray-500">Normal</p>
+    <h2 className="text-3xl font-bold text-blue-700">
+        {
+            whatsappOrders.filter(
+                o => (o.priority || "Normal") === "Normal"
+            ).length
+        }
+    </h2>
+</div>
+
+<div
+    onClick={() => setStatusFilter("Urgent")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "Urgent"
+            ? "bg-red-200 border-red-600"
+            : "bg-red-50"
+    }`}
+>
+        <p className="text-xs text-gray-500">
+            Urgent
+        </p>
+        <h2 className="text-3xl font-bold text-red-700">
+            {
+                whatsappOrders.filter(
+                    o => o.priority === "Urgent"
+                ).length
+            }
         </h2>
     </div>
 
@@ -4129,25 +4190,27 @@ const automaticInsights = useMemo(() => {
         </h2>
     </div>
 
-    <div
-    onClick={() => setStatusFilter("QC")}
+    
+
+<div
+    onClick={() => setStatusFilter("Approved")}
     className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
-        statusFilter === "QC"
-            ? "bg-blue-200 border-blue-600"
-            : "bg-blue-50"
+        statusFilter === "Approved"
+            ? "bg-green-200 border-green-600"
+            : "bg-green-50"
     }`}
 >
-        <p className="text-xs text-gray-500">QC</p>
-        <h2 className="text-3xl font-bold text-blue-700">
-            {
-                whatsappOrders.filter(
-                    o => o.status === "QC"
-                ).length
-            }
-        </h2>
-    </div>
+    <p className="text-xs text-gray-500">Approved</p>
+    <h2 className="text-3xl font-bold text-green-700">
+        {
+            whatsappOrders.filter(
+                o => o.status === "Approved"
+            ).length
+        }
+    </h2>
+</div>
 
-    <div
+<div
     onClick={() => setStatusFilter("In Production")}
     className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
         statusFilter === "In Production"
@@ -4155,19 +4218,36 @@ const automaticInsights = useMemo(() => {
             : "bg-purple-50"
     }`}
 >
-        <p className="text-xs text-gray-500">
-            Production
-        </p>
-        <h2 className="text-3xl font-bold text-purple-700">
-            {
-                whatsappOrders.filter(
-                    o => o.status === "In Production"
-                ).length
-            }
-        </h2>
-    </div>
+    <p className="text-xs text-gray-500">In Production</p>
+    <h2 className="text-3xl font-bold text-purple-700">
+        {
+            whatsappOrders.filter(
+                o => o.status === "In Production"
+            ).length
+        }
+    </h2>
+</div>
 
-    <div
+
+<div
+    onClick={() => setStatusFilter("Ready")}
+    className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
+        statusFilter === "Ready"
+            ? "bg-orange-200 border-orange-600"
+            : "bg-orange-50"
+    }`}
+>
+    <p className="text-xs text-gray-500">Ready</p>
+    <h2 className="text-3xl font-bold text-orange-700">
+        {
+            whatsappOrders.filter(
+                o => o.status === "Ready"
+            ).length
+        }
+    </h2>
+</div>
+
+<div
     onClick={() => setStatusFilter("Delivered")}
     className={`border rounded-lg p-4 text-center cursor-pointer transition hover:shadow-md ${
         statusFilter === "Delivered"
@@ -4175,32 +4255,60 @@ const automaticInsights = useMemo(() => {
             : "bg-green-50"
     }`}
 >
-        <p className="text-xs text-gray-500">
-            Delivered
-        </p>
-        <h2 className="text-3xl font-bold text-green-700">
-            {
-                whatsappOrders.filter(
-                    o => o.status === "Delivered"
-                ).length
-            }
-        </h2>
-    </div>
+    <p className="text-xs text-gray-500">Delivered</p>
+    <h2 className="text-3xl font-bold text-green-700">
+        {
+            whatsappOrders.filter(
+                o => o.status === "Delivered"
+            ).length
+        }
+    </h2>
+</div>
 
-    <div className="bg-red-50 border rounded-lg p-4 text-center">
-        <p className="text-xs text-gray-500">
-            Urgent
-        </p>
-        <h2 className="text-3xl font-bold text-red-700">
-            {
-                whatsappOrders.filter(
-                    o => o.priority === "Urgent"
-                ).length
-            }
-        </h2>
-    </div>
+
 
 </div>
+
+{statusFilter === "Urgent" && (
+    <div className="flex flex-col sm:flex-row gap-3 items-end bg-red-50 border border-red-200 rounded-lg p-4">
+        
+        <div>
+            <label className="block text-xs text-gray-600 mb-1">
+                From Date
+            </label>
+            <input
+                type="date"
+                value={urgentFromDate}
+                onChange={(e) => setUrgentFromDate(e.target.value)}
+                className="border rounded-md px-3 py-2 bg-white"
+            />
+        </div>
+
+        <div>
+            <label className="block text-xs text-gray-600 mb-1">
+                To Date
+            </label>
+            <input
+                type="date"
+                value={urgentToDate}
+                onChange={(e) => setUrgentToDate(e.target.value)}
+                className="border rounded-md px-3 py-2 bg-white"
+            />
+        </div>
+
+        <button
+            type="button"
+            onClick={() => {
+                setUrgentFromDate("");
+                setUrgentToDate("");
+            }}
+            className="border rounded-md px-4 py-2 bg-white hover:bg-gray-50"
+        >
+            Clear Dates
+        </button>
+
+    </div>
+)}
 
 <div className="flex flex-col md:flex-row gap-4 mb-4">
 
