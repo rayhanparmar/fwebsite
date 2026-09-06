@@ -60,26 +60,41 @@ export default function AdminDashboard() {
   const [selectedCustomisation, setSelectedCustomisation] = useState(null);
   const downloadCustomisationFile = async (fileUrl, fileName) => {
     try {
-      const response = await fetch(fileUrl);
+      if (!fileUrl) {
+        throw new Error("File URL is missing");
+      }
+  
+      const s3Url = new URL(fileUrl);
+      const filePath = s3Url.pathname;
+  
+      const backendUrl =
+        `${process.env.REACT_APP_BACKEND_URL}/api/files${filePath}`;
+  
+      console.log("Downloading through backend:", backendUrl);
+  
+      const response = await fetch(backendUrl);
   
       if (!response.ok) {
-        throw new Error("Failed to download file");
+        throw new Error(`Download failed: ${response.status}`);
       }
   
       const blob = await response.blob();
   
       const blobUrl = window.URL.createObjectURL(blob);
-  
       const link = document.createElement("a");
+  
       link.href = blobUrl;
       link.download = fileName || "customisation-file";
+  
       document.body.appendChild(link);
       link.click();
-  
       link.remove();
+  
       window.URL.revokeObjectURL(blobUrl);
+  
+      toast.success("File downloaded successfully");
     } catch (error) {
-      console.error("Download error:", error);
+      console.error("File download error:", error);
       toast.error("Unable to download file");
     }
   };
