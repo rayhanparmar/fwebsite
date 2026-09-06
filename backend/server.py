@@ -1207,64 +1207,10 @@ async def admin_get_customisations(request: Request):
 
         result.append(custom)
 
-    # ============================================================
-    # WHATSAPP FLOW CUSTOMISATION / ORDERS
-    # ============================================================
-
-    whatsapp_customisations = await whatsapp_orders.find(
-        {
-            "order_type": "custom"
-        },
-        {
-            "_id": 0
-        }
-    ).sort("createdAt", -1).to_list(500)
-
-    for order in whatsapp_customisations:
-
-        custom = order.copy()
-
-        # Convert WhatsApp order fields to the same
-        # structure used by the Admin Customisations page.
-
-        custom["custom_id"] = custom.get(
-            "orderId",
-            f"WA-{str(custom.get('createdAt', ''))[:10]}"
-        )
-
-        custom["channel"] = "WhatsApp"
-
-        custom["status"] = custom.get(
-            "status",
-            "Pending"
-        )
-
-        custom["created_at"] = custom.get(
-            "createdAt",
-            ""
-        )
-
-        custom["user_name"] = custom.get(
-            "customer_name",
-            ""
-        )
-
-        custom["user_phone"] = custom.get(
-            "customer_whatsapp",
-            ""
-        )
-
-        custom["user_email"] = custom.get(
-            "customer_email",
-            ""
-        )
-
-        custom["retailer"] = None
-
-        result.append(custom)
+   
 
     # ============================================================
-    # SORT BOTH SOURCES TOGETHER
+    # # SORT WEBSITE CUSTOMISATIONS
     # ============================================================
 
     def sort_date(item):
