@@ -532,16 +532,11 @@ type="video/mp4"
                 className="w-full border rounded-lg p-3"
             >
 
-                <option>Pending</option>
-                <option>Approved</option>
-                <option>Assigned</option>
-                <option>In Production</option>
-                <option>Polishing</option>
-                <option>Stone Setting</option>
-                <option>QC</option>
-                <option>Ready</option>
-                <option>Delivered</option>
-                <option>Rejected</option>
+<option>Pending</option>
+<option>Approved</option>
+<option>In Production</option>
+<option>Ready</option>
+<option>Delivered</option>
 
             </select>
 
@@ -561,10 +556,8 @@ type="video/mp4"
     className="w-full border rounded-lg p-3"
 >
 
-                <option>Low</option>
-                <option>Normal</option>
-                <option>High</option>
-                <option>Urgent</option>
+<option>Normal</option>
+<option>Urgent</option>
 
             </select>
 
