@@ -6543,6 +6543,7 @@ Our team will contact you."""
                 order = form_data.copy()
                 order["design_images"] = cloudinary_images
                 order["orderId"] = await get_next_order_id()
+                print("CUSTOMER WHATSAPP NUMBER:", message.get("from"))
                 order["customer_whatsapp"] = message["from"]
                 order["status"] = "New"
                 order["priority"] = "Normal"
