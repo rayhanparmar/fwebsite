@@ -52,6 +52,7 @@ export default function AdminDashboard() {
   const { api } = useAuth();
   const [stats, setStats] = useState(null);
   const [retailers, setRetailers] = useState([]);
+  const [selectedRetailer, setSelectedRetailer] = useState(null);
   const [products, setProducts] = useState([]);
   const [enquiries, setEnquiries] = useState([]);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
@@ -2761,57 +2762,397 @@ const automaticInsights = useMemo(() => {
           </TabsContent>
 
           {/* Retailers */}
-          <TabsContent value="retailers">
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {["all","pending","approved"].map(f => (
-                <Button key={f} variant={retailerFilter === f ? "default" : "outline"} size="sm"
-                  onClick={() => setRetailerFilter(f)}
-                  className={retailerFilter === f ? "bg-[#359E58] text-white" : "border-[#E5E7EB]"}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </Button>
-              ))}
+<TabsContent value="retailers">
+
+{/* Filter buttons */}
+<div className="flex gap-2 mb-5 flex-wrap">
+  {["all", "pending", "approved"].map((f) => (
+    <Button
+      key={f}
+      variant={retailerFilter === f ? "default" : "outline"}
+      size="sm"
+      onClick={() => setRetailerFilter(f)}
+      className={
+        retailerFilter === f
+          ? "bg-[#359E58] hover:bg-[#2e884c] text-white"
+          : "border-[#E5E7EB]"
+      }
+    >
+      {f.charAt(0).toUpperCase() + f.slice(1)}
+    </Button>
+  ))}
+</div>
+
+{/* Retailer list */}
+<div className="space-y-3">
+
+  {retailers.map((r) => (
+    <div
+      key={r._id}
+      onClick={() => setSelectedRetailer(r)}
+      className="
+        group
+        flex flex-col sm:flex-row
+        sm:items-center
+        justify-between
+        p-5
+        border border-[#E5E7EB]
+        bg-white
+        gap-4
+        cursor-pointer
+        hover:border-[#359E58]
+        hover:shadow-md
+        transition-all
+      "
+      data-testid={`retailer-${r._id}`}
+    >
+
+      {/* Retailer summary */}
+      <div className="min-w-0 flex-1">
+
+        <div className="flex items-center gap-3 mb-2">
+          <p className="font-medium text-[#0A0A0A] font-body text-base">
+            {r.name || "-"}
+          </p>
+
+          <span
+            className={
+              r.approved
+                ? "text-xs bg-[#359E58]/10 text-[#359E58] px-2.5 py-1 font-body font-medium"
+                : "text-xs bg-yellow-50 text-yellow-700 px-2.5 py-1 font-body font-medium"
+            }
+          >
+            {r.approved ? "Approved" : "Pending"}
+          </span>
+        </div>
+
+        <p className="text-sm text-[#4B5563] font-body mb-1">
+          {r.business_name || "-"}
+        </p>
+
+        <p className="text-xs text-[#6B7280] font-body">
+          {r.email || "-"} &nbsp;|&nbsp; {r.phone || "-"}
+        </p>
+
+        <p className="text-xs text-[#6B7280] font-body mt-1">
+          {r.city || "-"}, {r.state || "-"} &nbsp;|&nbsp; GST: {r.gst_number || "-"}
+        </p>
+
+        <p className="text-xs text-[#359E58] font-body mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click to view complete details →
+        </p>
+
+      </div>
+
+      {/* Actions */}
+      <div
+        className="flex gap-2 shrink-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+
+        {!r.approved ? (
+          <>
+            <Button
+              size="sm"
+              onClick={() => approveRetailer(r._id)}
+              className="bg-[#359E58] hover:bg-[#2e884c] text-white gap-1"
+              data-testid={`admin-approve-${r._id}`}
+            >
+              <Check className="w-3 h-3" />
+              Approve
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => rejectRetailer(r._id)}
+              className="border-red-300 text-red-500 gap-1"
+              data-testid={`admin-reject-${r._id}`}
+            >
+              <X className="w-3 h-3" />
+              Reject
+            </Button>
+          </>
+        ) : (
+          <span className="text-xs bg-[#359E58]/10 text-[#359E58] px-3 py-2 font-body font-medium">
+            Approved
+          </span>
+        )}
+
+      </div>
+
+    </div>
+  ))}
+
+  {retailers.length === 0 && (
+    <p className="text-[#4B5563] text-sm py-8 text-center font-body">
+      No retailers found
+    </p>
+  )}
+
+</div>
+
+</TabsContent>
+
+{/* Retailer Details Popup */}
+{selectedRetailer && (
+  <div
+    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+    onClick={() => setSelectedRetailer(null)}
+  >
+    <div
+      className="bg-white w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+
+      {/* Header */}
+      <div className="flex items-start justify-between px-6 py-5 border-b border-[#E5E7EB]">
+
+        <div>
+          <h2 className="text-xl font-semibold text-[#0A0A0A] font-heading">
+            Retailer Details
+          </h2>
+
+          <p className="text-sm text-[#6B7280] mt-1 font-body">
+            Complete retailer application information
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelectedRetailer(null)}
+          className="text-2xl text-gray-400 hover:text-black leading-none"
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      {/* Content */}
+      <div className="p-6 space-y-7">
+
+        {/* Personal Information */}
+        <section>
+
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#359E58] mb-4">
+            Personal Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Full Name
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.name || "-"}
+              </p>
             </div>
-            <div className="space-y-3">
-              {retailers.map(r => (
-                <div key={r._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-[#E5E7EB] bg-white gap-3" data-testid={`retailer-${r._id}`}>
-                  <div>
-                    <p className="font-medium text-[#0A0A0A] font-body">{r.name}</p>
-                    <p className="text-xs text-[#4B5563] font-body">{r.email} | {r.phone} | {r.business_name}</p>
-                    <p className="text-xs text-[#4B5563] font-body">
-  GST: {r.gst_number}
-</p>
 
-<p className="text-xs text-[#4B5563] font-body">
-  {r.city}, {r.state}
-</p>
-
-<p className="text-xs text-[#4B5563] font-body">
-  {r.business_address}
-</p>
-
-<p className="text-xs text-[#4B5563] font-body">
-  Pincode: {r.pincode}
-</p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    {!r.approved ? (
-                      <>
-                        <Button size="sm" onClick={() => approveRetailer(r._id)} className="bg-[#359E58] hover:bg-[#2e884c] text-white gap-1" data-testid={`admin-approve-${r._id}`}>
-                          <Check className="w-3 h-3" />Approve
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => rejectRetailer(r._id)} className="border-red-300 text-red-500 gap-1" data-testid={`admin-reject-${r._id}`}>
-                          <X className="w-3 h-3" />Reject
-                        </Button>
-                      </>
-                    ) : (
-                      <span className="text-xs bg-[#359E58]/10 text-[#359E58] px-3 py-1 font-body font-medium">Approved</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {retailers.length === 0 && <p className="text-[#4B5563] text-sm py-8 text-center font-body">No retailers found</p>}
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Contact Number
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.phone || "-"}
+              </p>
             </div>
-          </TabsContent>
+
+            <div className="sm:col-span-2">
+              <p className="text-xs text-gray-500 mb-1">
+                Email
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A] break-all">
+                {selectedRetailer.email || "-"}
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* Business Information */}
+        <section>
+
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#359E58] mb-4">
+            Business Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Business Name
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.business_name || "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                GST Number
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.gst_number || "-"}
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* Business Address */}
+        <section>
+
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#359E58] mb-4">
+            Business Address
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                State
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.state || "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                City
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.city || "-"}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Pincode
+              </p>
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.pincode || "-"}
+              </p>
+            </div>
+
+            <div className="sm:col-span-3">
+              <p className="text-xs text-gray-500 mb-1">
+                Complete Business Address
+              </p>
+
+              <div className="bg-gray-50 border border-[#E5E7EB] p-4 rounded-md">
+                <p className="text-sm text-[#0A0A0A] leading-relaxed">
+                  {selectedRetailer.business_address || "-"}
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+
+        {/* Application Information */}
+        <section>
+
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-[#359E58] mb-4">
+            Application Information
+          </h3>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Application Status
+              </p>
+
+              <span
+                className={
+                  selectedRetailer.approved
+                    ? "inline-flex text-xs bg-[#359E58]/10 text-[#359E58] px-3 py-1.5 font-medium"
+                    : "inline-flex text-xs bg-yellow-50 text-yellow-700 px-3 py-1.5 font-medium"
+                }
+              >
+                {selectedRetailer.approved ? "Approved" : "Pending Approval"}
+              </span>
+            </div>
+
+            <div>
+              <p className="text-xs text-gray-500 mb-1">
+                Applied On
+              </p>
+
+              <p className="text-sm font-medium text-[#0A0A0A]">
+                {selectedRetailer.created_at
+                  ? new Date(selectedRetailer.created_at).toLocaleString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "-"
+                }
+              </p>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+
+      {/* Footer */}
+      <div className="flex flex-col sm:flex-row justify-end gap-3 px-6 py-4 border-t border-[#E5E7EB] bg-gray-50">
+
+        {!selectedRetailer.approved && (
+          <>
+            <Button
+              onClick={async () => {
+                await approveRetailer(selectedRetailer._id);
+                setSelectedRetailer(null);
+              }}
+              className="bg-[#359E58] hover:bg-[#2e884c] text-white gap-2"
+            >
+              <Check className="w-4 h-4" />
+              Approve Retailer
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await rejectRetailer(selectedRetailer._id);
+                setSelectedRetailer(null);
+              }}
+              className="border-red-300 text-red-500 hover:bg-red-50 gap-2"
+            >
+              <X className="w-4 h-4" />
+              Reject Retailer
+            </Button>
+          </>
+        )}
+
+        <Button
+          variant="outline"
+          onClick={() => setSelectedRetailer(null)}
+          className="border-[#E5E7EB]"
+        >
+          Close
+        </Button>
+
+      </div>
+
+    </div>
+  </div>
+)}
 
           {/* Products */}
           <TabsContent value="products">
