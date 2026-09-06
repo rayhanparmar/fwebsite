@@ -93,7 +93,11 @@ const sendStatusMessage = async () => {
         alert("Status message sent successfully!");
     } catch (err) {
         console.error(err);
-        alert("Unable to send status message.");
+    
+        alert(
+            err.response?.data?.detail ||
+            "Unable to send status message."
+        );
     }
 };
 
