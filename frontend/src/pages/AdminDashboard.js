@@ -466,6 +466,26 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     catch { toast.error("Failed to delete"); }
   };
 
+  const deleteCustomisation = async (customId) => {
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete this customisation request?\n\nThis action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/admin/customisations/${customId}`);
+      toast.success("Customisation deleted successfully");
+      loadCustomisations();
+      loadStats();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || "Failed to delete customisation"
+      );
+    }
+  };
+
   const deleteWhatsappOrder = async (orderId) => {
 
     const confirmDelete = window.confirm(
@@ -3770,9 +3790,16 @@ const automaticInsights = useMemo(() => {
 
         </div>
 
-        <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full font-body shrink-0">
-          {c.status || "Pending"}
-        </span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            deleteCustomisation(c.custom_id);
+          }}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm shrink-0"
+        >
+          Delete
+        </button>
 
       </div>
 
