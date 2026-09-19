@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
 import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
-import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
 import { displayValue } from "@/lib/labels";
 import {
   ResponsiveContainer,
