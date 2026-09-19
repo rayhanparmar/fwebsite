@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,8 @@ const CATEGORIES = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "overview";
   const { api } = useAuth();
   const [stats, setStats] = useState(null);
   const [retailers, setRetailers] = useState([]);
@@ -444,6 +446,17 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   }, [searchTerm, statusFilter, whatsappOrders, urgentFromDate, urgentToDate, api]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+  
+
+  // Load data for whichever tab the URL points at
+  useEffect(() => {
+    if (activeTab === "overview") loadStats();
+    if (activeTab === "retailers") loadRetailers();
+    if (activeTab === "products") loadProducts();
+    if (activeTab === "enquiries") loadEnquiries();
+    if (activeTab === "customisations") loadCustomisations();
+    if (activeTab === "whatsapp") loadWhatsappOrders();
+  }, [activeTab]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
   // Auto-load products when category or page changes
   useEffect(() => { if (productsLoaded) loadProducts(); }, [productCategory, productPage]);
@@ -2779,7 +2792,13 @@ const automaticInsights = useMemo(() => {
           <p className="text-[#4B5563] font-body">Manage your B2B jewellery platform</p>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setSearchParams({ tab: value }, { replace: true })
+          }
+          className="space-y-6"
+        >
           <TabsList className="bg-[#FAFAFA] border border-[#E5E7EB] p-1 h-auto flex overflow-x-auto w-full justify-start gap-1 no-scrollbar">
             <TabsTrigger value="overview" onClick={loadStats} className="gap-2 data-[state=active]:bg-[#359E58] data-[state=active]:text-white rounded-sm shrink-0" data-testid="admin-overview-tab">
               <BarChart3 className="w-4 h-4" />Overview
