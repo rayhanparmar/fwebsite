@@ -193,7 +193,7 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [newProductId, setNewProductId] = useState("");
   const [newProductCategory, setNewProductCategory] = useState("");
   const [editingProductId, setEditingProductId] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [productsLoaded, setProductsLoaded] = useState(false);
   const [categoryImages, setCategoryImages] = useState([]);
@@ -545,37 +545,68 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
 };
 
-  const handleFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 25 * 1024 * 1024) { toast.error("File must be under 25MB"); return; }
-      setSelectedFile(file);
-    }
-  };
+const handleFileSelect = (e) => {
+  const files = Array.from(e.target.files || []);
 
-  const uploadProduct = async (e) => {
-    e.preventDefault();
-    if (!newProductId.trim()) { toast.error("Product ID is required"); return; }
-    if (!newProductCategory) { toast.error("Please select a category"); return; }
-    if (!selectedFile) { toast.error("Please select an image file"); return; }
-    setUploading(true);
-    try {
+  if (files.length === 0) return;
+
+  if (files.length > 5) {
+    toast.error("You can select a maximum of 5 files at a time");
+    e.target.value = "";
+    return;
+  }
+
+  const tooBig = files.find((f) => f.size > 25 * 1024 * 1024);
+
+  if (tooBig) {
+    toast.error(`"${tooBig.name}" is over 25MB`);
+    e.target.value = "";
+    return;
+  }
+
+  setSelectedFiles(files);
+  e.target.value = "";
+};
+
+const uploadProduct = async (e) => {
+  e.preventDefault();
+
+  if (!newProductId.trim()) { toast.error("Product ID is required"); return; }
+  if (!newProductCategory) { toast.error("Please select a category"); return; }
+  if (selectedFiles.length === 0) { toast.error("Please select at least one image"); return; }
+
+  setUploading(true);
+
+  let done = 0;
+
+  try {
+    for (const file of selectedFiles) {
       const formData = new FormData();
       formData.append("product_id", newProductId.trim());
       formData.append("category", newProductCategory);
-      formData.append("file", selectedFile);
-      const res = await api.post("/admin/products/upload", formData, {
+      formData.append("file", file);
+
+      await api.post("/admin/products/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success(res.data.message);
-      setSelectedFile(null);
-      // Don't clear product_id and category so user can upload more images to same product
-      loadProducts();
-      loadStats();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || "Upload failed");
-    } finally { setUploading(false); }
-  };
+
+      done += 1;
+    }
+
+    toast.success(`${done} image${done !== 1 ? "s" : ""} uploaded successfully`);
+    setSelectedFiles([]);
+    loadProducts();
+    loadStats();
+  } catch (err) {
+    toast.error(
+      err.response?.data?.detail ||
+      `Upload stopped after ${done} of ${selectedFiles.length} images`
+    );
+    loadProducts();
+  } finally {
+    setUploading(false);
+  }
+};
 
   const saveProductDetails = async () => {
     if (!selectedProduct) {
@@ -728,41 +759,41 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   };
 
   const uploadProductImage = async () => {
-    if (!selectedProduct || !selectedFile) {
-      toast.error("Please select an image");
+    if (!selectedProduct || selectedFiles.length === 0) {
+      toast.error("Please select at least one image");
       return;
     }
-  
+
+    let done = 0;
+
     try {
-      const formData = new FormData();
-  
-      formData.append("product_id", selectedProduct.product_id);
-      formData.append("category", selectedProduct.category);
-      formData.append("file", selectedFile);
-  
-      const res = await api.post(
-        "/admin/products/upload",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-  
-      toast.success(res.data.message || "Image uploaded successfully");
-  
-      setSelectedFile(null);
-  
-      // Reload the products from the backend
+      for (const file of selectedFiles) {
+        const formData = new FormData();
+
+        formData.append("product_id", selectedProduct.product_id);
+        formData.append("category", selectedProduct.category);
+        formData.append("file", file);
+
+        await api.post("/admin/products/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        done += 1;
+      }
+
+      toast.success(`${done} image${done !== 1 ? "s" : ""} uploaded successfully`);
+      setSelectedFiles([]);
+
+      const refreshed = await api.get(`/admin/products?page=1&limit=1&category=${encodeURIComponent(selectedProduct.category)}`);
+      void refreshed;
+
       await loadProducts();
-  
     } catch (err) {
       console.error(err);
-  
       toast.error(
-        err.response?.data?.detail || "Failed to upload image"
+        err.response?.data?.detail || `Upload stopped after ${done} images`
       );
+      await loadProducts();
     }
   };
 
@@ -906,7 +937,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   const resetForm = () => {
     setNewProductId("");
     setNewProductCategory("");
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setShowAddProduct(false);
   };
 
@@ -3337,22 +3368,35 @@ const automaticInsights = useMemo(() => {
 
                 {/* File Upload */}
                 <div>
-                  <Label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] font-body">Product Image</Label>
-                  {!selectedFile ? (
-                    <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] hover:border-[#4AB868] transition-colors cursor-pointer p-6 bg-white" data-testid="admin-product-file-upload">
-                      <FileUp className="w-6 h-6 text-[#4B5563] mb-2" strokeWidth={1.5} />
-                      <p className="text-sm text-[#4B5563] font-body">{uploading ? "Uploading..." : "Click to select image"}</p>
-                      <p className="text-xs text-gray-400 font-body mt-1">JPG, PNG, WebP (max 25MB)</p>
-                      <input type="file" className="hidden" onChange={handleFileSelect} disabled={uploading}
-                        accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff" data-testid="admin-product-file-input" />
-                    </label>
-                  ) : (
-                    <div className="mt-1 flex items-center gap-3 border border-[#6CC284]/30 bg-white p-3">
-                      <Image className="w-6 h-6 text-[#359E58] shrink-0" strokeWidth={1.5} />
-                      <span className="text-sm text-[#0A0A0A] font-body flex-1 truncate">{selectedFile.name}</span>
-                      <button type="button" onClick={() => setSelectedFile(null)} className="text-[#4B5563] hover:text-red-500 p-1">
-                        <X className="w-4 h-4" />
-                      </button>
+                  <Label className="text-xs font-semibold tracking-wider uppercase text-[#4B5563] font-body">Product Images</Label>
+
+                  <label className="mt-1 flex flex-col items-center justify-center border-2 border-dashed border-[#E5E7EB] hover:border-[#4AB868] transition-colors cursor-pointer p-6 bg-white" data-testid="admin-product-file-upload">
+                    <FileUp className="w-6 h-6 text-[#4B5563] mb-2" strokeWidth={1.5} />
+                    <p className="text-sm text-[#4B5563] font-body">
+                      {uploading ? "Uploading..." : "Click to select images"}
+                    </p>
+                    <p className="text-xs text-gray-400 font-body mt-1">
+                      Up to 5 at a time &middot; JPG, PNG, WebP (max 25MB each)
+                    </p>
+                    <input type="file" multiple className="hidden" onChange={handleFileSelect} disabled={uploading}
+                      accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff" data-testid="admin-product-file-input" />
+                  </label>
+
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center gap-3 border border-[#6CC284]/30 bg-white p-3">
+                          <Image className="w-5 h-5 text-[#359E58] shrink-0" strokeWidth={1.5} />
+                          <span className="text-sm text-[#0A0A0A] font-body flex-1 truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+                            className="text-[#4B5563] hover:text-red-500 p-1"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -7947,42 +7991,38 @@ Close
         </h3>
 
         <div className="mb-5">
-  <input
-    type="file"
-    accept="image/*"
-    id="product-image-upload"
-    className="hidden"
-    onChange={(e) => {
-      const file = e.target.files?.[0];
-      if (file) {
-        setSelectedFile(file);
-      }
-    }}
-  />
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            id="product-image-upload"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
 
-  <label
-    htmlFor="product-image-upload"
-    className="inline-flex items-center justify-center px-4 py-2 bg-[#359E58] hover:bg-[#2e884c] text-white text-sm rounded-sm cursor-pointer"
-  >
-    {selectedFile ? "Change Selected Image" : "Add Image"}
-  </label>
+          <label
+            htmlFor="product-image-upload"
+            className="inline-flex items-center justify-center px-4 py-2 bg-[#359E58] hover:bg-[#2e884c] text-white text-sm rounded-sm cursor-pointer"
+          >
+            {selectedFiles.length > 0 ? "Change Selection" : "Add Images"}
+          </label>
 
-  {selectedFile && (
-    <span className="ml-3 text-sm text-[#4B5563]">
-      {selectedFile.name}
-    </span>
-  )}
+          {selectedFiles.length > 0 && (
+            <>
+              <span className="ml-3 text-sm text-[#4B5563]">
+                {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
+              </span>
 
-{selectedFile && (
-  <Button
-    type="button"
-    onClick={uploadProductImage}
-    className="ml-3 bg-[#359E58] hover:bg-[#2e884c] text-white"
-  >
-    Upload
-  </Button>
-)}
-</div>
+              <Button
+                type="button"
+                onClick={uploadProductImage}
+                className="ml-3 bg-[#359E58] hover:bg-[#2e884c] text-white"
+              >
+                Upload
+              </Button>
+            </>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
 
