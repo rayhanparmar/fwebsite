@@ -3723,1158 +3723,699 @@ const automaticInsights = useMemo(() => {
 {/* Customisations */}
 <TabsContent value="customisations">
 
-  <div className="space-y-5">
+<div className="space-y-4">
 
-    {customisations.map((c) => {
-
-      const categoryLabels = {
-        bali: "Bali",
-        bangle_kada: "Bangle/Kada",
-        bracelet: "Bracelet",
-        chain_multilayer: "Chain + Multilayer",
-        cufflink: "Cufflink",
-        brooch: "Brooch",
-        earring: "Earring",
-        haathpaan: "Haathpaan",
-        maang_tikka: "Maang Tikka",
-        mangalsutra: "Mangal Sutra",
-        necklace: "Necklace",
-        nose_pin: "Nose Pin",
-        pendant_dancing_stone:
-          "Pendant + Dancing Stone",
-        ring_titanium:
-          "Ring + Titanium Ring",
-        tops: "Tops",
-        watch_belt: "Watch Belt",
-        full_set: "Full Set",
-      };
-
-      const goldColourLabels = {
-        yellow: "Yellow",
-        white: "White",
-        rose: "Rose",
-        yellow_white: "Yellow + White",
-        rose_white: "Rose + White",
-        rose_yellow: "Rose + Yellow",
-        rose_white_yellow:
-          "Rose + White + Yellow",
-        green: "Green",
-        green_white: "Green + White",
-        green_yellow: "Green + Yellow",
-        green_rose: "Green + Rose",
-        other: "Other",
-      };
-
-      const stoneLabels = {
-        natural_diamond: "Natural Diamond",
-        lab_grown_diamond:
-          "Lab Grown Diamond",
-        cz: "CZ",
-        colour_stone: "Colour Stone",
-        precious_stone: "Precious Stone",
-        other: "Other",
-      };
-
-      const finishLabels = {
-        high_polish: "High Polish",
-        matt: "Matt",
-        sandblast: "Sandblast",
-        matt_high_polish:
-          "Matt + High Polish",
-        other: "Other",
-      };
-
-      const yesNoLabel = (value) => {
-        if (value === "yes") return "Yes";
-        if (value === "no") return "No";
-        return value || "";
-      };
-
-      const show = (value) =>
-        value !== undefined &&
-        value !== null &&
-        String(value).trim() !== "";
-
-      return (
-        <div
-          key={c.custom_id}
-          className="border border-[#E5E7EB] bg-white rounded-xl overflow-hidden"
-          data-testid={`custom-${c.custom_id}`}
-        >
-
-          {/* HEADER */}
-          <div className="p-5 border-b border-[#E5E7EB]">
-
-            <div className="flex flex-col sm:flex-row justify-between gap-3">
-
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-
-                  <p className="font-semibold text-[#0A0A0A]">
-                    {c.custom_id}
-                  </p>
-
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      c.channel === "WhatsApp"
-                        ? "bg-green-50 text-green-700"
-                        : "bg-blue-50 text-blue-700"
-                    }`}
-                  >
-                    {c.channel || "Website"}
-                  </span>
-
-                </div>
-
-                <p className="text-sm text-[#4B5563] mt-1">
-                  {c.user_name || "Customer"}
-                </p>
-
-                {show(c.user_email) && (
-                  <p className="text-xs text-gray-500">
-                    {c.user_email}
-                  </p>
-                )}
-
-                {show(c.user_phone) && (
-                  <p className="text-xs text-gray-500">
-                    {c.user_phone}
-                  </p>
-                )}
-
-              </div>
-
-              <span className="text-xs bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full h-fit">
-                {c.status || "Pending"}
-              </span>
-
-            </div>
-
-          </div>
-
-
-          {/* CUSTOMER / BASIC INFORMATION */}
-          <div className="p-5">
-
-            <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-              Customer & Order Details
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              {show(c.customer_name || c.user_name) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Customer Name
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.customer_name || c.user_name}
-                  </p>
-                </div>
-              )}
-
-              {show(c.customer_whatsapp || c.user_phone) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    WhatsApp
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.customer_whatsapp || c.user_phone}
-                  </p>
-                </div>
-              )}
-
-              {show(c.order_date) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Order Date
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.order_date}
-                  </p>
-                </div>
-              )}
-
-              {show(c.party_reference_order_id) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Party Reference Order ID
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.party_reference_order_id}
-                  </p>
-                </div>
-              )}
-
-              {show(c.product_category) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Product Category
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {categoryLabels[c.product_category] ||
-                      c.product_category}
-                  </p>
-                </div>
-              )}
-
-              {show(c.due_date) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Due Date
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.due_date}
-                  </p>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* METAL */}
-          <div className="px-5 pb-5">
-
-            <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-              Metal Details
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              {show(c.metal) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Metal
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.metal === "gold"
-                      ? "Gold"
-                      : c.metal === "platinum"
-                      ? "Platinum"
-                      : c.metal === "gold_platinum"
-                      ? "Gold + Platinum"
-                      : c.metal}
-                  </p>
-                </div>
-              )}
-
-              {show(c.gold_kt) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Gold Purity
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.gold_kt}
-                  </p>
-                </div>
-              )}
-
-              {show(c.gold_colour) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Gold Colour
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {goldColourLabels[c.gold_colour] ||
-                      c.gold_colour}
-                  </p>
-                </div>
-              )}
-
-              {show(c.gold_colour_other) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Other Gold Colour
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.gold_colour_other}
-                  </p>
-                </div>
-              )}
-
-              {show(c.platinum_purity) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Platinum Purity
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.platinum_purity}
-                  </p>
-                </div>
-              )}
-
-              {show(c.metal_colour_platinum) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Platinum Colour
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.metal_colour_platinum}
-                  </p>
-                </div>
-              )}
-
-              {show(c.metal_purity_combo) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Metal Purity
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.metal_purity_combo}
-                  </p>
-                </div>
-              )}
-
-              {show(c.metal_colour_combo) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Metal Colour
-                  </p>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {c.metal_colour_combo}
-                  </p>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* PRODUCT SPECIFICATIONS */}
-          <div className="px-5 pb-5">
-
-            <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-              Product Specifications
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              {show(c.bali_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Bali Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.bali_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.bangle_kada_size1) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Bangle/Kada Size 1
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.bangle_kada_size1}
-                  </p>
-                </div>
-              )}
-
-              {show(c.bangle_kada_size2) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Bangle/Kada Size 2
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.bangle_kada_size2}
-                  </p>
-                </div>
-              )}
-
-              {show(c.bracelet_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Bracelet Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.bracelet_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.need_multilayer) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Need Multilayer
-                  </p>
-                  <p className="text-sm mt-1">
-                    {yesNoLabel(c.need_multilayer)}
-                  </p>
-                </div>
-              )}
-
-              {show(c.multilayer_chain_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Multilayer Chain Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.multilayer_chain_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.chain_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Chain Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.chain_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.cufflink_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Cufflink Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.cufflink_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.brooch_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Brooch Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.brooch_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.earring_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Earring Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.earring_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.haathpaan_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Haathpaan Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.haathpaan_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.maang_tikka_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Maang Tikka Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.maang_tikka_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.mangalsutra_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Mangal Sutra Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.mangalsutra_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.necklace_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Necklace Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.necklace_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.nose_pin_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Nose Pin Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.nose_pin_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.pendant_chain_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Pendant Chain Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.pendant_chain_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.pendant_size_optional) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Pendant Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.pendant_size_optional}
-                  </p>
-                </div>
-              )}
-
-              {show(c.ring_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Ring Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.ring_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.tops_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Tops Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.tops_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.watch_belt_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Watch Belt Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.watch_belt_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_choice_1) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set — Chain / Necklace
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_choice_1}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_chain_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set Chain Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_chain_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_necklace_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set Necklace Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_necklace_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_choice_2) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set — Tops / Earring
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_choice_2}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_tops_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set Tops Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_tops_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.full_set_earring_size) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Full Set Earring Size
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.full_set_earring_size}
-                  </p>
-                </div>
-              )}
-
-              {show(c.approx_weight) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Weight (g)
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.approx_weight}
-                  </p>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* STONE / FINISH */}
-          <div className="px-5 pb-5">
-
-            <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-              Stone & Finish
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-
-              {show(c.stone_type) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Stone Type
-                  </p>
-                  <p className="text-sm mt-1">
-                    {stoneLabels[c.stone_type] ||
-                      c.stone_type}
-                  </p>
-                </div>
-              )}
-
-              {show(c.stone_type_other) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Other Stone
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.stone_type_other}
-                  </p>
-                </div>
-              )}
-
-              {show(c.finish_type) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Finish Type
-                  </p>
-                  <p className="text-sm mt-1">
-                    {finishLabels[c.finish_type] ||
-                      c.finish_type}
-                  </p>
-                </div>
-              )}
-
-              {show(c.finish_type_other) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Other Finish
-                  </p>
-                  <p className="text-sm mt-1">
-                    {c.finish_type_other}
-                  </p>
-                </div>
-              )}
-
-              {show(c.hallmark_required) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Hallmark Required
-                  </p>
-                  <p className="text-sm mt-1">
-                    {yesNoLabel(c.hallmark_required)}
-                  </p>
-                </div>
-              )}
-
-              {show(c.need_call) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase">
-                    Call Required
-                  </p>
-                  <p className="text-sm mt-1">
-                    {yesNoLabel(c.need_call)}
-                  </p>
-                </div>
-              )}
-
-            </div>
-
-          </div>
-
-
-          {/* REMARKS */}
-          {(show(c.remarks) ||
-            show(c.reference_link)) && (
-
-            <div className="px-5 pb-5">
-
-              <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-                Additional Information
-              </h3>
-
-              {show(c.remarks) && (
-                <div className="mb-4">
-                  <p className="text-xs text-gray-400 uppercase mb-1">
-                    Remarks
-                  </p>
-
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                    {c.remarks}
-                  </p>
-                </div>
-              )}
-
-              {show(c.reference_link) && (
-                <div>
-                  <p className="text-xs text-gray-400 uppercase mb-1">
-                    Reference Link
-                  </p>
-
-                  <a
-                    href={c.reference_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-[#359E58] hover:underline break-all"
-                  >
-                    {c.reference_link}
-                  </a>
-                </div>
-              )}
-
-            </div>
-          )}
-
-
-          {/* DESIGN IMAGES */}
-          {Array.isArray(c.design_images) &&
-            c.design_images.length > 0 && (
-
-            <div className="px-5 pb-5">
-
-              <h3 className="text-sm font-semibold text-[#0A0A0A] mb-4">
-                Reference Images
-              </h3>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-
-                {c.design_images.map(
-                  (image, index) => {
-
-                    const imageUrl =
-                      typeof image === "string"
-                        ? image
-                        : image?.url ||
-                          image?.secure_url ||
-                          image?.path;
-
-                    if (!imageUrl) return null;
-
-                    return (
-                      <a
-                        key={`${imageUrl}-${index}`}
-                        href={imageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block border border-[#E5E7EB] rounded-lg overflow-hidden bg-gray-50"
-                      >
-                        <img
-                          src={imageUrl}
-                          alt={`Reference ${index + 1}`}
-                          className="w-full h-40 object-cover hover:scale-105 transition-transform"
-                        />
-
-                        <p className="text-xs text-gray-500 p-2">
-                          Reference {index + 1}
-                        </p>
-                      </a>
-                    );
-
-                  }
-                )}
-
-              </div>
-
-            </div>
-          )}
-
-
-          {/* FOOTER */}
-          <div className="px-5 py-4 bg-gray-50 border-t border-[#E5E7EB]">
-
-            <p className="text-xs text-gray-400">
-              Submitted:{" "}
-              {c.created_at
-                ? new Date(
-                    c.created_at
-                  ).toLocaleString()
-                : "—"}
-            </p>
-
-          </div>
-
-        </div>
-      );
-    })}
-
-    {customisations.length === 0 && (
-      <p className="text-[#4B5563] text-sm py-12 text-center">
-        No customisation requests yet
-      </p>
-    )}
-
-  </div>
-
-</TabsContent>
-
-{/* Customisation Details Popup */}
-{selectedCustomisation && (
-  <div
-    className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
-    onClick={() => setSelectedCustomisation(null)}
-  >
+  {customisations.map((c) => (
 
     <div
-      className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl"
-      onClick={(e) => e.stopPropagation()}
+      key={c.custom_id}
+      onClick={() => setSelectedCustomisation(c)}
+      className="border border-[#E5E7EB] bg-white rounded-xl p-4 sm:p-5 cursor-pointer hover:border-[#359E58] hover:shadow-md transition-all group"
+      data-testid={`custom-${c.custom_id}`}
     >
 
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-5 border-b">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-3">
 
-        <div>
-          <h2 className="text-xl font-semibold text-[#0A0A0A]">
-            Customisation Request
-          </h2>
+        <div className="min-w-0">
 
-          <p className="text-sm text-[#4B5563] mt-1">
-            {selectedCustomisation.custom_id}
+          <div className="flex flex-wrap items-center gap-2">
+
+            <p className="font-medium text-[#0A0A0A] font-body">
+              {c.custom_id}
+            </p>
+
+            <span
+              className={
+                c.channel === "WhatsApp"
+                  ? "text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700"
+                  : "text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700"
+              }
+            >
+              {c.channel || "Website"}
+            </span>
+
+          </div>
+
+          <p className="text-xs text-[#4B5563] font-body mt-1">
+            {c.customer_name || c.user_name || "Customer"}
           </p>
+
+          <p className="text-xs text-gray-500 font-body">
+            {c.user_email}
+          </p>
+
+          <p className="text-xs text-gray-500 font-body">
+            {c.customer_whatsapp || c.user_phone}
+          </p>
+
         </div>
 
-        <button
-          onClick={() => setSelectedCustomisation(null)}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-black text-xl"
-        >
-          ×
-        </button>
+        <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded-full font-body shrink-0">
+          {c.status || "Pending"}
+        </span>
 
       </div>
 
+      <div className="p-3 bg-[#FAFAFA] rounded-lg text-sm">
 
-      {/* =========================================
-          CUSTOMISATION DETAILS
-      ========================================= */}
-
-      <div className="p-6 border-b">
-
-        <h3 className="text-base font-semibold mb-5">
-          Customisation Details
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-          {/* Metal */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Metal Type
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.metal_type || "-"}
-            </p>
-          </div>
-
-
-          {/* Stone */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Stone Changes
-            </p>
-
-            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
-              {selectedCustomisation.stone_changes || "-"}
-            </p>
-          </div>
-
-
-          {/* Size */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Size Changes
-            </p>
-
-            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
-              {selectedCustomisation.size_changes || "-"}
-            </p>
-          </div>
-
-
-          {/* Reference */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Reference Description
-            </p>
-
-            <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
-              {selectedCustomisation.reference_description || "-"}
-            </p>
-          </div>
-
-        </div>
-
-
-        {/* Special Notes */}
-        <div className="mt-5">
-
-          <p className="text-xs text-gray-500 uppercase tracking-wider">
-            Special Notes
-          </p>
-
-          <div className="mt-2 bg-[#FAFAFA] border border-gray-100 rounded-lg p-4">
-
-            <p className="text-sm text-[#374151] whitespace-pre-wrap">
-              {selectedCustomisation.special_notes || "-"}
-            </p>
-
-          </div>
-
-        </div>
-
-
-        {/* Attached File */}
-        {selectedCustomisation.file_name && (
-  <div className="mt-5">
-
-    <p className="text-xs text-gray-500 uppercase tracking-wider">
-      Attached File
-    </p>
-
-    <button
-  type="button"
-  onClick={() =>
-    downloadCustomisationFile(
-      selectedCustomisation.file_url,
-      selectedCustomisation.file_name
-    )
-  }
-  className="mt-2 w-full flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4 hover:bg-[#359E58]/10 transition-colors text-left"
->
-  <FileUp className="w-5 h-5 text-[#359E58] shrink-0" />
-
-  <div className="flex-1 min-w-0">
-    <p className="text-sm font-medium text-[#359E58] truncate">
-      {selectedCustomisation.file_name}
-    </p>
-
-    <p className="text-xs text-gray-500 mt-1">
-      Click to download file
-    </p>
-  </div>
-
-  <span className="text-sm font-medium text-[#359E58]">
-    Download →
-  </span>
-</button>
-
-  </div>
-)}
-
-      </div>
-
-
-      {/* =========================================
-          RETAILER DETAILS
-      ========================================= */}
-
-      <div className="p-6 border-b">
-
-        <h3 className="text-base font-semibold mb-5">
-          Retailer Details
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-
-          {/* Full Name */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Full Name
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.name ||
-                selectedCustomisation.user_name ||
-                "-"}
-            </p>
-          </div>
-
-
-          {/* Business Name */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Business Name
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.business_name || "-"}
-            </p>
-          </div>
-
-
-          {/* Email */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Email
-            </p>
-
-            <p className="text-sm font-medium mt-1 break-all">
-              {selectedCustomisation.retailer?.email ||
-                selectedCustomisation.user_email ||
-                "-"}
-            </p>
-          </div>
-
-
-          {/* Phone */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Contact Number
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.phone ||
-                selectedCustomisation.user_phone ||
-                "-"}
-            </p>
-          </div>
-
-
-          {/* GST */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              GST Number
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.gst_number || "-"}
-            </p>
-          </div>
-
-
-          {/* State */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              State
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.state || "-"}
-            </p>
-          </div>
-
-
-          {/* City */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              City
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.city || "-"}
-            </p>
-          </div>
-
-
-          {/* Pincode */}
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wider">
-              Pincode
-            </p>
-
-            <p className="text-sm font-medium mt-1">
-              {selectedCustomisation.retailer?.pincode || "-"}
-            </p>
-          </div>
-
-        </div>
-
-
-        {/* Business Address */}
-        <div className="mt-5">
-
-          <p className="text-xs text-gray-500 uppercase tracking-wider">
-            Business Address
-          </p>
-
-          <p className="text-sm font-medium mt-1 whitespace-pre-wrap">
-            {selectedCustomisation.retailer?.business_address || "-"}
-          </p>
-
-        </div>
-
-      </div>
-
-
-      {/* =========================================
-          REQUEST META
-      ========================================= */}
-
-      <div className="px-6 py-4 bg-[#FAFAFA] flex flex-col sm:flex-row justify-between gap-2">
-
-        <p className="text-xs text-gray-500">
-          Request ID:{" "}
-          <span className="font-medium text-gray-700">
-            {selectedCustomisation.custom_id}
-          </span>
+        <p className="font-medium font-body truncate">
+          {displayValue("product_category", c.product_category) || "Customisation Request"}
         </p>
 
-        <p className="text-xs text-gray-500">
-          Submitted:{" "}
-          <span className="font-medium text-gray-700">
-            {new Date(
-              selectedCustomisation.created_at
-            ).toLocaleString()}
-          </span>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+
+          {c.metal && (
+            <span className="text-xs text-[#4B5563] font-body">
+              metal: {displayValue("metal", c.metal)}
+            </span>
+          )}
+
+          {c.gold_kt && (
+            <span className="text-xs text-[#4B5563] font-body">
+              purity: {displayValue("gold_kt", c.gold_kt)}
+            </span>
+          )}
+
+          {c.stone_type && (
+            <span className="text-xs text-[#4B5563] font-body">
+              stone: {displayValue("stone_type", c.stone_type)}
+            </span>
+          )}
+
+          {c.finish_type && (
+            <span className="text-xs text-[#4B5563] font-body">
+              finish: {displayValue("finish_type", c.finish_type)}
+            </span>
+          )}
+
+          {c.approx_weight && (
+            <span className="text-xs text-[#4B5563] font-body">
+              weight: {c.approx_weight}
+            </span>
+          )}
+
+          {c.due_date && (
+            <span className="text-xs text-[#4B5563] font-body">
+              due: {c.due_date}
+            </span>
+          )}
+
+        </div>
+
+      </div>
+
+      <div className="flex items-center justify-between mt-2">
+
+        <p className="text-xs text-gray-400 font-body">
+          {c.created_at ? new Date(c.created_at).toLocaleString() : ""}
+        </p>
+
+        <p className="text-xs text-[#359E58] font-body opacity-0 group-hover:opacity-100 transition-opacity">
+          Click to view complete details
         </p>
 
       </div>
 
     </div>
 
+  ))}
+
+  {customisations.length === 0 && (
+    <p className="text-[#4B5563] text-sm py-12 text-center font-body">
+      No customisation requests yet
+    </p>
+  )}
+
+</div>
+
+</TabsContent>
+
+{/* Customisation Details Popup */}
+{selectedCustomisation && (
+
+<div
+className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
+onClick={() => setSelectedCustomisation(null)}
+>
+
+<div
+className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl"
+onClick={(e) => e.stopPropagation()}
+>
+
+{/* HEADER */}
+<div className="flex items-start justify-between px-6 py-5 border-b">
+
+<div>
+
+<div className="flex flex-wrap items-center gap-2">
+
+<h2 className="text-xl font-semibold text-[#0A0A0A]">
+  Customisation Request
+</h2>
+
+<span
+  className={
+    selectedCustomisation.channel === "WhatsApp"
+      ? "text-xs px-2 py-1 rounded-full bg-green-50 text-green-700"
+      : "text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700"
+  }
+>
+  {selectedCustomisation.channel || "Website"}
+</span>
+
+<span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-1 rounded-full">
+  {selectedCustomisation.status || "Pending"}
+</span>
+
+</div>
+
+<p className="text-sm text-[#4B5563] mt-1">
+{selectedCustomisation.custom_id}
+</p>
+
+</div>
+
+<button
+type="button"
+onClick={() => setSelectedCustomisation(null)}
+className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-black text-xl leading-none"
+>
+X
+</button>
+
+</div>
+
+{/* CUSTOMER AND ORDER DETAILS */}
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+Customer & Order Details
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Customer Name
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {selectedCustomisation.customer_name ||
+    selectedCustomisation.user_name ||
+    "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  WhatsApp / Phone
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {selectedCustomisation.customer_whatsapp ||
+    selectedCustomisation.user_phone ||
+    "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Email
+</p>
+<p className="text-sm text-gray-700 mt-1 break-all">
+  {selectedCustomisation.user_email || "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Product Category
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {displayValue(
+    "product_category",
+    selectedCustomisation.product_category
+  ) || "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Order Date
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {selectedCustomisation.order_date || "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Due Date
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {selectedCustomisation.due_date || "-"}
+</p>
+</div>
+
+<div>
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Party Reference Order ID
+</p>
+<p className="text-sm text-gray-700 mt-1">
+  {selectedCustomisation.party_reference_order_id || "-"}
+</p>
+</div>
+
+</div>
+
+</div>
+
+{["metal", "gold_kt", "gold_colour", "gold_colour_other", "platinum_purity", "metal_colour_platinum", "metal_purity_combo", "metal_colour_combo"].some(
+(f) => selectedCustomisation[f]
+) && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+  Metal Details
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+  {[
+    ["Metal", "metal"],
+    ["Gold Purity", "gold_kt"],
+    ["Gold Colour", "gold_colour"],
+    ["Other Gold Colour", "gold_colour_other"],
+    ["Platinum Purity", "platinum_purity"],
+    ["Platinum Colour", "metal_colour_platinum"],
+    ["Metal Purity", "metal_purity_combo"],
+    ["Metal Colour", "metal_colour_combo"],
+  ]
+    .filter((pair) => selectedCustomisation[pair[1]])
+    .map((pair) => (
+
+      <div key={pair[1]}>
+
+        <p className="text-xs text-gray-400 uppercase tracking-wider">
+          {pair[0]}
+        </p>
+
+        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+          {displayValue(pair[1], selectedCustomisation[pair[1]])}
+        </p>
+
+      </div>
+
+    ))}
+
+</div>
+
+</div>
+)}
+
+{["bali_size", "bangle_kada_size1", "bangle_kada_size2", "bracelet_size", "need_multilayer", "multilayer_chain_size", "chain_size", "cufflink_size", "brooch_size", "earring_size", "haathpaan_size", "maang_tikka_size", "mangalsutra_size", "necklace_size", "nose_pin_size", "pendant_chain_size", "pendant_size_optional", "ring_size", "tops_size", "watch_belt_size", "full_set_choice_1", "full_set_chain_size", "full_set_necklace_size", "full_set_choice_2", "full_set_tops_size", "full_set_earring_size", "approx_weight"].some(
+(f) => selectedCustomisation[f]
+) && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+  Product Specifications
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+  {[
+    ["Bali Size", "bali_size"],
+    ["Bangle/Kada Size 1", "bangle_kada_size1"],
+    ["Bangle/Kada Size 2", "bangle_kada_size2"],
+    ["Bracelet Size", "bracelet_size"],
+    ["Need Multilayer", "need_multilayer"],
+    ["Multilayer Chain Size", "multilayer_chain_size"],
+    ["Chain Size", "chain_size"],
+    ["Cufflink Size", "cufflink_size"],
+    ["Brooch Size", "brooch_size"],
+    ["Earring Size", "earring_size"],
+    ["Haathpaan Size", "haathpaan_size"],
+    ["Maang Tikka Size", "maang_tikka_size"],
+    ["Mangal Sutra Size", "mangalsutra_size"],
+    ["Necklace Size", "necklace_size"],
+    ["Nose Pin Size", "nose_pin_size"],
+    ["Pendant Chain Size", "pendant_chain_size"],
+    ["Pendant Size", "pendant_size_optional"],
+    ["Ring Size", "ring_size"],
+    ["Tops Size", "tops_size"],
+    ["Watch Belt Size", "watch_belt_size"],
+    ["Full Set - Chain / Necklace", "full_set_choice_1"],
+    ["Full Set Chain Size", "full_set_chain_size"],
+    ["Full Set Necklace Size", "full_set_necklace_size"],
+    ["Full Set - Tops / Earring", "full_set_choice_2"],
+    ["Full Set Tops Size", "full_set_tops_size"],
+    ["Full Set Earring Size", "full_set_earring_size"],
+    ["Weight (g)", "approx_weight"],
+  ]
+    .filter((pair) => selectedCustomisation[pair[1]])
+    .map((pair) => (
+
+      <div key={pair[1]}>
+
+        <p className="text-xs text-gray-400 uppercase tracking-wider">
+          {pair[0]}
+        </p>
+
+        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+          {displayValue(pair[1], selectedCustomisation[pair[1]])}
+        </p>
+
+      </div>
+
+    ))}
+
+</div>
+
+</div>
+)}
+
+{["stone_type", "stone_type_other", "finish_type", "finish_type_other", "hallmark_required", "need_call"].some(
+(f) => selectedCustomisation[f]
+) && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+  Stone &amp; Finish
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+  {[
+    ["Stone Type", "stone_type"],
+    ["Other Stone", "stone_type_other"],
+    ["Finish Type", "finish_type"],
+    ["Other Finish", "finish_type_other"],
+    ["Hallmark Required", "hallmark_required"],
+    ["Call Required", "need_call"],
+  ]
+    .filter((pair) => selectedCustomisation[pair[1]])
+    .map((pair) => (
+
+      <div key={pair[1]}>
+
+        <p className="text-xs text-gray-400 uppercase tracking-wider">
+          {pair[0]}
+        </p>
+
+        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+          {displayValue(pair[1], selectedCustomisation[pair[1]])}
+        </p>
+
+      </div>
+
+    ))}
+
+</div>
+
+</div>
+)}
+
+{["metal_type", "stone_changes", "size_changes", "reference_description"].some(
+(f) => selectedCustomisation[f]
+) && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+  Customisation Details
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+  {[
+    ["Metal Type", "metal_type"],
+    ["Stone Changes", "stone_changes"],
+    ["Size Changes", "size_changes"],
+    ["Reference Description", "reference_description"],
+  ]
+    .filter((pair) => selectedCustomisation[pair[1]])
+    .map((pair) => (
+
+      <div key={pair[1]}>
+
+        <p className="text-xs text-gray-400 uppercase tracking-wider">
+          {pair[0]}
+        </p>
+
+        <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+          {displayValue(pair[1], selectedCustomisation[pair[1]])}
+        </p>
+
+      </div>
+
+    ))}
+
+</div>
+
+</div>
+)}
+
+{/* REMARKS AND NOTES */}
+{(selectedCustomisation.remarks ||
+selectedCustomisation.special_notes ||
+selectedCustomisation.reference_link) && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+Additional Information
+</h3>
+
+{selectedCustomisation.remarks && (
+<div className="mb-5">
+  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+    Remarks
+  </p>
+  <div className="bg-[#FAFAFA] border border-gray-100 rounded-lg p-4">
+    <p className="text-sm text-[#374151] whitespace-pre-wrap">
+      {selectedCustomisation.remarks}
+    </p>
   </div>
+</div>
+)}
+
+{selectedCustomisation.special_notes && (
+<div className="mb-5">
+  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
+    Special Notes
+  </p>
+  <div className="bg-[#FAFAFA] border border-gray-100 rounded-lg p-4">
+    <p className="text-sm text-[#374151] whitespace-pre-wrap">
+      {selectedCustomisation.special_notes}
+    </p>
+  </div>
+</div>
+)}
+
+{selectedCustomisation.reference_link && (
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">
+    Reference Link
+  </p>
+  <a
+    href={selectedCustomisation.reference_link}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-sm text-[#359E58] hover:underline break-all"
+  >
+    {selectedCustomisation.reference_link}
+  </a>
+</div>
+)}
+
+</div>
+)}
+
+{/* ATTACHED FILE */}
+{selectedCustomisation.file_name && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-4">
+Attached File
+</h3>
+
+<button
+type="button"
+onClick={() =>
+  downloadCustomisationFile(
+    selectedCustomisation.file_url,
+    selectedCustomisation.file_name
+  )
+}
+className="w-full flex items-center gap-3 bg-[#359E58]/5 border border-[#359E58]/20 rounded-lg p-4 hover:bg-[#359E58]/10 transition-colors text-left"
+>
+
+<FileUp className="w-5 h-5 text-[#359E58] shrink-0" />
+
+<div className="flex-1 min-w-0">
+  <p className="text-sm font-medium text-[#359E58] truncate">
+    {selectedCustomisation.file_name}
+  </p>
+  <p className="text-xs text-gray-500 mt-1">
+    Click to download file
+  </p>
+</div>
+
+<span className="text-sm font-medium text-[#359E58]">
+  Download
+</span>
+
+</button>
+
+</div>
+)}
+
+{/* REFERENCE IMAGES */}
+{Array.isArray(selectedCustomisation.design_images) &&
+selectedCustomisation.design_images.length > 0 && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-4">
+Reference Images
+</h3>
+
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+
+{selectedCustomisation.design_images.map((image, index) => (
+
+  <a
+    key={index}
+    href={typeof image === "string" ? image : image.url}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="block border border-[#E5E7EB] rounded-lg overflow-hidden bg-gray-50"
+  >
+    <img
+      src={typeof image === "string" ? image : image.url}
+      alt={`Reference ${index + 1}`}
+      className="w-full h-40 object-cover hover:scale-105 transition-transform"
+    />
+    <p className="text-xs text-gray-500 p-2">
+      Reference {index + 1}
+    </p>
+  </a>
+
+))}
+
+</div>
+
+</div>
+)}
+
+{/* RETAILER DETAILS */}
+{selectedCustomisation.retailer && (
+
+<div className="p-6 border-b">
+
+<h3 className="text-base font-semibold mb-5">
+Retailer Details
+</h3>
+
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    Business Name
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.business_name || "-"}
+  </p>
+</div>
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    GST Number
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.gst_number || "-"}
+  </p>
+</div>
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    Contact Number
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.phone || "-"}
+  </p>
+</div>
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    City
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.city || "-"}
+  </p>
+</div>
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    State
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.state || "-"}
+  </p>
+</div>
+
+<div>
+  <p className="text-xs text-gray-400 uppercase tracking-wider">
+    Pincode
+  </p>
+  <p className="text-sm text-gray-700 mt-1">
+    {selectedCustomisation.retailer.pincode || "-"}
+  </p>
+</div>
+
+</div>
+
+<div className="mt-5">
+<p className="text-xs text-gray-400 uppercase tracking-wider">
+  Business Address
+</p>
+<p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
+  {selectedCustomisation.retailer.business_address || "-"}
+</p>
+</div>
+
+</div>
+)}
+
+{/* FOOTER */}
+<div className="px-6 py-4 bg-[#FAFAFA] flex flex-col sm:flex-row justify-between items-center gap-3">
+
+<p className="text-xs text-gray-500">
+Submitted:{" "}
+<span className="font-medium text-gray-700">
+{selectedCustomisation.created_at
+  ? new Date(selectedCustomisation.created_at).toLocaleString()
+  : "-"}
+</span>
+</p>
+
+<button
+type="button"
+onClick={() => setSelectedCustomisation(null)}
+className="px-5 py-2 bg-[#359E58] text-white rounded-lg hover:bg-[#2e8b4d] text-sm"
+>
+Close
+</button>
+
+</div>
+
+</div>
+
+</div>
 )}
           <TabsContent value="whatsapp">
           <div className="space-y-4">
