@@ -1244,6 +1244,106 @@ async def admin_get_customisations(request: Request):
         "customisations": result
     }
 
+
+@api_router.delete("/admin/customisations/{custom_id}")
+async def admin_delete_customisation(
+    custom_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    custom = await db.customisation_requests.find_one(
+        {"custom_id": custom_id}
+    )
+
+    if not custom:
+        raise HTTPException(
+            status_code=404,
+            detail="Customisation request not found"
+        )
+
+    # --------------------------------------------------------
+    # COLLECT S3 FILE URLS
+    # --------------------------------------------------------
+
+    def extract_url(value):
+
+        if not value:
+            return None
+
+        if isinstance(value, str):
+            return value
+
+        if isinstance(value, dict):
+            return (
+                value.get("path")
+                or value.get("url")
+                or value.get("storage_path")
+                or value.get("secure_url")
+            )
+
+        return None
+
+    file_urls = []
+
+    for image in custom.get("design_images", []) or []:
+        url = extract_url(image)
+        if url:
+            file_urls.append(url)
+
+    video_url = extract_url(custom.get("reference_video"))
+    if video_url:
+        file_urls.append(video_url)
+
+    attached_file = extract_url(custom.get("file_url"))
+    if attached_file:
+        file_urls.append(attached_file)
+
+    # --------------------------------------------------------
+    # DELETE FILES FROM S3
+    # --------------------------------------------------------
+
+    from urllib.parse import urlparse, unquote
+
+    for url in file_urls:
+
+        try:
+
+            key = unquote(urlparse(url).path).lstrip("/")
+
+            if not key:
+                continue
+
+            s3.delete_object(
+                Bucket=AWS_BUCKET_NAME,
+                Key=key
+            )
+
+            await db.files.delete_many(
+                {"storage_path": url}
+            )
+
+            logger.info(f"Deleted S3 object: {key}")
+
+        except Exception as e:
+            logger.warning(f"S3 delete failed for {url}: {e}")
+
+    # --------------------------------------------------------
+    # DELETE THE REQUEST
+    # --------------------------------------------------------
+
+    await db.customisation_requests.delete_one(
+        {"custom_id": custom_id}
+    )
+
+    logger.info(f"Customisation deleted: {custom_id}")
+
+    return {
+        "success": True,
+        "message": "Customisation request deleted successfully",
+        "custom_id": custom_id
+    }
+
 @api_router.get("/admin/whatsapp-orders")
 async def admin_get_whatsapp_orders(request: Request):
     await get_admin_user(request)
