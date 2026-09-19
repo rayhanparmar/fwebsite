@@ -469,6 +469,25 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     try { await api.put(`/admin/retailers/${id}/approve`); toast.success("Retailer approved"); loadRetailers(); loadStats(); }
     catch { toast.error("Failed to approve"); }
   };
+
+  const removeRetailer = async (id, name) => {
+    if (!window.confirm(
+      `Permanently remove ${name || "this retailer"}?\n\n` +
+      "They will lose access and will have to register again.\n\n" +
+      "This cannot be undone."
+    )) return;
+
+    try {
+      await api.delete(`/admin/retailers/${id}`);
+      toast.success("Retailer removed");
+      loadRetailers();
+      loadStats();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || "Failed to remove retailer"
+      );
+    }
+  };
   const rejectRetailer = async (id) => {
     try { await api.put(`/admin/retailers/${id}/reject`); toast.success("Retailer rejected"); loadRetailers(); loadStats(); }
     catch { toast.error("Failed to reject"); }
@@ -2978,11 +2997,23 @@ const automaticInsights = useMemo(() => {
               Reject
             </Button>
           </>
-        ) : (
-          <span className="text-xs bg-[#359E58]/10 text-[#359E58] px-3 py-2 font-body font-medium">
-            Approved
-          </span>
-        )}
+                ) : (
+                  <>
+                    <span className="text-xs bg-[#359E58]/10 text-[#359E58] px-3 py-2 font-body font-medium">
+                      Approved
+                    </span>
+        
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeRetailer(r._id, r.name)}
+                      className="border-red-300 text-red-500 hover:bg-red-50 gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Remove
+                    </Button>
+                  </>
+                )}
 
       </div>
 

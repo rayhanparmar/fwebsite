@@ -702,6 +702,41 @@ async def reject_retailer(request: Request, user_id: str):
         raise HTTPException(404, "Retailer not found")
     return {"message": "Retailer rejected"}
 
+@api_router.delete("/admin/retailers/{user_id}")
+async def admin_delete_retailer(request: Request, user_id: str):
+    await get_admin_user(request)
+
+    try:
+        object_id = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(400, "Invalid retailer id")
+
+    retailer = await db.users.find_one({"_id": object_id})
+
+    if not retailer:
+        raise HTTPException(404, "Retailer not found")
+
+    # Never allow an admin account to be deleted from here
+    if retailer.get("role") == "admin":
+        raise HTTPException(
+            400,
+            "Admin accounts cannot be deleted"
+        )
+
+    # Remove their shopping cart
+    await db.carts.delete_one({"user_id": user_id})
+
+    await db.users.delete_one({"_id": object_id})
+
+    logger.info(
+        f"Retailer deleted: {retailer.get('name')} "
+        f"({retailer.get('email')})"
+    )
+
+    return {
+        "message": "Retailer removed successfully"
+    }
+
 @api_router.get("/admin/products")
 async def admin_get_products(request: Request, category: Optional[str] = None, page: int = 1, limit: int = 30):
     await get_admin_user(request)
