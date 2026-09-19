@@ -360,6 +360,8 @@ class CustomisationRequest(BaseModel):
     remarks: str = ""
     reference_link: str = ""
 
+    reference_video: Optional[Dict] = None
+
     design_images: List[Dict] = []
 
 class ContactRequest(BaseModel):
@@ -558,6 +560,14 @@ async def upload_file(request: Request, file: UploadFile = File(...)):
     filename = f"uploads/{user['_id']}/{uuid.uuid4()}.{ext}"
 
     data = await file.read()
+
+        # Customisation reference video limit
+    if file.content_type and file.content_type.startswith("video/"):
+        if len(data) > 50 * 1024 * 1024:
+            raise HTTPException(
+                status_code=400,
+                detail="Video must be under 50MB"
+            )
 
     import io
 

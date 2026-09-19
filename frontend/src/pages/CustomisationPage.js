@@ -243,6 +243,7 @@ export default function CustomisationPage() {
 
   const [form, setForm] = useState(initialForm);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [uploadedVideo, setUploadedVideo] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -321,6 +322,51 @@ export default function CustomisationPage() {
       toast.error(
         err.response?.data?.detail ||
           "Image upload failed"
+      );
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+  
+    if (!file) return;
+  
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
+  
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Video size must be under 50MB");
+      return;
+    }
+  
+    setUploading(true);
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      const res = await api.post("/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+  
+      setUploadedVideo({
+        path: res.data.path,
+        filename: res.data.filename,
+        size: res.data.size,
+      });
+  
+      toast.success(`Video "${file.name}" uploaded successfully`);
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail ||
+        "Video upload failed"
       );
     } finally {
       setUploading(false);
@@ -542,6 +588,7 @@ export default function CustomisationPage() {
       const payload = {
         ...form,
         design_images: uploadedFiles,
+        reference_video: uploadedVideo,
       };
 
       const res = await api.post(
@@ -1559,6 +1606,53 @@ export default function CustomisationPage() {
 
               </div>
             </div>
+
+            <div className="mt-4">
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Reference Video (Optional)
+  </label>
+
+  <input
+    type="file"
+    accept="video/*"
+    onChange={handleVideoUpload}
+    disabled={uploading || !!uploadedVideo}
+    className="block w-full text-sm text-gray-600"
+  />
+
+  <p className="text-xs text-gray-500 mt-1">
+    Upload one video up to 50MB.
+  </p>
+</div>
+
+            {uploadedVideo && (
+  <div className="mt-4 border rounded-lg p-4 bg-gray-50">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="font-medium text-gray-800">
+          Reference Video
+        </p>
+        <p className="text-sm text-gray-500">
+          {uploadedVideo.filename}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setUploadedVideo(null)}
+        className="text-red-600 hover:text-red-700 text-sm font-medium"
+      >
+        Remove
+      </button>
+    </div>
+
+    <video
+      src={uploadedVideo.path}
+      controls
+      className="mt-3 w-full max-w-xl rounded-lg"
+    />
+  </div>
+)}
 
             {/* SUBMIT */}
             <Button

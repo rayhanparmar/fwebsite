@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
 import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
+import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
+import { displayValue } from "@/lib/labels";
 import {
   ResponsiveContainer,
   LineChart,
@@ -388,6 +390,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
 
             order.customer_name?.toLowerCase().includes(search) ||
 
+            displayValue("product_category", order.product_category)?.toLowerCase().includes(search) ||
             order.product_category?.toLowerCase().includes(search) ||
 
             order.status?.toLowerCase().includes(search)
@@ -5250,10 +5253,10 @@ const automaticInsights = useMemo(() => {
 <div
     key={order.orderId}
     onClick={() => navigate(`/admin/whatsapp-orders/${order.orderId}`)}
-    className="border border-[#E5E7EB] bg-white p-5 rounded-sm hover:border-[#359E58] hover:shadow-md transition-all relative cursor-pointer"
+        className="border border-[#E5E7EB] bg-white px-5 py-3 rounded-sm hover:border-[#359E58] hover:shadow-md transition-all relative cursor-pointer"
 >
 
-<div className="flex justify-between items-start mb-3">
+<div className="flex justify-between items-start mb-2">
 
 <div>
 
@@ -5303,22 +5306,22 @@ const automaticInsights = useMemo(() => {
 
 </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+<div className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 text-sm">
 
-          <div>
-            <strong>Customer</strong><br />
-            {order.customer_name}
-          </div>
+<div>
+  <strong>Customer</strong><br />
+  {order.customer_name}
+</div>
 
-          <div>
-            <strong>Product</strong><br />
-            {order.product_category}
-          </div>
+<div>
+  <strong>Product</strong><br />
+  {displayValue("product_category", order.product_category)}
+</div>
 
-          <div>
-            <strong>Metal</strong><br />
-            {order.metal}
-          </div>
+<div>
+  <strong>Metal</strong><br />
+  {displayValue("metal", order.metal)}
+</div>
 
           <div>
             <strong>Due Date</strong><br />
@@ -5336,7 +5339,7 @@ const automaticInsights = useMemo(() => {
 <br />
 
 <span
-    className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-semibold ${
+    className={`inline-block mt-0.5 px-3 py-1 rounded-full text-xs font-semibold ${
         order.priority === "Low"
             ? "bg-green-100 text-green-800"
 

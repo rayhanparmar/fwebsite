@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { displayValue } from "@/lib/labels";
 import {
     User,
     Package,
@@ -13,11 +14,13 @@ import {
     ShieldCheck
 } from "lucide-react";
 
-function SizeCard({ title, value }) {
+function SizeCard({ title, field, value }) {
     return (
         <div className="bg-gray-50 rounded-lg border p-4">
             <p className="text-sm text-gray-500">{title}</p>
-            <p className="font-semibold mt-1">{value}</p>
+            <p className="font-semibold mt-1">
+                {displayValue(field, value)}
+            </p>
         </div>
     );
 }
@@ -241,13 +244,13 @@ Jewellery Details
 
 <div className="space-y-3">
 
-<p><b>Category:</b> {order.product_category}</p>
+<p><b>Category:</b> {displayValue("product_category", order.product_category)}</p>
 
-<p><b>Metal:</b> {order.metal}</p>
+<p><b>Metal:</b> {displayValue("metal", order.metal)}</p>
 
-<p><b>Stone:</b> {order.stone_type}</p>
+<p><b>Stone:</b> {displayValue("stone_type", order.stone_type)}</p>
 
-<p><b>Finish:</b> {order.finish_type}</p>
+<p><b>Finish:</b> {displayValue("finish_type", order.finish_type)}</p>
 
 <p><b>Weight:</b> {order.approx_weight}</p>
 
@@ -311,39 +314,65 @@ className="w-full h-52 object-cover rounded-lg border transition duration-200 ho
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
 
         {order.ring_size && (
-            <SizeCard title="Ring Size" value={order.ring_size} />
+            <SizeCard
+                title="Ring Size"
+                field="ring_size"
+                value={order.ring_size}
+            />
         )}
 
         {order.bali_size && (
-            <SizeCard title="Bali Size" value={order.bali_size} />
+            <SizeCard
+                title="Bali Size"
+                field="bali_size"
+                value={order.bali_size}
+            />
         )}
 
         {order.bracelet_size && (
-            <SizeCard title="Bracelet Size" value={order.bracelet_size} />
+            <SizeCard
+                title="Bracelet Size"
+                field="bracelet_size"
+                value={order.bracelet_size}
+            />
         )}
 
         {order.chain_size && (
-            <SizeCard title="Chain Size" value={order.chain_size} />
+            <SizeCard
+                title="Chain Size"
+                field="chain_size"
+                value={order.chain_size}
+            />
         )}
 
         {order.multilayer_chain_size && (
             <SizeCard
                 title="Multilayer Chain Size"
+                field="multilayer_chain_size"
                 value={order.multilayer_chain_size}
             />
         )}
 
         {order.necklace_size && (
-            <SizeCard title="Necklace Size" value={order.necklace_size} />
+            <SizeCard
+                title="Necklace Size"
+                field="necklace_size"
+                value={order.necklace_size}
+            />
         )}
 
         {order.mangalsutra_size && (
-            <SizeCard title="Mangalsutra Size" value={order.mangalsutra_size} />
+            <SizeCard
+                title="Mangalsutra Size"
+                field="mangalsutra_size"
+                value={order.mangalsutra_size}
+            />
         )}
 
         {order.bangle_kada_size1 && (
             <SizeCard
                 title="Bangle/Kada Size 1"
+                field="bangle_kada_size1"
                 value={order.bangle_kada_size1}
             />
         )}
@@ -351,21 +380,31 @@ className="w-full h-52 object-cover rounded-lg border transition duration-200 ho
         {order.bangle_kada_size2 && (
             <SizeCard
                 title="Bangle/Kada Size 2"
+                field="bangle_kada_size2"
                 value={order.bangle_kada_size2}
             />
         )}
 
         {order.tops_size && (
-            <SizeCard title="Tops Size" value={order.tops_size} />
+            <SizeCard
+                title="Tops Size"
+                field="tops_size"
+                value={order.tops_size}
+            />
         )}
 
         {order.earring_size && (
-            <SizeCard title="Earring Size" value={order.earring_size} />
+            <SizeCard
+                title="Earring Size"
+                field="earring_size"
+                value={order.earring_size}
+            />
         )}
 
         {order.pendant_chain_size && (
             <SizeCard
                 title="Pendant Chain Size"
+                field="pendant_chain_size"
                 value={order.pendant_chain_size}
             />
         )}
@@ -373,6 +412,7 @@ className="w-full h-52 object-cover rounded-lg border transition duration-200 ho
         {order.pendant_size_optional && (
             <SizeCard
                 title="Pendant Size"
+                field="pendant_size_optional"
                 value={order.pendant_size_optional}
             />
         )}
@@ -380,6 +420,7 @@ className="w-full h-52 object-cover rounded-lg border transition duration-200 ho
         {order.watch_belt_size && (
             <SizeCard
                 title="Watch Belt Size"
+                field="watch_belt_size"
                 value={order.watch_belt_size}
             />
         )}
@@ -458,42 +499,54 @@ type="video/mp4"
         {order.gold_kt && (
             <div>
                 <p className="text-sm text-gray-500">Gold Purity</p>
-                <p className="font-semibold">{order.gold_kt}</p>
+                <p className="font-semibold">
+                    {displayValue("gold_kt", order.gold_kt)}
+                </p>
             </div>
         )}
 
         {order.platinum_purity && (
             <div>
                 <p className="text-sm text-gray-500">Platinum Purity</p>
-                <p className="font-semibold">{order.platinum_purity}</p>
+                <p className="font-semibold">
+                    {displayValue("platinum_purity", order.platinum_purity)}
+                </p>
             </div>
         )}
 
         {order.metal_purity_combo && (
             <div>
                 <p className="text-sm text-gray-500">Metal Purity</p>
-                <p className="font-semibold">{order.metal_purity_combo}</p>
+                <p className="font-semibold">
+                    {displayValue("metal_purity_combo", order.metal_purity_combo)}
+                </p>
             </div>
         )}
 
         {order.gold_colour && (
             <div>
                 <p className="text-sm text-gray-500">Gold Colour</p>
-                <p className="font-semibold">{order.gold_colour}</p>
+                <p className="font-semibold">
+                    {displayValue("gold_colour", order.gold_colour)}
+                </p>
             </div>
         )}
 
         {order.metal_colour_combo && (
             <div>
                 <p className="text-sm text-gray-500">Metal Colour</p>
-                <p className="font-semibold">{order.metal_colour_combo}</p>
+                <p className="font-semibold">
+                    {displayValue("metal_colour_combo", order.metal_colour_combo)}
+                </p>
             </div>
         )}
 
         {order.stone_type && (
             <div>
                 <p className="text-sm text-gray-500">Stone Type</p>
-                <p className="font-semibold">{order.stone_type}</p>
+                <p className="font-semibold">
+                    {displayValue("stone_type", order.stone_type)}
+                </p>
             </div>
         )}
 
@@ -501,22 +554,26 @@ type="video/mp4"
             <div>
                 <p className="text-sm text-gray-500">Finish Type</p>
                 <p className="font-semibold">
-    {order.finish_type || "-"}
-</p>
+                    {displayValue("finish_type", order.finish_type) || "-"}
+                </p>
             </div>
         )}
 
         {order.hallmark_required && (
             <div>
                 <p className="text-sm text-gray-500">Hallmark Required</p>
-                <p className="font-semibold">{order.hallmark_required}</p>
+                <p className="font-semibold">
+                    {displayValue("hallmark_required", order.hallmark_required)}
+                </p>
             </div>
         )}
 
         {order.need_call && (
             <div>
                 <p className="text-sm text-gray-500">Need Call</p>
-                <p className="font-semibold">{order.need_call}</p>
+                <p className="font-semibold">
+                    {displayValue("need_call", order.need_call)}
+                </p>
             </div>
         )}
 
