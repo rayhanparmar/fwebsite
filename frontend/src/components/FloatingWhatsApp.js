@@ -1,6 +1,6 @@
 import { FaWhatsapp } from "react-icons/fa";
 
-const WA_NUMBER = "917045927391";
+const WA_NUMBER = "919082056315";
 
 export function getWhatsAppUrl(message = "") {
   const encoded = encodeURIComponent(message);

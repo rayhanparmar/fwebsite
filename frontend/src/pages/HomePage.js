@@ -33,7 +33,7 @@ const features = [
     title: "Reliable Communication",
     desc: "Stay updated at every step with transparent communication",
     span: "md:col-span-1",
-    action: () => window.open("https://wa.me/917045927391", "_blank"),
+    action: () => window.open("https://wa.me/919082056315", "_blank"),
   },
 ];
 
@@ -182,7 +182,7 @@ export default function HomePage() {
                 if (i === 0) navigate("/catalogue");
                 if (i === 1) navigate("/customisation");
                 if (i === 2) navigate("/about");
-                if (i === 3) window.open("https://wa.me/917045927391", "_blank");
+                if (i === 3) window.open("https://wa.me/919082056315", "_blank");
               }}
               className={`bg-white border border-[#E5E7EB] p-8 md:p-10 hover:border-[#6CC284]/50 hover:shadow-lg hover:scale-105 cursor-pointer transition-all duration-300 ${f.span}`}
               data-testid={`feature-card-${i}`}
