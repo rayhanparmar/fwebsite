@@ -1876,6 +1876,8 @@ async def admin_combined_analysis(
                     if clean(item.get("stone")) != canonical_stone(stone):
                         continue
 
+                matching_items.append(item)
+
         # If item filters were supplied, order must contain
         # at least one matching item.
         item_filter_used = any([
@@ -2196,7 +2198,7 @@ async def admin_combined_analysis(
                 "lab" in raw_stone
                 and "diamond" in raw_stone
             ):
-                stone_name = "Lab Grown"
+                stone_name = "Lab Grown Diamond"
 
             elif raw_stone in {
                 "cz",
@@ -3017,7 +3019,7 @@ async def admin_combined_analysis(
                 "lab" in stone_name
                 and "diamond" in stone_name
             ):
-                stone_name = "Lab Grown"
+                stone_name = "Lab Grown Diamond"
 
             elif stone_name in {
                 "cz",
@@ -3174,6 +3176,13 @@ async def admin_combined_analysis(
 
     for row in stone_data:
         row["count"] = row.get("orders", 0)
+
+    # group_items() emits "count"; mirror it to "orders" so the
+    # dashboard reads either key without blanks.
+    for rows in (purity_data, gold_colour_data, category_data,
+                 status_data, customer_data):
+        for row in rows:
+            row["orders"] = row.get("count", 0)
 
     # --------------------------------------------------------
     # 17. DUE DATE ANALYSIS
