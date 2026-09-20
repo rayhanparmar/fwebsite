@@ -511,7 +511,10 @@ async def get_categories():
 async def get_products(category: Optional[str] = None, page: int = 1, limit: int = 30, search: Optional[str] = None):
     query = {}
     if category:
-        category_names = CATEGORY_ALIASES.get(category, [category])
+        # Always search the canonical name as well as any aliases.
+        # Without this, a category that has aliases defined will not
+        # match products saved under its own exact name.
+        category_names = list({category, *CATEGORY_ALIASES.get(category, [])})
         query["category"] = {"$in": category_names}
     if search:
         query["product_id"] = {"$regex": search, "$options": "i"}
