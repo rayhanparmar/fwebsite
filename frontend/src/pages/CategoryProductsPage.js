@@ -34,7 +34,7 @@ export default function CategoryProductsPage() {
 
   useEffect(() => {
     if (!category) return;
-    api.get(`/products?category=${encodeURIComponent(category.name)}&limit=30`)
+    api.get(`/products?category=${encodeURIComponent(category.name)}&limit=0`)
       .then(res => setProducts(res.data.products))
       .catch(() => toast.error("Failed to load products"))
       .finally(() => setLoading(false));
@@ -73,7 +73,7 @@ export default function CategoryProductsPage() {
               onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/product/${product.product_id}`); }}>
               <div className="bg-white border border-transparent hover:border-[#6CC284]/30 transition-all duration-300 overflow-hidden">
                 <div className="aspect-square overflow-hidden bg-[#FAFAFA]">
-                  <img src={product.images?.[0]?.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${product.images[0]}` : product.images?.[0]}
+                  <img loading="lazy" decoding="async" src={product.thumbnails?.[0] || (product.images?.[0]?.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${product.images[0]}` : product.images?.[0])}
                     alt={product.product_id}
                     className="w-full h-full object-cover" loading="lazy" />
                 </div>

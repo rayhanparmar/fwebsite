@@ -70,3 +70,11 @@
 a[href*="emergent"] {
   display: none !important;
 }
+/* Cormorant Garamond defaults to old-style figures, which makes numbers
+   sit at uneven heights (the 4 drops, the 8 rides high). Force lining,
+   tabular figures so stats align and read cleanly. */
+h1, h2, h3, h4, h5, h6,
+.font-serif {
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
