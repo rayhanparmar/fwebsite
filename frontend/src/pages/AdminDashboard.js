@@ -26,7 +26,8 @@ import {
   Legend,
 } from "recharts";
 
-
+// Validated categorical palette — colourblind-safe, checked for CVD separation
+const ANALYSIS_COLORS = ["#359E58", "#2563EB", "#D97706", "#7C3AED", "#0D9488"];
 
 const CATEGORIES = [
   "Bali",
@@ -161,6 +162,11 @@ const [expandedAnalysisRetailer, setExpandedAnalysisRetailer] =
 
 const [retailerAnalysisSort, setRetailerAnalysisSort] =
   useState("orders_desc");
+
+const [analysisView, setAnalysisView] = useState("overview");
+const [showAnalysisFilters, setShowAnalysisFilters] = useState(false);
+const [showAllInsights, setShowAllInsights] = useState(false);
+const [expandedAnalysisCategory, setExpandedAnalysisCategory] = useState(null);
 
 const [productPerformanceSort, setProductPerformanceSort] =
   useState("orders_desc");
@@ -297,67 +303,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
         `/admin/analysis${query ? `?${query}` : ""}`
       );
   
-      setAnalysisData({
-        overview: {
-          total_orders: response.data.overview?.total_orders || 0,
-          combined_orders: response.data.overview?.combined_orders || 0,
-          custom_orders: response.data.overview?.custom_orders || 0,
-          catalogue_orders: response.data.overview?.catalogue_orders || 0,
-          website_orders: response.data.overview?.website_orders || 0,
-          whatsapp_orders: response.data.overview?.whatsapp_orders || 0,
-          total_products: response.data.overview?.total_products || 0,
-          catalogue_size: response.data.overview?.catalogue_size || 0,
-          average_orders_per_day:
-            response.data.overview?.average_orders_per_day || 0,
-        },
-
-        categories: response.data.categories || [],
-
-        by_date: response.data.by_date || [],
-
-        customers: response.data.customers || [],
-
-        category: response.data.category || [],
-      
-        category: response.data.category || [],
-      
-        category_monthly:
-          response.data.category_monthly || [],
-      
-        products:
-          response.data.products || [],
-      
-        product_intelligence:
-          response.data.product_intelligence || {
-            best_sellers: [],
-            underperforming: [],
-            never_ordered: [],
-          },
-      
-        retailers:
-          response.data.retailers || [],
-      
-        metal:
-          response.data.metal || [],
-      
-        purity:
-          response.data.purity || [],
-      
-        gold_colour:
-          response.data.gold_colour || [],
-      
-        stone:
-          response.data.stone || [],
-      
-        status:
-          response.data.status || {},
-      
-        due_dates:
-          response.data.due_dates || {},
-      
-        filters:
-          response.data.filters || {},
-      });
+      setAnalysisData(response.data || {});
   
     } catch (error) {
       console.error(
@@ -5051,2744 +4997,1114 @@ Close
 
 <TabsContent value="analysis">
 
-  <div className="space-y-6">
+  <div className="space-y-4">
 
-    {/* =====================================================
-        AUTOMATIC BUSINESS INSIGHTS
-    ===================================================== */}
-    <div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mb-6">
-      <div className="mb-5">
-        <h3 className="font-semibold text-lg">Automatic Business Insights</h3>
-        <p className="text-sm text-gray-500 mt-1">Key observations from your current analysis</p>
-      </div>
-      {automaticInsights.length === 0 ? (
-        <p className="text-sm text-gray-500">No automatic insights available for the selected filters.</p>
-      ) : (
-        <div className="space-y-3">
-          {automaticInsights.map((insight, index) => (
-            <div key={`insight-${index}`} className="flex items-start gap-3 border border-gray-100 rounded-lg p-4">
-              <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${insight.type === "positive" ? "bg-green-500" : insight.type === "warning" ? "bg-red-500" : "bg-blue-500"}`} />
-              <p className="text-sm text-gray-700 leading-6">{insight.text}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    {/* ============================================================
+        HEADER  +  FILTERS  +  EXPORT
+    ============================================================ */}
 
+    <div className="bg-white border border-[#E5E7EB] rounded-lg">
 
-    {/* HEADER */}
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-      <div>
-        <h2 className="text-2xl font-heading font-semibold text-[#0A0A0A]">
-          WhatsApp Order Analysis
-        </h2>
-
-        <p className="text-sm text-[#4B5563] font-body mt-1">
-          Analyse order trends, customers, products and production status.
-        </p>
-      </div>
-
-
-      {/* DATE FILTER */}
-      <div className="flex flex-wrap gap-2">
-      <select
-  value={analysisChannel}
-  onChange={(e) => setAnalysisChannel(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">Combined</option>
-  <option value="website">Website</option>
-  <option value="whatsapp">WhatsApp</option>
-</select>
-
-<select
-  value={analysisRetailer}
-  onChange={(e) => setAnalysisRetailer(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Retailers</option>
-
-  {(analysisData?.retailers || []).map((retailer) => (
-    <option
-      key={retailer.retailer_id || retailer.retailer_name}
-      value={retailer.retailer_id || retailer.retailer_name}
-    >
-      {retailer.retailer_name || "Unknown"}
-    </option>
-  ))}
-</select>
-
-
-<select
-  value={analysisCategory}
-  onChange={(e) => setAnalysisCategory(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Categories</option>
-
-  {(analysisData?.categories || []).map((category) => {
-    const categoryName =
-      typeof category === "string"
-        ? category
-        : category.category;
-
-    return (
-      <option
-        key={categoryName}
-        value={categoryName}
-      >
-        {categoryName}
-      </option>
-    );
-  })}
-</select>
-
-<select
-  value={analysisProduct}
-  onChange={(e) => setAnalysisProduct(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Products / Designs</option>
-
-  {(analysisData?.products || []).map((product) => {
-    const productId =
-      product.product_id ||
-      product.id ||
-      product.design_number ||
-      product.product_number;
-
-    const productName =
-      product.design_number ||
-      product.product_number ||
-      product.name ||
-      product.product_name ||
-      productId;
-
-    return (
-      <option
-        key={productId}
-        value={productId}
-      >
-        {productName}
-      </option>
-    );
-  })}
-</select>
-
-<select
-  value={analysisOrderType}
-  onChange={(e) => setAnalysisOrderType(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">Custom + Stock</option>
-  <option value="custom">Custom</option>
-  <option value="stock">Stock</option>
-</select>
-
-<select
-  value={analysisMetal}
-  onChange={(e) => setAnalysisMetal(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Metals</option>
-  <option value="gold">Gold</option>
-  <option value="platinum">Platinum</option>
-  <option value="gold_platinum">Gold + Platinum</option>
-</select>
-
-<select
-  value={analysisPurity}
-  onChange={(e) => setAnalysisPurity(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Purity</option>
-  <option value="24K">24K</option>
-  <option value="22K">22K</option>
-  <option value="18K">18K</option>
-  <option value="14K">14K</option>
-  <option value="9K">9K</option>
-</select>
-
-<select
-  value={analysisStone}
-  onChange={(e) => setAnalysisStone(e.target.value)}
-  className="border border-[#E5E7EB] rounded-md px-3 py-2 bg-white text-sm"
->
-  <option value="all">All Stones</option>
-  <option value="Natural Diamond">Natural Diamond</option>
-  <option value="Lab Grown">Lab Grown</option>
-  <option value="CZ">CZ</option>
-  <option value="Colour Stones">Colour Stones</option>
-  <option value="Precious Stones">Precious Stones</option>
-</select>
-
-      <div className="flex items-center gap-2">
-  <span className="text-sm text-[#4B5563]">
-    From
-  </span>
-
-  <input
-    type="date"
-    value={analysisFromDate}
-    onChange={(e) => setAnalysisFromDate(e.target.value)}
-    className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white"
-  />
-
-  <span className="text-sm text-[#4B5563]">
-    To
-  </span>
-
-  <input
-    type="date"
-    value={analysisToDate}
-    onChange={(e) => setAnalysisToDate(e.target.value)}
-    className="border border-[#E5E7EB] rounded-md px-3 py-2 text-sm bg-white"
-  />
-</div>
-
-<button
-  onClick={loadWhatsappAnalysis}
-  className="bg-[#359E58] hover:bg-[#2e884c] text-white px-4 py-2 rounded-md text-sm"
->
-  Refresh
-</button>
-
-      </div>
-
-    </div>
-
-
-    {/* =================================================
-        KPI CARDS
-    ================================================= */}
-
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-  <p className="text-sm text-[#6B7280]">Total Orders</p>
-  <p className="text-2xl font-semibold text-[#111827] mt-1">
-    {analysisData?.overview?.total_orders || 0}
-  </p>
-</div>
-
-<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-  <p className="text-sm text-[#6B7280]">Website Orders</p>
-  <p className="text-2xl font-semibold text-[#111827] mt-1">
-    {analysisData?.overview?.website_orders || 0}
-  </p>
-</div>
-
-<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-  <p className="text-sm text-[#6B7280]">WhatsApp Orders</p>
-  <p className="text-2xl font-semibold text-[#111827] mt-1">
-    {analysisData?.overview?.whatsapp_orders || 0}
-  </p>
-</div>
-
-<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-  <p className="text-sm text-[#6B7280]">Total Products</p>
-  <p className="text-2xl font-semibold text-[#111827] mt-1">
-    {analysisData?.overview?.total_products || 0}
-  </p>
-</div>
-
-<div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
-  <p className="text-sm text-[#6B7280]">Average Orders/Day</p>
-  <p className="text-2xl font-semibold text-[#111827] mt-1">
-    {analysisData?.overview?.average_orders_per_day || 0}
-  </p>
-</div>
-
-</div>
-
-
-    {/* =================================================
-        ORDER TYPE
-    ================================================= */}
-
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Order Type
-        </h3>
-
-        <div className="space-y-5">
-
-          <div>
-            <div className="flex justify-between text-sm mb-2">
-              <span>Custom Jewellery</span>
-              <span className="font-semibold">
-                {analysisCustomOrders}
-              </span>
-            </div>
-
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#359E58] rounded-full"
-                style={{
-                  width: `${
-                    analysisTotalOrders
-                      ? (analysisCustomOrders / analysisTotalOrders) * 100
-                      : 0
-                  }%`
-                }}
-              />
-            </div>
-          </div>
-
-
-          <div>
-            <div className="flex justify-between text-sm mb-2">
-              <span>Catalogue</span>
-              <span className="font-semibold">
-                {analysisCatalogueOrders}
-              </span>
-            </div>
-
-            <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gray-700 rounded-full"
-                style={{
-                  width: `${
-                    analysisTotalOrders
-                      ? (analysisCatalogueOrders / analysisTotalOrders) * 100
-                      : 0
-                  }%`
-                }}
-              />
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-
-      {/* STATUS */}
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Orders by Status
-        </h3>
-
-        <div className="space-y-4">
-
-          {analysisByStatus.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No order data available.
-            </p>
-          )}
-
-          {analysisByStatus.map((item) => (
-
-            <div key={item.name}>
-
-              <div className="flex justify-between text-sm mb-1">
-                <span>{item.name}</span>
-                <span className="font-semibold">
-                  {item.count}
-                </span>
-              </div>
-
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-
-                <div
-                  className="h-full bg-[#359E58] rounded-full"
-                  style={{
-                    width: `${
-                      (item.count / maxAnalysisStatusCount) * 100
-                    }%`
-                  }}
-                />
-
-              </div>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    {/* =================================================
-        DAILY TREND
-    ================================================= */}
-
-    <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
 
         <div>
-          <h3 className="font-semibold text-lg">
-            Order Trend
-          </h3>
-
-          <p className="text-xs text-gray-500 mt-1">
-            Last 14 order dates in the selected period
+          <h2 className="font-heading font-semibold text-lg text-[#0A0A0A]">
+            Business Analysis
+          </h2>
+          <p className="text-xs text-gray-500">
+            {analysisFromDate || analysisToDate
+              ? `${analysisFromDate || "start"} to ${analysisToDate || "today"}`
+              : "All time"}
+            {" · "}
+            {analysisChannel === "all" ? "Website + WhatsApp" : analysisChannel}
           </p>
         </div>
 
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
 
+          <button
+            type="button"
+            onClick={() => setShowAnalysisFilters(!showAnalysisFilters)}
+            className="border border-gray-200 rounded-md px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Filters {showAnalysisFilters ? "▲" : "▼"}
+          </button>
 
-      {analysisByDate.length === 0 ? (
+          <button
+            type="button"
+            onClick={exportAnalysisCSV}
+            className="border border-gray-200 rounded-md px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            CSV
+          </button>
 
-        <div className="py-12 text-center text-sm text-gray-500">
-          No order data available for this period.
-        </div>
+          <button
+            type="button"
+            onClick={exportAnalysisExcel}
+            className="border border-gray-200 rounded-md px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            Excel
+          </button>
 
-      ) : (
+          <button
+            type="button"
+            onClick={exportAnalysisPDF}
+            className="border border-gray-200 rounded-md px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
+            PDF
+          </button>
 
-        <div className="flex items-end gap-3 h-64 overflow-x-auto">
-
-          {analysisByDate.map((item) => {
-
-            const height =
-              (item.count / maxAnalysisDateCount) * 100;
-
-            return (
-
-              <div
-                key={item.date}
-                className="flex flex-col items-center justify-end min-w-[55px] h-full"
-              >
-
-                <span className="text-xs font-semibold mb-2">
-                  {item.count}
-                </span>
-
-                <div
-                  className="w-8 bg-[#359E58] rounded-t-md transition-all"
-                  style={{
-                    height: `${Math.max(height, 5)}%`
-                  }}
-                />
-
-                <span className="text-[10px] text-gray-500 mt-2 whitespace-nowrap">
-                  {item.date.slice(5)}
-                </span>
-
-              </div>
-
-            );
-
-          })}
+          <button
+            type="button"
+            onClick={loadWhatsappAnalysis}
+            className="bg-[#359E58] hover:bg-[#2e884c] text-white px-3 py-1.5 rounded-md text-sm"
+          >
+            Refresh
+          </button>
 
         </div>
 
-      )}
-
-    </div>
-
-
-    {/* =================================================
-        PRODUCT CATEGORY + CUSTOMER
-    ================================================= */}
-
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-
-    {/* =====================================================
-    PRODUCT CATALOGUE INTELLIGENCE
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-<div className="mb-6">
-  <h3 className="font-semibold text-lg">
-    Product Catalogue Intelligence
-  </h3>
-
-  <p className="text-sm text-gray-500 mt-1">
-    Best sellers, underperforming and never-ordered designs
-  </p>
-</div>
-
-{/* PRODUCT PERFORMANCE BAR CHART */}
-
-{analysisByProducts?.length > 0 && (
-  <div className="mb-8">
-
-    <div className="mb-4">
-      <h4 className="font-semibold text-base">
-        Product / Design Orders
-      </h4>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Order volume across the catalogue
-      </p>
-    </div>
-
-    <div className="w-full h-[380px]">
-
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-      >
-
-        <BarChart
-          data={[...analysisByProducts]
-            .sort(
-              (a, b) =>
-                Number(
-                  b?.orders ||
-                  b?.order_count ||
-                  b?.count ||
-                  0
-                ) -
-                Number(
-                  a?.orders ||
-                  a?.order_count ||
-                  a?.count ||
-                  0
-                )
-            )
-            .slice(0, 15)
-            .map((item) => ({
-              name:
-                item?.design_number ||
-                item?.product_number ||
-                item?.product_id ||
-                item?.name ||
-                "Unknown",
-
-              orders: Number(
-                item?.orders ||
-                item?.order_count ||
-                item?.count ||
-                0
-              ),
-            }))}
-
-          layout="vertical"
-
-          margin={{
-            top: 10,
-            right: 20,
-            left: 20,
-            bottom: 10,
-          }}
-        >
-
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis
-            type="number"
-            allowDecimals={false}
-          />
-
-          <YAxis
-            type="category"
-            dataKey="name"
-            width={100}
-            tick={{ fontSize: 11 }}
-          />
-
-          <Tooltip />
-
-          <Bar
-            dataKey="orders"
-            name="Orders"
-            radius={[0, 4, 4, 0]}
-          />
-
-        </BarChart>
-
-      </ResponsiveContainer>
-
-    </div>
-
-  </div>
-)}
-
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-  {/* BEST SELLERS */}
-
-  <div className="border border-gray-100 rounded-xl p-5">
-
-    <h4 className="font-semibold text-base mb-4">
-      Best Sellers
-    </h4>
-
-    {analysisProductIntelligence.best_sellers?.length === 0 ? (
-
-      <p className="text-sm text-gray-500">
-        No best-selling products found.
-      </p>
-
-    ) : (
-
-      <div className="space-y-3">
-
-        {analysisProductIntelligence.best_sellers.map(
-          (product, index) => {
-
-            const productName =
-              product.design_number ||
-              product.product_number ||
-              product.product_name ||
-              product.name ||
-              product.product_id ||
-              "Unknown";
-
-            const category =
-              product.category ||
-              product.product_category ||
-              "—";
-
-            const orders =
-              Number(
-                product.orders ||
-                product.order_count ||
-                product.count ||
-                0
-              );
-
-            return (
-              <div
-                key={`best-${productName}-${index}`}
-                className="flex items-center justify-between gap-3"
-              >
-
-                <div className="min-w-0">
-
-                  <p className="text-sm font-medium truncate">
-                    {productName}
-                  </p>
-
-                  <p className="text-xs text-gray-500 truncate">
-                    {category}
-                  </p>
-
-                </div>
-
-                <span className="text-sm font-semibold shrink-0">
-                  {orders}
-                </span>
-
-              </div>
-            );
-
-          }
-        )}
-
       </div>
 
-    )}
-
-  </div>
-{/* UNDERPERFORMING */}
-
-  <div className="border border-gray-100 rounded-xl p-5">
-
-    <h4 className="font-semibold text-base mb-4">
-      Underperforming
-    </h4>
-
-    {analysisProductIntelligence.underperforming?.length === 0 ? (
-
-      <p className="text-sm text-gray-500">
-        No underperforming products found.
-      </p>
-
-    ) : (
-
-      <div className="space-y-3">
-
-        {analysisProductIntelligence.underperforming.map(
-          (product, index) => {
-
-            const productName =
-              product.design_number ||
-              product.product_number ||
-              product.product_name ||
-              product.name ||
-              product.product_id ||
-              "Unknown";
-
-            const category =
-              product.category ||
-              product.product_category ||
-              "—";
-
-            const orders =
-              Number(
-                product.orders ||
-                product.order_count ||
-                product.count ||
-                0
-              );
-
-            return (
-              <div
-                key={`under-${productName}-${index}`}
-                className="flex items-center justify-between gap-3"
-              >
-
-                <div className="min-w-0">
-
-                  <p className="text-sm font-medium truncate">
-                    {productName}
-                  </p>
-
-                  <p className="text-xs text-gray-500 truncate">
-                    {category}
-                  </p>
-
-                </div>
-
-                <span className="text-sm font-semibold shrink-0">
-                  {orders}
-                </span>
-
-              </div>
-            );
-
-          }
-        )}
-
-      </div>
-
-    )}
-
-  </div>
-
-
-  {/* NEVER ORDERED */}
-
-  <div className="border border-gray-100 rounded-xl p-5">
-
-    <h4 className="font-semibold text-base mb-4">
-      Never Ordered
-    </h4>
-
-    {analysisProductIntelligence.never_ordered?.length === 0 ? (
-
-      <p className="text-sm text-gray-500">
-        No never-ordered products found.
-      </p>
-
-    ) : (
-
-      <div className="space-y-3">
-
-        {analysisProductIntelligence.never_ordered.map(
-          (product, index) => {
-
-            const productName =
-              product.design_number ||
-              product.product_number ||
-              product.product_name ||
-              product.name ||
-              product.product_id ||
-              "Unknown";
-
-            const category =
-              product.category ||
-              product.product_category ||
-              "—";
-
-            return (
-              <div
-                key={`never-${productName}-${index}`}
-                className="flex items-center justify-between gap-3"
-              >
-
-                <div className="min-w-0">
-
-                  <p className="text-sm font-medium truncate">
-                    {productName}
-                  </p>
-
-                  <p className="text-xs text-gray-500 truncate">
-                    {category}
-                  </p>
-
-                </div>
-
-                <span className="text-xs font-medium text-gray-500 shrink-0">
-                  0 orders
-                </span>
-
-              </div>
-            );
-
-          }
-        )}
-
-      </div>
-
-    )}
-
-  </div>
-
-</div>
-
-
-  {/* FULL PRODUCT CATALOGUE */}
-{/* =====================================================
-    FULL PRODUCT CATALOGUE
-===================================================== */}
-
-<div className="mt-8">
-
-<div className="flex items-center justify-between mb-4">
-  <div>
-    <h4 className="font-semibold text-base">
-      Full Product Catalogue
-    </h4>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Complete catalogue performance
-    </p>
-  </div>
-
-  <span className="text-sm text-gray-500">
-    {analysisByProducts.length} products
-  </span>
-</div>
-
-<select
-  value={productPerformanceSort}
-  onChange={(e) =>
-    setProductPerformanceSort(e.target.value)
-  }
-  className="border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
->
-  <option value="orders_desc">
-    Highest Orders
-  </option>
-
-  <option value="orders_asc">
-    Lowest Orders
-  </option>
-
-  <option value="name_asc">
-    Product / Design
-  </option>
-</select>
-
-{analysisByProducts.length === 0 ? (
-
-  <p className="text-sm text-gray-500 py-6">
-    No product data available.
-  </p>
-
-) : (
-
-  <div className="overflow-x-auto border border-gray-100 rounded-xl">
-
-    <table className="w-full text-sm">
-
-      <thead className="bg-gray-50 border-b border-gray-100">
-
-        <tr>
-
-          <th className="text-left px-4 py-3 font-semibold">
-            Product / Design
-          </th>
-
-          <th className="text-left px-4 py-3 font-semibold">
-            Category
-          </th>
-
-          <th className="text-right px-4 py-3 font-semibold">
-            Orders
-          </th>
-
-        </tr>
-
-      </thead>
-
-      <tbody className="divide-y divide-gray-100">
-
-      {[...analysisByProducts]
-  .sort((a, b) => {
-
-    const aName =
-      a.design_number ||
-      a.product_number ||
-      a.product_name ||
-      a.name ||
-      a.product_id ||
-      "";
-
-    const bName =
-      b.design_number ||
-      b.product_number ||
-      b.product_name ||
-      b.name ||
-      b.product_id ||
-      "";
-
-    const aOrders =
-      Number(
-        a.orders ||
-        a.order_count ||
-        a.count ||
-        0
-      );
-
-    const bOrders =
-      Number(
-        b.orders ||
-        b.order_count ||
-        b.count ||
-        0
-      );
-
-    if (productPerformanceSort === "orders_asc") {
-      return aOrders - bOrders;
-    }
-
-    if (productPerformanceSort === "name_asc") {
-      return aName.localeCompare(bName);
-    }
-
-    return bOrders - aOrders;
-  })
-  .map((product, index) => {
-
-          const productName =
-            product.design_number ||
-            product.product_number ||
-            product.product_name ||
-            product.name ||
-            product.product_id ||
-            "Unknown";
-
-          const category =
-            product.category ||
-            product.product_category ||
-            "—";
-
-          const orders =
-            Number(
-              product.orders ||
-              product.order_count ||
-              product.count ||
-              0
-            );
-
-          return (
-
-            <tr
-  key={`catalogue-${productName}-${index}`}
-  onClick={() => {
-    const productId =
-      product.product_id ||
-      product.id ||
-      product.design_number ||
-      product.product_number;
-
-    if (productId) {
-      setAnalysisProduct(String(productId));
-    }
-  }}
-  className="hover:bg-gray-50 cursor-pointer"
->
-
-              <td className="px-4 py-3 font-medium">
-                {productName}
-              </td>
-
-              <td className="px-4 py-3 text-gray-600">
-                {category}
-              </td>
-
-              <td className="px-4 py-3 text-right font-semibold">
-                {orders}
-              </td>
-
-            </tr>
-
-          );
-
-        })}
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-)}
-
-</div>
-
-</div>
-
-{/* =====================================================
-    CATEGORY PERFORMANCE
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-<div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
-
-  <div>
-    <h3 className="font-semibold text-lg">
-      Category Performance
-    </h3>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Orders, share and monthly category growth
-    </p>
-  </div>
-
-  <div className="text-sm text-gray-500">
-    Combined Orders:{" "}
-    <span className="font-semibold text-gray-900">
-      {analysisData?.overview?.combined_orders ?? 0}
-    </span>
-  </div>
-
-</div>
-
-
-{/* CATEGORY SUMMARY */}
-
-{analysisByCategory.length === 0 ? (
-
-  <p className="text-sm text-gray-500">
-    No category data available.
-  </p>
-
-) : (
-
-  <div className="space-y-4">
-
-    {analysisByCategory.map((item) => {
-
-      const orderPercentage =
-        Number(item.percentage || 0);
-
-      const orderCount =
-        Number(item.count || 0);
-
-      return (
-
-        <div
-          key={item.name}
-          className="border border-gray-100 rounded-lg p-4"
-        >
-
-          <div className="flex items-center justify-between gap-4 mb-2">
-
-            <div className="min-w-0">
-
-              <p className="font-medium text-sm truncate">
-                {item.name}
-              </p>
-
-              <p className="text-xs text-gray-500 mt-1">
-                {orderPercentage.toFixed(1)}% of orders
-              </p>
-
-            </div>
-
-            <div className="text-right shrink-0">
-
-              <p className="font-semibold text-sm">
-                {orderCount}
-              </p>
-
-              <p className="text-xs text-gray-500">
-                orders
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* ORDER SHARE BAR */}
-
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-
-            <div
-              className="h-full bg-[#359E58] rounded-full transition-all"
-              style={{
-                width: `${Math.min(
-                  Math.max(orderPercentage, 0),
-                  100
-                )}%`
-              }}
+      {showAnalysisFilters && (
+
+        <div className="border-t border-[#E5E7EB] px-4 py-3">
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+
+            <select
+              value={analysisChannel}
+              onChange={(e) => setAnalysisChannel(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">Website + WhatsApp</option>
+              <option value="website">Website only</option>
+              <option value="whatsapp">WhatsApp only</option>
+            </select>
+
+            <select
+              value={analysisRetailer}
+              onChange={(e) => setAnalysisRetailer(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Retailers</option>
+              {(analysisData?.retailers || []).map((r) => (
+                <option
+                  key={r.retailer_id || r.retailer_name}
+                  value={r.retailer_id || r.retailer_name}
+                >
+                  {r.retailer_name || "Unknown"}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={analysisCategory}
+              onChange={(e) => setAnalysisCategory(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Categories</option>
+              {(analysisData?.categories || []).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
+            <select
+              value={analysisProduct}
+              onChange={(e) => setAnalysisProduct(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Designs</option>
+              {(analysisData?.products || []).map((p) => {
+                const id = p.product_id || p.design_number;
+                return (
+                  <option key={id} value={id}>
+                    {p.design_number || p.product_id}
+                  </option>
+                );
+              })}
+            </select>
+
+            <select
+              value={analysisOrderType}
+              onChange={(e) => setAnalysisOrderType(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">Custom + Stock</option>
+              <option value="custom">Custom only</option>
+              <option value="stock">Stock only</option>
+            </select>
+
+            <select
+              value={analysisMetal}
+              onChange={(e) => setAnalysisMetal(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Metals</option>
+              <option value="gold">Gold</option>
+              <option value="platinum">Platinum</option>
+              <option value="gold_platinum">Gold + Platinum</option>
+            </select>
+
+            <select
+              value={analysisPurity}
+              onChange={(e) => setAnalysisPurity(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Purity</option>
+              <option value="24kt">24KT</option>
+              <option value="22kt">22KT</option>
+              <option value="18kt">18KT</option>
+              <option value="14kt">14KT</option>
+              <option value="9kt">9KT</option>
+            </select>
+
+            <select
+              value={analysisStone}
+              onChange={(e) => setAnalysisStone(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 bg-white text-sm"
+            >
+              <option value="all">All Stones</option>
+              <option value="Natural Diamond">Natural Diamond</option>
+              <option value="Lab Grown Diamond">Lab Grown Diamond</option>
+              <option value="CZ">CZ</option>
+              <option value="Colour Stone">Colour Stone</option>
+              <option value="Precious Stone">Precious Stone</option>
+            </select>
+
+            <input
+              type="date"
+              value={analysisFromDate}
+              onChange={(e) => setAnalysisFromDate(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 text-sm bg-white"
+            />
+
+            <input
+              type="date"
+              value={analysisToDate}
+              onChange={(e) => setAnalysisToDate(e.target.value)}
+              className="border border-gray-200 rounded-md px-2 py-1.5 text-sm bg-white"
             />
 
           </div>
 
-        </div>
-
-      );
-
-    })}
-
-  </div>
-
-)}
-
-</div>
-
-{/* CATEGORY PERFORMANCE LINE CHART */}
-
-{categoryMonthlyChartData.length > 0 && (
-  <div className="mb-8">
-
-    <div className="mb-4">
-      <h4 className="font-semibold text-base">
-        Category Orders Over Time
-      </h4>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Monthly order performance by category
-      </p>
-
-
-      <div className="flex flex-wrap gap-2 mt-4">
-
-        <button
-  type="button"
-  onClick={() => setSelectedAnalysisCategories([])}
-  className="px-3 py-1.5 rounded-full text-xs font-medium border border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-400 transition"
->
-  Clear
-</button>
-
-{analysisByCategory.map((categoryItem) => {
-
-  const categoryName =
-    categoryItem?.name;
-
-  if (!categoryName) {
-    return null;
-  }
-
-  const isSelected =
-    selectedAnalysisCategories.includes(
-      categoryName
-    );
-
-  return (
-    <button
-      key={categoryName}
-      type="button"
-      onClick={() => {
-        setSelectedAnalysisCategories((current) => {
-
-          if (current.includes(categoryName)) {
-            return current.filter(
-              (name) => name !== categoryName
-            );
-          }
-
-          return [
-            ...current,
-            categoryName
-          ];
-        });
-      }}
-      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${
-        isSelected
-          ? "bg-gray-900 text-white border-gray-900"
-          : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
-      }`}
-    >
-      {categoryName}
-    </button>
-  );
-})}
-
-</div>
-    </div>
-
-    <div className="w-full h-[380px]">
-
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-      >
-
-        <LineChart
-          data={categoryMonthlyChartData}
-          margin={{
-            top: 10,
-            right: 20,
-            left: 0,
-            bottom: 10,
-          }}
-        >
-
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis
-            dataKey="month"
-            tick={{ fontSize: 12 }}
-          />
-
-          <YAxis
-            allowDecimals={false}
-            tick={{ fontSize: 12 }}
-          />
-
-          <Tooltip />
-
-          <Legend />
-
-          {analysisByCategory
-  .filter((categoryItem) => {
-    const categoryName =
-      categoryItem?.name;
-
-    return (
-      categoryName &&
-      (
-        selectedAnalysisCategories.length === 0 ||
-        selectedAnalysisCategories.includes(categoryName)
-      )
-    );
-  })
-  .map((categoryItem) => {
-
-    const categoryName =
-      categoryItem?.name;
-
-    return (
-      <Line
-        key={categoryName}
-        type="monotone"
-        dataKey={categoryName}
-        strokeWidth={2}
-        dot={{ r: 3 }}
-        activeDot={{ r: 5 }}
-      />
-    );
-  })}
-
-        </LineChart>
-
-      </ResponsiveContainer>
-
-    </div>
-
-  </div>
-)}
-
-
-{/* =====================================================
-    MONTHLY CATEGORY PERFORMANCE
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-  <div className="mb-6">
-    <h3 className="font-semibold text-lg">
-      Monthly Category Performance
-    </h3>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Month-by-month orders and growth / decline by category
-    </p>
-  </div>
-
-  {analysisByCategoryMonthly.length === 0 ? (
-
-    <p className="text-sm text-gray-500">
-      No monthly category data available.
-    </p>
-
-  ) : (
-
-    <div className="space-y-6">
-
-      {analysisByCategoryMonthly.map((monthData) => {
-
-        const month =
-          monthData?.month || "";
-
-        const categories =
-          monthData?.categories || {};
-
-        const categoryEntries =
-          Object.entries(categories);
-
-        return (
-
-          <div
-            key={month}
-            className="border border-gray-100 rounded-xl overflow-hidden"
+          <button
+            type="button"
+            onClick={() => {
+              setAnalysisChannel("all");
+              setAnalysisRetailer("all");
+              setAnalysisCategory("all");
+              setAnalysisProduct("all");
+              setAnalysisOrderType("all");
+              setAnalysisMetal("all");
+              setAnalysisPurity("all");
+              setAnalysisStone("all");
+              setAnalysisFromDate("");
+              setAnalysisToDate("");
+            }}
+            className="mt-2 text-xs text-gray-500 hover:text-[#359E58]"
           >
-
-            {/* MONTH HEADER */}
-
-            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between">
-
-              <p className="font-semibold text-sm text-gray-900">
-                {month}
-              </p>
-
-              <p className="text-xs text-gray-500">
-                {categoryEntries.length} categories
-              </p>
-
-            </div>
-
-
-            {/* CATEGORY ROWS */}
-
-            <div className="divide-y divide-gray-100">
-
-              {categoryEntries.length === 0 ? (
-
-                <div className="px-4 py-4 text-sm text-gray-500">
-                  No category orders this month.
-                </div>
-
-              ) : (
-
-                categoryEntries.map(
-                  ([categoryName, categoryInfo]) => {
-
-                    const orders =
-                      Number(
-                        categoryInfo?.orders || 0
-                      );
-
-                    const growth =
-                      Number(
-                        categoryInfo?.growth_percentage || 0
-                      );
-
-                    const status =
-                      categoryInfo?.growth_status ||
-                      "unchanged";
-
-                    return (
-
-                      <div
-                        key={`${month}-${categoryName}`}
-                        className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-3"
-                      >
-
-                        {/* CATEGORY */}
-
-                        <div className="flex-1 min-w-0">
-
-                          <p className="text-sm font-medium truncate">
-                            {categoryName}
-                          </p>
-
-                        </div>
-
-
-                        {/* ORDERS */}
-
-                        <div className="md:w-24">
-
-                          <p className="text-sm font-semibold">
-                            {orders}
-                          </p>
-
-                          <p className="text-xs text-gray-500">
-                            orders
-                          </p>
-
-                        </div>
-
-
-                        {/* GROWTH */}
-
-                        <div className="md:w-32">
-
-                          {status === "growth" ? (
-
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                              ↑ {growth.toFixed(1)}%
-                            </span>
-
-                          ) : status === "decline" ? (
-
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
-                              ↓ {Math.abs(growth).toFixed(1)}%
-                            </span>
-
-                          ) : status === "new" ? (
-
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                              New
-                            </span>
-
-                          ) : (
-
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-600">
-                              — 0%
-                            </span>
-
-                          )}
-
-                        </div>
-
-                      </div>
-
-                    );
-
-                  }
-                )
-
-              )}
-
-            </div>
-
-          </div>
-
-        );
-
-      })}
-
-    </div>
-
-  )}
-
-</div>
-
-
-      {/* TOP CUSTOMERS */}
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Top Customers
-        </h3>
-
-        <div className="space-y-4">
-
-          {analysisByCustomer.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No customer data available.
-            </p>
-          )}
-
-          {analysisByCustomer.map((item, index) => (
-
-            <div
-              key={item.name}
-              className="flex items-center gap-3"
-            >
-
-              <div className="w-7 h-7 rounded-full bg-[#359E58]/10 text-[#359E58] flex items-center justify-center text-xs font-semibold">
-                {index + 1}
-              </div>
-
-              <div className="flex-1 min-w-0">
-
-                <div className="flex justify-between text-sm mb-1">
-
-                  <span className="truncate">
-                    {item.name}
-                  </span>
-
-                  <span className="font-semibold ml-2">
-                    {item.count}
-                  </span>
-
-                </div>
-
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-
-                  <div
-                    className="h-full bg-[#359E58] rounded-full"
-                    style={{
-                      width: `${
-                        (item.count / maxAnalysisCustomerCount) * 100
-                      }%`
-                    }}
-                  />
-
-                </div>
-
-              </div>
-
-            </div>
-
-          ))}
+            Clear all filters
+          </button>
 
         </div>
-
-      </div>
-
-    </div>
-
-
-
-
-{/* =====================================================
-    RETAILER ANALYSIS
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-<div className="mb-6">
-  <h3 className="font-semibold text-lg">
-    Retailer Analysis
-  </h3>
-
-  <p className="text-sm text-gray-500 mt-1">
-    Understand who is buying what
-  </p>
-
-  <div className="flex items-center justify-between mt-4">
-  <span className="text-xs text-gray-500">
-    Sort retailers by
-  </span>
-
-  <select
-    value={retailerAnalysisSort}
-    onChange={(e) =>
-      setRetailerAnalysisSort(e.target.value)
-    }
-    className="border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
-  >
-    <option value="orders_desc">
-      Highest Orders
-    </option>
-
-    <option value="orders_asc">
-      Lowest Orders
-    </option>
-
-    <option value="name_asc">
-      Retailer Name
-    </option>
-  </select>
-</div>
-</div>
-
-{/* RETAILER ORDER VOLUME BAR CHART */}
-
-{analysisByRetailer?.length > 0 && (
-  <div className="mb-8">
-
-    <div className="mb-4">
-      <h4 className="font-semibold text-base">
-        Retailer Order Volume
-      </h4>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Total orders by retailer, split by Custom and Stock
-      </p>
-    </div>
-
-    <div className="w-full h-[380px]">
-
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-      >
-
-        <BarChart
-          layout="vertical"
-          data={[...(analysisByRetailer || [])]
-            .sort(
-              (a, b) =>
-                Number(b?.total_orders || 0) -
-                Number(a?.total_orders || 0)
-            )
-            .slice(0, 15)
-            .map((retailer) => ({
-              name:
-                retailer?.retailer_name ||
-                retailer?.name ||
-                "Unknown Retailer",
-
-              custom: Number(
-                retailer?.custom_orders || 0
-              ),
-
-              stock: Number(
-                retailer?.stock_orders || 0
-              ),
-
-              total: Number(
-                retailer?.total_orders || 0
-              ),
-            }))}
-
-          margin={{
-            top: 10,
-            right: 20,
-            left: 20,
-            bottom: 10,
-          }}
-        >
-
-          <CartesianGrid
-            strokeDasharray="3 3"
-          />
-
-          <XAxis
-            type="number"
-            allowDecimals={false}
-          />
-
-          <YAxis
-            type="category"
-            dataKey="name"
-            width={120}
-            tick={{ fontSize: 11 }}
-          />
-
-          <Tooltip />
-
-          <Legend />
-
-          <Bar
-            dataKey="custom"
-            name="Custom Orders"
-            stackId="orders"
-          />
-
-          <Bar
-            dataKey="stock"
-            name="Stock Orders"
-            stackId="orders"
-          />
-
-        </BarChart>
-
-      </ResponsiveContainer>
+      )}
 
     </div>
 
-  </div>
-)}
 
-{analysisByRetailer.length === 0 ? (
+    {/* ============================================================
+        KPI STRIP
+    ============================================================ */}
 
-  <p className="text-sm text-gray-500">
-    No retailer data available.
-  </p>
-
-) : (
-
-  <div className="overflow-x-auto border border-gray-100 rounded-xl">
-
-    <table className="w-full text-sm">
-
-      <thead className="bg-gray-50 border-b border-gray-100">
-
-        <tr>
-
-          <th className="text-left px-4 py-3 font-semibold">
-            Retailer
-          </th>
-
-          <th className="text-right px-4 py-3 font-semibold">
-            Total Orders
-          </th>
-
-          <th className="text-right px-4 py-3 font-semibold">
-            Custom
-          </th>
-
-          <th className="text-right px-4 py-3 font-semibold">
-            Stock
-          </th>
-
-          <th className="text-left px-4 py-3 font-semibold">
-            Top Categories
-          </th>
-
-        </tr>
-
-      </thead>
-
-      <tbody className="divide-y divide-gray-100">
-
-      {[...analysisByRetailer]
-  .sort((a, b) => {
-
-    const aName =
-      a.retailer_name ||
-      a.name ||
-      "";
-
-    const bName =
-      b.retailer_name ||
-      b.name ||
-      "";
-
-    const aOrders =
-      Number(a.total_orders || 0);
-
-    const bOrders =
-      Number(b.total_orders || 0);
-
-    if (retailerAnalysisSort === "orders_asc") {
-      return aOrders - bOrders;
-    }
-
-    if (retailerAnalysisSort === "name_asc") {
-      return aName.localeCompare(bName);
-    }
-
-    return bOrders - aOrders;
-  })
-  .map((retailer, index) => {
-
-          const retailerName =
-            retailer.retailer_name ||
-            retailer.name ||
-            "Unknown Retailer";
-
-          const totalOrders =
-            Number(retailer.total_orders || 0);
-
-          const customOrders =
-            Number(retailer.custom_orders || 0);
-
-          const stockOrders =
-            Number(retailer.stock_orders || 0);
-
-          const categories =
-            retailer.categories || {};
-
-          const topCategories =
-            Object.entries(categories)
-              .sort((a, b) => Number(b[1]) - Number(a[1]))
-              .slice(0, 3);
-
-              return (
-                <>
-                  <tr
-                    key={`retailer-${retailer.retailer_id || retailerName}-${index}`}
-                    onClick={() =>
-                      setExpandedAnalysisRetailer(
-                        expandedAnalysisRetailer ===
-                          (retailer.retailer_id || retailerName)
-                          ? null
-                          : (retailer.retailer_id || retailerName)
-                      )
-                    }
-                    className="hover:bg-gray-50 cursor-pointer"
-                  >
-              
-                    <td className="px-4 py-3 font-medium">
-                      {retailerName}
-                    </td>
-
-                    <td className="px-4 py-3 text-right font-semibold">
-                      {totalOrders}
-                    </td>
-
-                    <td className="px-4 py-3 text-right">
-                      {customOrders}
-                    </td>
-
-                    <td className="px-4 py-3 text-right">
-                      {stockOrders}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {topCategories.length === 0 ? (
-                          <span className="text-xs text-gray-400">
-                            No categories
-                          </span>
-                        ) : (
-                          topCategories.map(([categoryName, count]) => (
-                            <span
-                              key={categoryName}
-                              className="inline-flex items-center gap-1 rounded-full bg-gray-50 border border-gray-100 px-2 py-1 text-xs"
-                            >
-                              {categoryName}
-                              <span className="font-semibold">
-                                {Number(count || 0)}
-                              </span>
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-              
-                  </tr>
-              
-                  {/* RETAILER CATEGORY + PRODUCT DRILL-DOWN */}
-              
-                  {expandedAnalysisRetailer ===
-                    (retailer.retailer_id || retailerName) && (
-              
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="px-4 py-5 bg-gray-50"
-                      >
-              
-                        <div className="space-y-4">
-              
-                          {Object.entries(
-                            retailer.category_details || {}
-                          )
-                            .sort(
-                              (a, b) =>
-                                Number(b[1]?.orders || 0) -
-                                Number(a[1]?.orders || 0)
-                            )
-                            .map(
-                              ([categoryName, categoryInfo]) => (
-              
-                                <div
-  key={categoryName}
-  onClick={(e) => {
-    e.stopPropagation();
-    setAnalysisCategory(categoryName);
-  }}
-  className="bg-white border border-gray-100 rounded-lg p-4 cursor-pointer hover:bg-gray-50"
->
-              
-                                  <div className="flex items-center justify-between mb-3">
-              
-                                    <p className="font-medium text-sm">
-                                      {categoryName}
-                                    </p>
-              
-                                    <span className="text-xs text-gray-500">
-                                      {Number(categoryInfo?.orders || 0)} orders
-                                    </span>
-              
-                                  </div>
-              
-                                  <div className="space-y-2">
-              
-                                    {(categoryInfo?.products || []).map(
-                                      (product, productIndex) => {
-              
-                                        const design =
-                                          product.design_number ||
-                                          product.product_id ||
-                                          product.name ||
-                                          "Unknown";
-              
-                                        return (
-                                          <div
-                                            key={`${categoryName}-${design}-${productIndex}`}
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-              
-                                              const productId =
-                                                product.product_id ||
-                                                product.design_number;
-              
-                                              if (productId) {
-                                                setAnalysisProduct(
-                                                  String(productId)
-                                                );
-                                              }
-                                            }}
-                                            className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-gray-50 cursor-pointer"
-                                          >
-              
-                                            <div className="min-w-0">
-              
-                                              <p className="text-sm font-medium truncate">
-                                                {design}
-                                              </p>
-              
-                                              {product.name &&
-                                                product.name !== design && (
-                                                  <p className="text-xs text-gray-500 truncate">
-                                                    {product.name}
-                                                  </p>
-                                                )}
-              
-                                            </div>
-              
-                                            <span className="text-sm font-semibold shrink-0">
-                                              {Number(product.orders || 0)}
-                                            </span>
-              
-                                          </div>
-                                        );
-                                      }
-                                    )}
-              
-                                  </div>
-              
-                                </div>
-                              )
-                            )}
-              
-                        </div>
-              
-                      </td>
-                    </tr>
-                  )}
-                </>
-              );
-
-        })}
-
-      </tbody>
-
-    </table>
-
-  </div>
-
-)}
-
-</div>
-
-{/* =====================================================
-    RETAILER × CATEGORY
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-  <div className="mb-6">
-    <h3 className="font-semibold text-lg">
-      Retailer × Category
-    </h3>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Category purchasing pattern by retailer
-    </p>
-  </div>
-
-  {analysisByRetailer.length === 0 ? (
-
-    <p className="text-sm text-gray-500">
-      No retailer/category data available.
-    </p>
-
-  ) : (
-
-    <div className="overflow-x-auto">
-
-      <table className="w-full text-sm border-collapse">
-
-        <thead>
-
-          <tr className="border-b border-gray-100">
-
-            <th className="text-left px-3 py-3 font-semibold sticky left-0 bg-white">
-              Retailer
-            </th>
-
-            {[
-              ...new Set(
-                analysisByRetailer.flatMap(
-                  (retailer) =>
-                    Object.keys(
-                      retailer.categories || {}
-                    )
-                )
-              ),
-            ].map((categoryName) => (
-
-              <th
-                key={categoryName}
-                className="px-3 py-3 font-semibold text-center whitespace-nowrap"
-              >
-                {categoryName}
-              </th>
-
-            ))}
-
-          </tr>
-
-        </thead>
-
-        <tbody>
-
-          {analysisByRetailer.map(
-            (retailer, retailerIndex) => {
-
-              const retailerName =
-                retailer.retailer_name ||
-                retailer.name ||
-                "Unknown Retailer";
-
-              const categories =
-                retailer.categories || {};
-
-              return (
-
-                <tr
-                  key={`heatmap-${retailer.retailer_id || retailerName}-${retailerIndex}`}
-                  className="border-b border-gray-50"
-                >
-
-                  <td className="px-3 py-3 font-medium whitespace-nowrap sticky left-0 bg-white">
-                    {retailerName}
-                  </td>
-
-                  {[
-                    ...new Set(
-                      analysisByRetailer.flatMap(
-                        (r) =>
-                          Object.keys(
-                            r.categories || {}
-                          )
-                      )
-                    ),
-                  ].map((categoryName) => {
-
-                    const orders =
-                      Number(
-                        categories[categoryName] || 0
-                      );
-
-                    return (
-
-                      <td
-                        key={`${retailerName}-${categoryName}`}
-                        onClick={() => {
-                          if (orders > 0) {
-                            setAnalysisRetailer(
-                              retailer.retailer_id ||
-                              retailerName
-                            );
-
-                            setAnalysisCategory(
-                              categoryName
-                            );
-                          }
-                        }}
-                        className={`px-3 py-3 text-center ${
-                          orders > 0
-                            ? "cursor-pointer hover:bg-gray-100"
-                            : ""
-                        }`}
-                      >
-
-                        <span className="font-medium">
-                          {orders}
-                        </span>
-
-                      </td>
-
-                    );
-
-                  })}
-
-                </tr>
-
-              );
-
-            }
-          )}
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  )}
-
-</div>
-
-{/* =====================================================
-    CATEGORY × METAL
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mt-6">
-
-  <div className="mb-6">
-    <h3 className="font-semibold text-lg">
-      Category × Metal
-    </h3>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Metal preference across product categories
-    </p>
-  </div>
-
-  {analysisByCategory.length === 0 ? (
-
-    <p className="text-sm text-gray-500">
-      No category data available.
-    </p>
-
-  ) : (
-
-    <div className="overflow-x-auto">
-
-      <table className="w-full text-sm">
-
-        <thead className="bg-gray-50 border-b border-gray-100">
-
-          <tr>
-
-            <th className="text-left px-4 py-3 font-semibold">
-              Category
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Gold
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Platinum
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Gold + Platinum
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Combined
-            </th>
-
-          </tr>
-
-        </thead>
-
-        <tbody className="divide-y divide-gray-100">
-
-          {analysisByCategory.map(
-            (categoryItem, index) => {
-
-              const categoryName =
-                categoryItem?.name ||
-                categoryItem?.category ||
-                "Unknown";
-
-              const metalData =
-                categoryItem?.metal ||
-                categoryItem?.metals ||
-                {};
-
-              const gold =
-                Number(
-                  metalData?.Gold ||
-                  metalData?.gold ||
-                  0
-                );
-
-              const platinum =
-                Number(
-                  metalData?.Platinum ||
-                  metalData?.platinum ||
-                  0
-                );
-
-              const goldPlatinum =
-                Number(
-                  metalData?.["Gold + Platinum"] ||
-                  metalData?.gold_platinum ||
-                  0
-                );
-
-              const combined =
-                gold +
-                platinum +
-                goldPlatinum;
-
-              return (
-
-                <tr
-                  key={`category-metal-${categoryName}-${index}`}
-                  className="hover:bg-gray-50"
-                >
-
-                  <td className="px-4 py-3 font-medium">
-                    {categoryName}
-                  </td>
-
-                  <td className="px-4 py-3 text-right">
-                    {gold}
-                  </td>
-
-                  <td className="px-4 py-3 text-right">
-                    {platinum}
-                  </td>
-
-                  <td className="px-4 py-3 text-right">
-                    {goldPlatinum}
-                  </td>
-
-                  <td className="px-4 py-3 text-right font-semibold">
-                    {combined}
-                  </td>
-
-                </tr>
-
-              );
-
-            }
-          )}
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  )}
-
-</div>
-
-{/* =====================================================
-    GOLD PURITY + GOLD COLOUR
-===================================================== */}
-
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-
-  {/* GOLD PURITY */}
-
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-    <div className="mb-5">
-      <h3 className="font-semibold text-lg">
-        Gold Purity
-      </h3>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Orders by gold purity
-      </p>
-    </div>
-
-    {analysisByPurity.length === 0 ? (
-
-      <p className="text-sm text-gray-500">
-        No gold purity data available.
-      </p>
-
-    ) : (
-
-      <div className="space-y-3">
-
-        {analysisByPurity.map((item, index) => {
-
-          const purity =
-            item?.name ||
-            item?.purity ||
-            item?.value ||
-            "Unknown";
-
-          const orders =
-            Number(
-              item?.orders ||
-              item?.order_count ||
-              item?.count ||
-              0
-            );
-
-          return (
-
-            <div
-              key={`purity-${purity}-${index}`}
-              className="flex items-center justify-between"
-            >
-
-              <span className="text-sm">
-                {purity}
-              </span>
-
-              <span className="text-sm font-semibold">
-                {orders}
-              </span>
-
-            </div>
-
-          );
-
-        })}
-
-      </div>
-
-    )}
-
-  </div>
-
-
-  {/* GOLD COLOUR */}
-
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-    <div className="mb-5">
-      <h3 className="font-semibold text-lg">
-        Gold Colour
-      </h3>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Orders by gold colour
-      </p>
-    </div>
-
-    {analysisByGoldColour.length === 0 ? (
-
-      <p className="text-sm text-gray-500">
-        No gold colour data available.
-      </p>
-
-    ) : (
-
-      <div className="space-y-3">
-
-        {analysisByGoldColour.map((item, index) => {
-
-          const colour =
-            item?.name ||
-            item?.gold_colour ||
-            item?.colour ||
-            item?.value ||
-            "Unknown";
-
-          const orders =
-            Number(
-              item?.orders ||
-              item?.order_count ||
-              item?.count ||
-              0
-            );
-
-          return (
-
-            <div
-              key={`gold-colour-${colour}-${index}`}
-              className="flex items-center justify-between"
-            >
-
-              <span className="text-sm">
-                {colour}
-              </span>
-
-              <span className="text-sm font-semibold">
-                {orders}
-              </span>
-
-            </div>
-
-          );
-
-        })}
-
-      </div>
-
-    )}
-
-  </div>
-
-</div>
-
-
-{/* =====================================================
-    CATEGORY × STONE
-===================================================== */}
-
-<div className="bg-white border border-[#E5E7EB] rounded-xl p-6 mt-6">
-
-  <div className="mb-6">
-    <h3 className="font-semibold text-lg">
-      Category × Stone
-    </h3>
-
-    <p className="text-sm text-gray-500 mt-1">
-      Stone preference across product categories
-    </p>
-  </div>
-
-  {analysisByStone.length === 0 ? (
-
-    <p className="text-sm text-gray-500">
-      No stone data available.
-    </p>
-
-  ) : (
-
-    <div className="overflow-x-auto">
-
-      <table className="w-full text-sm">
-
-        <thead className="bg-gray-50 border-b border-gray-100">
-
-          <tr>
-
-            <th className="text-left px-4 py-3 font-semibold">
-              Stone
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Orders
-            </th>
-
-            <th className="text-right px-4 py-3 font-semibold">
-              Order %
-            </th>
-
-          </tr>
-
-        </thead>
-
-        <tbody className="divide-y divide-gray-100">
-
-          {[...analysisByStone]
-            .sort(
-              (a, b) =>
-                Number(
-                  b?.orders ||
-                  b?.order_count ||
-                  b?.count ||
-                  0
-                ) -
-                Number(
-                  a?.orders ||
-                  a?.order_count ||
-                  a?.count ||
-                  0
-                )
-            )
-            .map((stoneItem, index) => {
-
-              const stoneName =
-                stoneItem?.name ||
-                stoneItem?.stone ||
-                stoneItem?.stone_type ||
-                stoneItem?.value ||
-                "Unknown";
-
-              const orders =
-                Number(
-                  stoneItem?.orders ||
-                  stoneItem?.order_count ||
-                  stoneItem?.count ||
-                  0
-                );
-
-              const percentage =
-                Number(
-                  stoneItem?.percentage ||
-                  stoneItem?.order_percentage ||
-                  0
-                );
-
-              return (
-
-                <tr
-                  key={`stone-${stoneName}-${index}`}
-                  onClick={() => {
-                    setAnalysisStone(stoneName);
-                  }}
-                  className="hover:bg-gray-50 cursor-pointer"
-                >
-
-                  <td className="px-4 py-3 font-medium">
-                    {stoneName}
-                  </td>
-
-                  <td className="px-4 py-3 text-right">
-                    {orders}
-                  </td>
-
-                  <td className="px-4 py-3 text-right">
-                    {percentage.toFixed(1)}%
-                  </td>
-
-                </tr>
-
-              );
-
-            })}
-
-        </tbody>
-
-      </table>
-
-    </div>
-
-  )}
-
-</div>
-
-{/* =====================================================
-    DUE DATE + ORDER STATUS
-===================================================== */}
-
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-
-  {/* DUE DATE ANALYSIS */}
-
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
-
-    <div className="mb-5">
-      <h3 className="font-semibold text-lg">
-        Due Date Analysis
-      </h3>
-
-      <p className="text-sm text-gray-500 mt-1">
-        Orders based on due-date performance
-      </p>
-    </div>
-
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
 
       {[
-        ["Due This Week", "due_this_week"],
-        ["Due Next Week", "due_next_week"],
-        ["Overdue", "overdue"],
-        ["Completed On Time", "completed_on_time"],
-        ["Delayed", "delayed"],
-      ].map(([label, key]) => (
-
-        <div
-          key={key}
-          className="border border-gray-100 rounded-lg p-4"
-        >
-
-          <p className="text-xs text-gray-500">
-            {label}
-          </p>
-
-          <p className="text-2xl font-semibold mt-1">
-            {Number(
-              analysisDueDates?.[key] || 0
-            )}
-          </p>
-
+        ["Orders", analysisData?.overview?.total_orders || 0],
+        ["Website", analysisData?.overview?.website_orders || 0],
+        ["WhatsApp", analysisData?.overview?.whatsapp_orders || 0],
+        ["Custom", analysisData?.overview?.custom_orders || 0],
+        ["Stock", analysisData?.overview?.catalogue_orders || 0],
+        ["Orders / day", analysisData?.overview?.average_orders_per_day || 0],
+      ].map(([label, value]) => (
+        <div key={label} className="bg-white border border-[#E5E7EB] rounded-lg px-3 py-2">
+          <p className="text-[11px] text-gray-500 truncate">{label}</p>
+          <p className="text-xl font-semibold text-[#111827] leading-tight">{value}</p>
         </div>
-
       ))}
 
     </div>
 
-  </div>
+
+    {/* ============================================================
+        INSIGHTS  (collapsed to 2 lines)
+    ============================================================ */}
+
+    {automaticInsights.length > 0 && (
+
+      <div className="bg-white border border-[#E5E7EB] rounded-lg px-4 py-3">
+
+        <div className="space-y-1.5">
+          {(showAllInsights
+            ? automaticInsights
+            : automaticInsights.slice(0, 2)
+          ).map((insight, index) => (
+            <div key={index} className="flex items-start gap-2">
+              <span
+                className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${
+                  insight.type === "positive"
+                    ? "bg-[#359E58]"
+                    : insight.type === "warning"
+                    ? "bg-red-500"
+                    : "bg-[#2563EB]"
+                }`}
+              />
+              <p className="text-sm text-gray-700 leading-snug">{insight.text}</p>
+            </div>
+          ))}
+        </div>
+
+        {automaticInsights.length > 2 && (
+          <button
+            type="button"
+            onClick={() => setShowAllInsights(!showAllInsights)}
+            className="mt-2 text-xs text-[#359E58] hover:underline"
+          >
+            {showAllInsights
+              ? "Show less"
+              : `Show ${automaticInsights.length - 2} more insights`}
+          </button>
+        )}
+
+      </div>
+    )}
 
 
-  {/* ORDER STATUS */}
+    {/* ============================================================
+        SUB-TAB NAV
+    ============================================================ */}
 
-  <div className="bg-white border border-[#E5E7EB] rounded-xl p-6">
+    <div className="flex gap-1 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
 
-    <div className="mb-5">
-      <h3 className="font-semibold text-lg">
-        Order Status
-      </h3>
+      {[
+        ["overview", "Overview"],
+        ["categories", "Categories"],
+        ["products", "Products"],
+        ["retailers", "Retailers"],
+        ["materials", "Metal & Stone"],
+      ].map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => setAnalysisView(key)}
+          className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 -mb-px transition ${
+            analysisView === key
+              ? "border-[#359E58] text-[#359E58] font-medium"
+              : "border-transparent text-gray-500 hover:text-gray-800"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
 
-      <p className="text-sm text-gray-500 mt-1">
-        Statuses currently available in the database
-      </p>
     </div>
 
-    {Array.isArray(analysisByStatus) &&
-    analysisByStatus.length > 0 ? (
 
-      <div className="space-y-3">
+    {/* ============================================================
+        OVERVIEW
+    ============================================================ */}
 
-        {analysisByStatus.map((item, index) => {
+    {analysisView === "overview" && (
 
-          const status =
-            item?.status ||
-            item?.name ||
-            item?.value ||
-            "Unknown";
+      <div className="space-y-4">
 
-          const orders =
-            Number(
-              item?.orders ||
-              item?.order_count ||
-              item?.count ||
-              0
-            );
+        {/* ORDER TREND */}
+        <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
 
-          return (
+          <h3 className="font-medium text-sm mb-3">Order Trend</h3>
 
-            <div
-              key={`${status}-${index}`}
-              className="flex items-center justify-between border-b border-gray-100 pb-3"
-            >
+          {analysisByDate.length === 0 ? (
+            <p className="text-sm text-gray-500 py-8 text-center">
+              No order data for this period.
+            </p>
+          ) : (
+            <div className="w-full h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={analysisByDate.map((d) => ({
+                    date: String(d.date).slice(5),
+                    orders: Number(d.count || 0),
+                  }))}
+                  margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF0EF" vertical={false} />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="orders"
+                    stroke="#359E58"
+                    strokeWidth={2}
+                    dot={{ r: 3, strokeWidth: 0, fill: "#359E58" }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
-              <span className="text-sm font-medium">
-                {status}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+          {/* STATUS */}
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+            <h3 className="font-medium text-sm mb-3">Orders by Status</h3>
+
+            {analysisByStatus.length === 0 ? (
+              <p className="text-sm text-gray-500">No data.</p>
+            ) : (
+              <div className="space-y-2">
+                {analysisByStatus.map((item) => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 w-28 truncate">{item.name}</span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#359E58] rounded-full"
+                        style={{ width: `${(item.count / maxAnalysisStatusCount) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold w-6 text-right">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+          {/* DUE DATES */}
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+            <h3 className="font-medium text-sm mb-3">Due Dates</h3>
+
+            <div className="space-y-2">
+              {[
+                ["Due this week", "due_this_week"],
+                ["Due next week", "due_next_week"],
+                ["Overdue", "overdue"],
+                ["Completed on time", "completed_on_time"],
+                ["Delayed", "delayed"],
+              ].map(([label, key]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-gray-700">{label}</span>
+                  <span
+                    className={`text-sm font-semibold ${
+                      (key === "overdue" || key === "delayed") &&
+                      Number(analysisDueDates?.[key] || 0) > 0
+                        ? "text-red-600"
+                        : "text-gray-900"
+                    }`}
+                  >
+                    {Number(analysisDueDates?.[key] || 0)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+          </div>
+
+          {/* TOP CUSTOMERS */}
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+            <h3 className="font-medium text-sm mb-3">Top Customers</h3>
+
+            {analysisByCustomer.length === 0 ? (
+              <p className="text-sm text-gray-500">No data.</p>
+            ) : (
+              <div className="space-y-2">
+                {analysisByCustomer.slice(0, 5).map((item, index) => (
+                  <div key={item.name} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-4">{index + 1}</span>
+                    <span className="text-sm text-gray-700 flex-1 truncate">{item.name}</span>
+                    <span className="text-sm font-semibold">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+    )}
+
+
+    {/* ============================================================
+        CATEGORIES
+    ============================================================ */}
+
+    {analysisView === "categories" && (
+
+      <div className="space-y-4">
+
+        <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+          <h3 className="font-medium text-sm mb-1">Category Performance</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Click a category to see its designs
+          </p>
+
+          {analysisByCategory.length === 0 ? (
+            <p className="text-sm text-gray-500">No category data.</p>
+          ) : (
+            <div className="space-y-1">
+
+              {[...analysisByCategory]
+                .sort((a, b) => Number(b.count || 0) - Number(a.count || 0))
+                .map((item) => {
+
+                  const drilldown =
+                    (analysisData?.category_product_drilldown || {})[item.name] || [];
+
+                  const isOpen = expandedAnalysisCategory === item.name;
+
+                  return (
+                    <div key={item.name} className="border-b border-gray-50 last:border-0">
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedAnalysisCategory(isOpen ? null : item.name)
+                        }
+                        className="w-full flex items-center gap-3 py-2 text-left hover:bg-gray-50 rounded px-1"
+                      >
+                        <span className="text-sm text-gray-800 w-40 truncate">
+                          {item.name}
+                        </span>
+
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-[#359E58] rounded-full"
+                            style={{
+                              width: `${Math.min(Math.max(Number(item.percentage || 0), 0), 100)}%`,
+                            }}
+                          />
+                        </div>
+
+                        <span className="text-xs text-gray-500 w-12 text-right">
+                          {Number(item.percentage || 0).toFixed(0)}%
+                        </span>
+
+                        <span className="text-sm font-semibold w-8 text-right">
+                          {item.count}
+                        </span>
+                      </button>
+
+                      {isOpen && (
+                        <div className="pl-4 pb-3">
+                          {drilldown.length === 0 ? (
+                            <p className="text-xs text-gray-400 py-2">
+                              No design-level data for this category.
+                            </p>
+                          ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1">
+                              {drilldown.slice(0, 12).map((p, i) => (
+                                <div
+                                  key={`${item.name}-${i}`}
+                                  className="flex justify-between text-xs"
+                                >
+                                  <span className="truncate text-gray-600">
+                                    {p.design_number || p.product_id}
+                                  </span>
+                                  <span className="font-medium">{p.orders}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  );
+                })}
+
+            </div>
+          )}
+
+        </div>
+
+        {/* MONTHLY TREND */}
+        {categoryMonthlyChartData.length > 0 && (
+
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="font-medium text-sm">Category Orders Over Time</h3>
+              <span className="text-xs text-gray-500">
+                {selectedAnalysisCategories.length === 0
+                  ? "Showing top 5"
+                  : `${selectedAnalysisCategories.length} selected`}
               </span>
+            </div>
 
-              <span className="text-sm font-semibold">
-                {orders}
-              </span>
+            <div className="flex flex-wrap gap-1.5 mb-3">
+
+              <button
+                type="button"
+                onClick={() => setSelectedAnalysisCategories([])}
+                className="px-2 py-1 rounded-full text-[11px] border border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-400"
+              >
+                Reset
+              </button>
+
+              {analysisByCategory.slice(0, 10).map((c) => {
+                const name = c?.name;
+                if (!name) return null;
+                const on = selectedAnalysisCategories.includes(name);
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() =>
+                      setSelectedAnalysisCategories((cur) =>
+                        cur.includes(name)
+                          ? cur.filter((n) => n !== name)
+                          : [...cur, name]
+                      )
+                    }
+                    className={`px-2 py-1 rounded-full text-[11px] border transition ${
+                      on
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
 
             </div>
 
-          );
+            <div className="w-full h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={categoryMonthlyChartData}
+                  margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF0EF" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
 
+                  {(selectedAnalysisCategories.length === 0
+                    ? analysisByCategory.slice(0, 5).map((c) => c?.name)
+                    : selectedAnalysisCategories
+                  )
+                    .filter(Boolean)
+                    .slice(0, 5)
+                    .map((name, i) => (
+                      <Line
+                        key={name}
+                        type="monotone"
+                        dataKey={name}
+                        stroke={ANALYSIS_COLORS[i % ANALYSIS_COLORS.length]}
+                        strokeWidth={2}
+                        dot={{ r: 3, strokeWidth: 0 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    ))}
+
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+          </div>
+        )}
+
+        {/* MONTHLY GROWTH TABLE */}
+        {analysisByCategoryMonthly.length > 0 && (
+
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+            <h3 className="font-medium text-sm mb-3">
+              Latest Month Growth
+              <span className="ml-2 text-xs font-normal text-gray-500">
+                {analysisByCategoryMonthly[analysisByCategoryMonthly.length - 1]?.month}
+              </span>
+            </h3>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-1.5">
+
+              {Object.entries(
+                analysisByCategoryMonthly[analysisByCategoryMonthly.length - 1]?.categories || {}
+              )
+                .filter(([, info]) => Number(info?.orders || 0) > 0 || info?.growth_status === "decline")
+                .map(([name, info]) => {
+
+                  const growth = Number(info?.growth_percentage || 0);
+                  const status = info?.growth_status || "unchanged";
+
+                  return (
+                    <div key={name} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-600 truncate">{name}</span>
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-xs font-medium">{info?.orders || 0}</span>
+                        <span
+                          className={`text-[11px] ${
+                            status === "growth"
+                              ? "text-[#359E58]"
+                              : status === "decline"
+                              ? "text-red-600"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {status === "growth"
+                            ? `↑${growth.toFixed(0)}%`
+                            : status === "decline"
+                            ? `↓${Math.abs(growth).toFixed(0)}%`
+                            : status === "new"
+                            ? "new"
+                            : "—"}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    )}
+
+
+    {/* ============================================================
+        PRODUCTS
+    ============================================================ */}
+
+    {analysisView === "products" && (
+
+      <div className="space-y-4">
+
+        <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+          <h3 className="font-medium text-sm mb-3">
+            Top Designs
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              {analysisByProducts.filter((p) => Number(p.orders || 0) > 0).length} ordered
+              {" · "}
+              {analysisByProducts.length} in catalogue
+            </span>
+          </h3>
+
+          {analysisByProducts.filter((p) => Number(p.orders || 0) > 0).length === 0 ? (
+            <p className="text-sm text-gray-500">No orders in this period.</p>
+          ) : (
+            <div className="w-full h-[260px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={[...analysisByProducts]
+                    .filter((p) => Number(p.orders || 0) > 0)
+                    .sort((a, b) => Number(b.orders || 0) - Number(a.orders || 0))
+                    .slice(0, 10)
+                    .map((p) => ({
+                      name: p.design_number || p.product_id || "Unknown",
+                      orders: Number(p.orders || 0),
+                    }))}
+                  margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF0EF" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
+                  <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11, fill: "#374151" }} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{ fill: "#F7F9F8" }} />
+                  <Bar dataKey="orders" name="Orders" fill="#359E58" radius={[0, 4, 4, 0]} barSize={14} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {[
+            ["Best Sellers", analysisProductIntelligence.best_sellers || [], true],
+            ["Underperforming", analysisProductIntelligence.underperforming || [], true],
+            ["Never Ordered", analysisProductIntelligence.never_ordered || [], false],
+          ].map(([title, list, showOrders]) => (
+
+            <div key={title} className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+              <h4 className="font-medium text-sm mb-1">{title}</h4>
+              <p className="text-xs text-gray-500 mb-3">{list.length} designs</p>
+
+              {list.length === 0 ? (
+                <p className="text-xs text-gray-400">None.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {list.slice(0, 5).map((p, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {p.design_number || p.product_id || "Unknown"}
+                        </p>
+                        <p className="text-[11px] text-gray-400 truncate">
+                          {p.category || "—"}
+                        </p>
+                      </div>
+                      {showOrders && (
+                        <span className="text-xs font-semibold shrink-0">
+                          {Number(p.orders || 0)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {list.length > 5 && (
+                    <p className="text-[11px] text-gray-400 pt-1">
+                      + {list.length - 5} more
+                    </p>
+                  )}
+                </div>
+              )}
+
+            </div>
+          ))}
+
+        </div>
+
+      </div>
+    )}
+
+
+    {/* ============================================================
+        RETAILERS
+    ============================================================ */}
+
+    {analysisView === "retailers" && (
+
+      <div className="space-y-4">
+
+        {analysisByRetailer.length === 0 ? (
+
+          <div className="bg-white border border-[#E5E7EB] rounded-lg p-8 text-center">
+            <p className="text-sm text-gray-500">No retailer data.</p>
+          </div>
+
+        ) : (
+
+          <>
+
+            <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+              <h3 className="font-medium text-sm mb-3">Orders by Retailer</h3>
+
+              <div className="w-full h-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={[...analysisByRetailer]
+                      .sort((a, b) => Number(b.total_orders || 0) - Number(a.total_orders || 0))
+                      .slice(0, 8)
+                      .map((r) => ({
+                        name: r.retailer_name || "Unknown",
+                        Custom: Number(r.custom_orders || 0),
+                        Stock: Number(r.stock_orders || 0),
+                      }))}
+                    margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#EEF0EF" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={{ stroke: "#E5E7EB" }} />
+                    <YAxis type="category" dataKey="name" width={110} tick={{ fontSize: 11, fill: "#374151" }} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{ fill: "#F7F9F8" }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="Custom" stackId="o" fill="#359E58" barSize={14} />
+                    <Bar dataKey="Stock" stackId="o" fill="#2563EB" barSize={14} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+            </div>
+
+            <div className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+              <h3 className="font-medium text-sm mb-1">Retailer Detail</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Click a retailer to see categories and designs
+              </p>
+
+              <div className="space-y-1">
+
+                {[...analysisByRetailer]
+                  .sort((a, b) => Number(b.total_orders || 0) - Number(a.total_orders || 0))
+                  .map((retailer, index) => {
+
+                    const name = retailer.retailer_name || "Unknown Retailer";
+                    const key = retailer.retailer_id || name;
+                    const isOpen = expandedAnalysisRetailer === key;
+
+                    return (
+                      <div key={`${key}-${index}`} className="border-b border-gray-50 last:border-0">
+
+                        <button
+                          type="button"
+                          onClick={() => setExpandedAnalysisRetailer(isOpen ? null : key)}
+                          className="w-full flex items-center gap-3 py-2 px-1 text-left hover:bg-gray-50 rounded"
+                        >
+                          <span className="text-sm text-gray-800 flex-1 truncate">{name}</span>
+                          <span className="text-[11px] text-gray-500">
+                            {Number(retailer.custom_orders || 0)} custom · {Number(retailer.stock_orders || 0)} stock
+                          </span>
+                          <span className="text-sm font-semibold w-8 text-right">
+                            {Number(retailer.total_orders || 0)}
+                          </span>
+                        </button>
+
+                        {isOpen && (
+                          <div className="pl-4 pb-3 space-y-2">
+                            {Object.entries(retailer.category_details || {}).length === 0 ? (
+                              <p className="text-xs text-gray-400">No category detail.</p>
+                            ) : (
+                              Object.entries(retailer.category_details || {})
+                                .sort((a, b) => Number(b[1]?.orders || 0) - Number(a[1]?.orders || 0))
+                                .map(([categoryName, info]) => (
+                                  <div key={categoryName}>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-xs font-medium text-gray-700">
+                                        {categoryName}
+                                      </span>
+                                      <span className="text-[11px] text-gray-500">
+                                        {Number(info?.orders || 0)} orders
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 mt-1">
+                                      {(info?.products || []).slice(0, 8).map((p, i) => (
+                                        <div key={i} className="flex justify-between text-[11px]">
+                                          <span className="truncate text-gray-500">
+                                            {p.design_number || p.product_id || "Unknown"}
+                                          </span>
+                                          <span className="font-medium">{Number(p.orders || 0)}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                            )}
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })}
+
+              </div>
+
+            </div>
+
+            {/* HEATMAP */}
+            <div className="bg-white border border-[#E5E7EB] rounded-lg p-4 overflow-x-auto">
+
+              <h3 className="font-medium text-sm mb-3">Retailer × Category</h3>
+
+              <table className="text-xs border-collapse">
+                <thead>
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-medium sticky left-0 bg-white">
+                      Retailer
+                    </th>
+                    {[...new Set(
+                      analysisByRetailer.flatMap((r) => Object.keys(r.categories || {}))
+                    )].map((c) => (
+                      <th key={c} className="px-2 py-1.5 font-medium text-center whitespace-nowrap text-gray-500">
+                        {c}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {analysisByRetailer.map((retailer, ri) => {
+
+                    const name = retailer.retailer_name || "Unknown";
+                    const cats = retailer.categories || {};
+
+                    const max = Math.max(
+                      1,
+                      ...analysisByRetailer.flatMap((r) =>
+                        Object.values(r.categories || {}).map(Number)
+                      )
+                    );
+
+                    return (
+                      <tr key={`${name}-${ri}`}>
+                        <td className="px-2 py-1.5 whitespace-nowrap sticky left-0 bg-white text-gray-700">
+                          {name}
+                        </td>
+                        {[...new Set(
+                          analysisByRetailer.flatMap((r) => Object.keys(r.categories || {}))
+                        )].map((c) => {
+
+                          const orders = Number(cats[c] || 0);
+                          const ratio = orders / max;
+
+                          const bg =
+                            orders === 0
+                              ? "#FFFFFF"
+                              : ratio > 0.75
+                              ? "#1F6B3B"
+                              : ratio > 0.5
+                              ? "#359E58"
+                              : ratio > 0.25
+                              ? "#8ACBA4"
+                              : "#DCEFE3";
+
+                          return (
+                            <td
+                              key={c}
+                              className="text-center px-2 py-1.5 border border-white"
+                              style={{
+                                backgroundColor: bg,
+                                color: ratio > 0.5 ? "#FFFFFF" : "#374151",
+                              }}
+                            >
+                              {orders || ""}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+            </div>
+
+          </>
+        )}
+
+      </div>
+    )}
+
+
+    {/* ============================================================
+        METAL & STONE
+    ============================================================ */}
+
+    {analysisView === "materials" && (
+
+      <div className="space-y-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {[
+            ["Metal", analysisByMetal],
+            ["Gold Purity", analysisByPurity],
+            ["Gold Colour", analysisByGoldColour],
+            ["Stone", analysisByStone],
+          ].map(([title, rows]) => (
+
+            <div key={title} className="bg-white border border-[#E5E7EB] rounded-lg p-4">
+
+              <h3 className="font-medium text-sm mb-3">{title}</h3>
+
+              {(!rows || rows.length === 0) ? (
+                <p className="text-xs text-gray-400">No data.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {rows.slice(0, 8).map((item, i) => (
+                    <div key={`${item.name}-${i}`} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-gray-600 truncate">
+                        {item.name || item.value || "Unknown"}
+                      </span>
+                      <span className="text-xs font-semibold">
+                        {Number(item.count ?? item.orders ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          ))}
+
+        </div>
+
+        {/* CROSS ANALYSIS */}
+        {[
+          ["Category × Metal", analysisData?.cross_analysis?.category_metal],
+          ["Category × Stone", analysisData?.cross_analysis?.category_stone],
+        ].map(([title, data]) => {
+
+          const rows = Object.entries(data || {});
+
+          if (rows.length === 0) return null;
+
+          const columns = [
+            ...new Set(rows.flatMap(([, v]) => Object.keys(v || {}))),
+          ];
+
+          return (
+            <div key={title} className="bg-white border border-[#E5E7EB] rounded-lg p-4 overflow-x-auto">
+
+              <h3 className="font-medium text-sm mb-3">{title}</h3>
+
+              <table className="w-full text-xs">
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="text-left px-2 py-1.5 font-medium text-gray-500">Category</th>
+                    {columns.map((c) => (
+                      <th key={c} className="text-right px-2 py-1.5 font-medium text-gray-500 whitespace-nowrap">
+                        {c}
+                      </th>
+                    ))}
+                    <th className="text-right px-2 py-1.5 font-medium text-gray-500">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {rows.map(([categoryName, values]) => {
+
+                    const total = columns.reduce(
+                      (sum, c) => sum + Number(values?.[c]?.orders || 0),
+                      0
+                    );
+
+                    return (
+                      <tr key={categoryName} className="hover:bg-gray-50">
+                        <td className="px-2 py-1.5 text-gray-700">{categoryName}</td>
+                        {columns.map((c) => (
+                          <td key={c} className="text-right px-2 py-1.5">
+                            {Number(values?.[c]?.orders || 0) || ""}
+                          </td>
+                        ))}
+                        <td className="text-right px-2 py-1.5 font-semibold">{total}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+            </div>
+          );
         })}
 
       </div>
-
-    ) : (
-
-      <p className="text-sm text-gray-500">
-        No order status data available.
-      </p>
-
     )}
 
-  </div>
 
-</div>
-
-  
-
-    {/* =================================================
-        METAL / GOLD KT / STONE
-    ================================================= */}
-
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-
-      {/* METAL */}
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Metal
-        </h3>
-
-        <div className="space-y-3">
-
-          {analysisByMetal.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No metal data available.
-            </p>
-          )}
-
-          {analysisByMetal.map((item) => (
-
-            <div
-              key={item.name}
-              className="flex justify-between items-center border-b pb-2"
-            >
-
-              <span className="text-sm">
-                {item.name}
-              </span>
-
-              <span className="font-semibold">
-                {item.count}
-              </span>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-
-      {/* GOLD KT */}
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Gold Purity
-        </h3>
-
-        <div className="space-y-3">
-
-          {analysisByGoldKT.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No gold KT data available.
-            </p>
-          )}
-
-          {analysisByGoldKT.map((item) => (
-
-            <div
-              key={item.name}
-              className="flex justify-between items-center border-b pb-2"
-            >
-
-              <span className="text-sm">
-                {item.name}
-              </span>
-
-              <span className="font-semibold">
-                {item.count}
-              </span>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-
-      {/* STONE */}
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-6">
-
-        <h3 className="font-semibold text-lg mb-5">
-          Stone Type
-        </h3>
-
-        <div className="space-y-3">
-
-          {analysisByStone.length === 0 && (
-            <p className="text-sm text-gray-500">
-              No stone data available.
-            </p>
-          )}
-
-          {analysisByStone.map((item) => (
-
-            <div
-              key={item.name}
-              className="flex justify-between items-center border-b pb-2"
-            >
-
-              <span className="text-sm">
-                {item.name}
-              </span>
-
-              <span className="font-semibold">
-                {item.count}
-              </span>
-
-            </div>
-
-          ))}
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-    {/* =================================================
-        EMPTY STATE
-    ================================================= */}
-
+    {/* EMPTY STATE */}
     {analysisTotalOrders === 0 && (
-
-      <div className="bg-white border border-[#E5E7EB] rounded-lg p-12 text-center">
-
-        <BarChart3 className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-
-        <h3 className="font-semibold text-lg">
-          No orders found
-        </h3>
-
-        <p className="text-sm text-gray-500 mt-1">
-          Try changing the date range or refresh the orders.
+      <div className="bg-white border border-[#E5E7EB] rounded-lg p-10 text-center">
+        <BarChart3 className="w-8 h-8 mx-auto text-gray-300 mb-2" />
+        <h3 className="font-medium text-sm">No orders found</h3>
+        <p className="text-xs text-gray-500 mt-1">
+          Try widening the date range or clearing filters.
         </p>
-
       </div>
-
     )}
 
   </div>
