@@ -300,14 +300,24 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
       setAnalysisData({
         overview: {
           total_orders: response.data.overview?.total_orders || 0,
-          combined_orders:
-            response.data.overview?.combined_orders || 0,
+          combined_orders: response.data.overview?.combined_orders || 0,
+          custom_orders: response.data.overview?.custom_orders || 0,
+          catalogue_orders: response.data.overview?.catalogue_orders || 0,
           website_orders: response.data.overview?.website_orders || 0,
           whatsapp_orders: response.data.overview?.whatsapp_orders || 0,
           total_products: response.data.overview?.total_products || 0,
+          catalogue_size: response.data.overview?.catalogue_size || 0,
           average_orders_per_day:
             response.data.overview?.average_orders_per_day || 0,
         },
+
+        categories: response.data.categories || [],
+
+        by_date: response.data.by_date || [],
+
+        customers: response.data.customers || [],
+
+        category: response.data.category || [],
       
         category: response.data.category || [],
       

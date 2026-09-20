@@ -1469,6 +1469,146 @@ async def admin_combined_analysis(
             return "stock"
 
         return value
+    
+        # --------------------------------------------------------
+    # CANONICAL VALUES
+    #
+    # Website enquiries store catalogue names ("Chains", "Bangle").
+    # WhatsApp orders store Flow ids ("chain_multilayer", "bangle_kada").
+    # Both are mapped onto the 17 names in CATEGORIES so a category
+    # is never counted twice.
+    # --------------------------------------------------------
+
+    CATEGORY_CANONICAL = {}
+
+    for cat in CATEGORIES:
+        CATEGORY_CANONICAL[cat["name"].strip().lower()] = cat["name"]
+        CATEGORY_CANONICAL[cat["slug"].replace("-", "_")] = cat["name"]
+
+        for alias in CATEGORY_ALIASES.get(cat["name"], []):
+            CATEGORY_CANONICAL[alias.strip().lower()] = cat["name"]
+
+    CATEGORY_CANONICAL.update({
+        "bali": "Bali",
+        "bangle_kada": "Bangle/Kada",
+        "bangle": "Bangle/Kada",
+        "kada": "Bangle/Kada",
+        "bracelet": "Bracelet",
+        "chain_multilayer": "Chain + Multilayer",
+        "chains": "Chain + Multilayer",
+        "chain": "Chain + Multilayer",
+        "cufflink": "Cufflink",
+        "cufflinks": "Cufflink",
+        "brooch": "Brooch",
+        "earring": "Earring",
+        "earrings": "Earring",
+        "haathpaan": "Haathpaan",
+        "hath pan": "Haathpaan",
+        "maang_tikka": "Maang Tikka",
+        "mangalsutra": "Mangal Sutra",
+        "necklace": "Necklace",
+        "nose_pin": "Nose Pin",
+        "pendant_dancing_stone": "Pendant + Dancing Stone",
+        "pendant": "Pendant + Dancing Stone",
+        "ring_titanium": "Ring + Titanium Ring",
+        "rings": "Ring + Titanium Ring",
+        "ring": "Ring + Titanium Ring",
+        "tops": "Tops",
+        "watch_belt": "Watch Belt",
+        "watchbelts": "Watch Belt",
+        "full_set": "Full Set",
+    })
+
+    def canonical_category(value):
+        key = clean(value).lower()
+        if not key:
+            return ""
+        return CATEGORY_CANONICAL.get(key, clean(value))
+
+    STATUS_CANONICAL = {
+        "new": "New",
+        "pending": "Pending",
+        "approved": "Approved",
+        "assigned": "Assigned",
+        "in production": "In Production",
+        "qc": "QC",
+        "ready": "Ready",
+        "delivered": "Delivered",
+        "rejected": "Rejected",
+        "completed": "Completed",
+    }
+
+    def canonical_status(value):
+        text = clean(value)
+        if not text:
+            return ""
+        return STATUS_CANONICAL.get(text.lower(), text.title())
+
+    def canonical_metal(value):
+        text = normalize_analysis_value(value)
+        if not text:
+            return ""
+        if "gold" in text and "platinum" in text:
+            return "Gold + Platinum"
+        if "platinum" in text:
+            return "Platinum"
+        if "gold" in text:
+            return "Gold"
+        return clean(value)
+
+    def canonical_purity(value):
+        text = clean(value).lower().replace(" ", "")
+        if not text:
+            return ""
+        mapping = {
+            "9kt": "9KT", "9k": "9KT",
+            "14kt": "14KT", "14k": "14KT",
+            "18kt": "18KT", "18k": "18KT",
+            "22kt": "22KT", "22k": "22KT",
+            "24kt": "24KT", "24k": "24KT",
+            "95_platinum": "95 Platinum",
+            "95platinum": "95 Platinum",
+            "95p_9kt": "95(P) + 9KT",
+            "95p_14kt": "95(P) + 14KT",
+            "95p_18kt": "95(P) + 18KT",
+        }
+        return mapping.get(text, clean(value))
+
+    def canonical_stone(value):
+        text = normalize_analysis_value(value)
+        if not text:
+            return ""
+        if "natural" in text and "diamond" in text:
+            return "Natural Diamond"
+        if "lab" in text and "diamond" in text:
+            return "Lab Grown Diamond"
+        if text in {"cz", "c.z.", "cubic zirconia", "cubic zircon"}:
+            return "CZ"
+        if "colour" in text or "color" in text:
+            return "Colour Stone"
+        if "precious" in text:
+            return "Precious Stone"
+        return clean(value)
+
+    def canonical_gold_colour(value):
+        text = clean(value)
+        if not text:
+            return ""
+        return OPTION_LABELS_ANALYSIS.get(text.lower(), text)
+
+    OPTION_LABELS_ANALYSIS = {
+        "yellow": "Yellow",
+        "white": "White",
+        "rose": "Rose",
+        "yellow_white": "Yellow + White",
+        "rose_white": "Rose + White",
+        "rose_yellow": "Rose + Yellow",
+        "rose_white_yellow": "Rose + White + Yellow",
+        "green": "Green",
+        "green_white": "Green + White",
+        "green_yellow": "Green + Yellow",
+        "green_rose": "Green + Rose",
+    }
 
     def get_order_date(order):
         value = (
@@ -1518,7 +1658,7 @@ async def admin_combined_analysis(
 
         for item in items:
 
-            normalized_items.append({
+                        normalized_items.append({
                 "product_id": clean(
                     item.get("product_id")
                     or item.get("design_number")
@@ -1529,24 +1669,24 @@ async def admin_combined_analysis(
                     or item.get("product_id")
                 ),
 
-                "category": clean(
+                "category": canonical_category(
                     item.get("category")
                     or item.get("product_category")
                 ),
 
-                "metal": clean(item.get("metal")),
+                "metal": canonical_metal(item.get("metal")),
 
-                "purity": clean(
+                "purity": canonical_purity(
                     item.get("purity")
                     or item.get("gold_kt")
                 ),
 
-                "gold_colour": clean(
+                "gold_colour": canonical_gold_colour(
                     item.get("gold_colour")
                     or item.get("gold_color")
                 ),
 
-                "stone": clean(
+                "stone": canonical_stone(
                     item.get("stone")
                     or item.get("stone_type")
                 ),
@@ -1573,7 +1713,7 @@ async def admin_combined_analysis(
                 enquiry.get("order_type")
             ),
 
-            "status": clean(
+            "status": canonical_status(
                 enquiry.get("status")
             ),
 
@@ -1604,26 +1744,24 @@ async def admin_combined_analysis(
                 or order.get("product_id")
             ),
 
-            "category": clean(
+            "category": canonical_category(
                 order.get("product_category")
                 or order.get("category")
             ),
 
-            "metal": clean(
-                order.get("metal")
-            ),
+            "metal": canonical_metal(order.get("metal")),
 
-            "purity": clean(
+            "purity": canonical_purity(
                 order.get("gold_kt")
                 or order.get("purity")
             ),
 
-            "gold_colour": clean(
+            "gold_colour": canonical_gold_colour(
                 order.get("gold_colour")
                 or order.get("gold_color")
             ),
 
-            "stone": clean(
+            "stone": canonical_stone(
                 order.get("stone_type")
                 or order.get("stone")
             ),
@@ -1652,7 +1790,7 @@ async def admin_combined_analysis(
                 order.get("order_type")
             ),
 
-            "status": clean(
+            "status": canonical_status(
                 order.get("status")
             ),
 
@@ -1712,82 +1850,31 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            if category and category.lower() != "all":
-
-                if normalize_analysis_value(
-                    item.get("category")
-                ) != normalize_analysis_value(category):
-                    continue
-
-            if product_id and product_id.lower() != "all":
-
-                requested_product = normalize_analysis_value(
-                    product_id
-                )
-
-                item_product_id = normalize_analysis_value(
-                    item.get("product_id")
-                )
-
-                item_design_number = normalize_analysis_value(
-                    item.get("design_number")
-                )
-
-                if (
-                    item_product_id != requested_product
-                    and item_design_number != requested_product
-                ):
-                    continue
-
-            if metal and metal.lower() != "all":
-
-                requested_metal = normalize_analysis_value(
-                    metal
-                )
-
-                item_metal = normalize_analysis_value(
-                    item.get("metal")
-                )
-
-                if "gold" in requested_metal and "platinum" in requested_metal:
-
-                    if not (
-                        "gold" in item_metal
-                        and "platinum" in item_metal
-                    ):
+                if category and category.lower() != "all":
+                    if clean(item.get("category")) != canonical_category(category):
                         continue
 
-                elif requested_metal == "gold":
+                if product_id and product_id.lower() != "all":
+
+                    requested_product = normalize_analysis_value(product_id)
 
                     if (
-                        "gold" not in item_metal
-                        or "platinum" in item_metal
+                        normalize_analysis_value(item.get("product_id")) != requested_product
+                        and normalize_analysis_value(item.get("design_number")) != requested_product
                     ):
                         continue
 
-                elif requested_metal == "platinum":
-
-                    if "platinum" not in item_metal:
+                if metal and metal.lower() != "all":
+                    if clean(item.get("metal")) != canonical_metal(metal):
                         continue
 
-                elif item_metal != requested_metal:
-                    continue
-
-            if purity and purity.lower() != "all":
-
-                if normalize_analysis_value(
-                    item.get("purity")
-                ) != normalize_analysis_value(purity):
+                if purity and purity.lower() != "all":
+                    if clean(item.get("purity")) != canonical_purity(purity):
                         continue
 
-            if stone and stone.lower() != "all":
-
-                if normalize_analysis_value(
-                    item.get("stone")
-                ) != normalize_analysis_value(stone):
+                if stone and stone.lower() != "all":
+                    if clean(item.get("stone")) != canonical_stone(stone):
                         continue
-
-            matching_items.append(item)
 
         # If item filters were supplied, order must contain
         # at least one matching item.
@@ -1986,7 +2073,16 @@ async def admin_combined_analysis(
         key=lambda x: x["orders"]
     )
 
-    underperforming_products = ordered_products[:20]
+    top_keys = {
+        (p.get("product_id"), p.get("design_number"))
+        for p in best_sellers[:10]
+        if p.get("orders", 0) > 0
+    }
+
+    underperforming_products = [
+        p for p in ordered_products
+        if (p.get("product_id"), p.get("design_number")) not in top_keys
+    ][:20]
 
 
     # Never ordered
@@ -2155,9 +2251,7 @@ async def admin_combined_analysis(
 
     for product in catalogue_products:
 
-        category_name = normalize_analysis_value(
-            product.get("category")
-        )
+        category_name = canonical_category(product.get("category"))
 
         if not category_name:
             continue
@@ -2200,9 +2294,7 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-                item.get("category")
-            )
+            category_name = canonical_category(item.get("category"))
 
             if not category_name:
                 continue
@@ -2265,9 +2357,7 @@ async def admin_combined_analysis(
     for order in orders:
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-    item.get("category")
-)
+            category_name = canonical_category(item.get("category"))
 
             metal_name = clean(
                 item.get("metal")
@@ -2346,9 +2436,7 @@ async def admin_combined_analysis(
     for order in orders:
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-    item.get("category")
-)
+            category_name = canonical_category(item.get("category"))
 
             stone_name = clean(
                 item.get("stone")
@@ -2487,9 +2575,7 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-    item.get("category")
-)
+            category_name = canonical_category(item.get("category"))
 
             if not category_name:
                 continue
@@ -2691,9 +2777,7 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-    item.get("category")
-)
+            category_name = canonical_category(item.get("category"))
 
             if not category_name:
                 continue
@@ -2803,9 +2887,7 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-                item.get("category")
-            )
+            category_name = canonical_category(item.get("category"))
 
             metal_name = normalize_analysis_value(
                 item.get("metal")
@@ -2915,9 +2997,7 @@ async def admin_combined_analysis(
 
         for item in order.get("items", []):
 
-            category_name = normalize_analysis_value(
-                item.get("category")
-            )
+            category_name = canonical_category(item.get("category"))
 
             stone_name = normalize_analysis_value(
                 item.get("stone")
@@ -3037,6 +3117,63 @@ async def admin_combined_analysis(
                 "orders": stone_info["orders"],
                 "products": products
             }
+
+
+        # --------------------------------------------------------
+    # ORDER TYPE SPLIT
+    # --------------------------------------------------------
+
+    custom_order_count = sum(
+        1 for o in orders
+        if normalize_order_type(o.get("order_type")) == "custom"
+    )
+
+    catalogue_order_count = sum(
+        1 for o in orders
+        if normalize_order_type(o.get("order_type")) == "stock"
+    )
+
+    # --------------------------------------------------------
+    # DAILY ORDER TREND
+    # --------------------------------------------------------
+
+    date_counts = {}
+
+    for order in orders:
+        order_day = clean(order.get("order_date"))
+        if order_day:
+            date_counts[order_day] = date_counts.get(order_day, 0) + 1
+
+    by_date_data = [
+        {"date": day, "count": count}
+        for day, count in sorted(date_counts.items())
+    ][-14:]
+
+    # --------------------------------------------------------
+    # TOP CUSTOMERS / RETAILERS
+    # --------------------------------------------------------
+
+    customer_counts = {}
+
+    for order in orders:
+        name = clean(order.get("retailer_name")) or "Unknown"
+        customer_counts[name] = customer_counts.get(name, 0) + 1
+
+    customer_data = [
+        {"name": name, "count": count}
+        for name, count in sorted(
+            customer_counts.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+    ][:10]
+
+    # Metal and stone are also read as "count" by the dashboard
+    for row in metal_data:
+        row["count"] = row.get("orders", 0)
+
+    for row in stone_data:
+        row["count"] = row.get("orders", 0)
 
     # --------------------------------------------------------
     # 17. DUE DATE ANALYSIS
@@ -3312,14 +3449,22 @@ async def admin_combined_analysis(
         "overview": {
             "total_orders": total_orders,
             "combined_orders": combined_orders,
+            "custom_orders": custom_order_count,
+            "catalogue_orders": catalogue_order_count,
             "website_orders": website_order_count,
             "whatsapp_orders": whatsapp_order_count,
             "total_products": total_products,
+            "catalogue_size": len(catalogue_products),
             "average_orders_per_day": average_orders_per_day,
         },
 
         "category": category_data,
+        
+"categories": [cat["name"] for cat in CATEGORIES],
 
+"by_date": by_date_data,
+
+"customers": customer_data,
 "category_product_drilldown": category_product_data,
 
 "category_monthly": category_monthly,
