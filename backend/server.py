@@ -73,6 +73,35 @@ def upload_to_s3(file_data, filename, content_type):
 
     return f"https://{AWS_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{filename}"
 
+
+def make_thumbnail(data, filename, content_type, max_size=800):
+    """Upload a small WebP copy for grid views.
+
+    The original file is never modified or replaced. Returns the thumbnail
+    URL, or None if the file is not an image or thumbnailing fails.
+    """
+    if not (content_type or "").startswith("image/"):
+        return None
+
+    try:
+        from PIL import Image, ImageOps
+
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
+        img = img.convert("RGBA" if img.mode in ("RGBA", "LA", "P") else "RGB")
+        img.thumbnail((max_size, max_size), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        img.save(buf, format="WEBP", quality=82, method=4)
+        buf.seek(0)
+
+        thumb_key = filename.rsplit(".", 1)[0] + "_thumb.webp"
+        return upload_to_s3(buf, thumb_key, "image/webp")
+
+    except Exception as exc:
+        logger.warning(f"Thumbnail failed for {filename}: {exc}")
+        return None
+
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
 # client = AsyncIOMotorClient(mongo_url)
@@ -488,8 +517,14 @@ async def get_products(category: Optional[str] = None, page: int = 1, limit: int
         query["product_id"] = {"$regex": search, "$options": "i"}
     skip = (page - 1) * limit
     total = await db.products.count_documents(query)
-    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
-    return {"products": products, "total": total, "page": page, "pages": max(1, (total + limit - 1) // limit)}
+    if limit and limit > 0:
+        products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+        pages = max(1, (total + limit - 1) // limit)
+    else:
+        # limit=0 -> return the whole category, no paging
+        products = await db.products.find(query, {"_id": 0}).to_list(length=None)
+        pages = 1
+    return {"products": products, "total": total, "page": page, "pages": pages}
 
 @api_router.get("/products/{product_id}")
 async def get_product(product_id: str):
@@ -743,8 +778,14 @@ async def admin_get_products(request: Request, category: Optional[str] = None, p
     query = {"category": category} if category else {}
     skip = (page - 1) * limit
     total = await db.products.count_documents(query)
-    products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
-    return {"products": products, "total": total, "page": page, "pages": max(1, (total + limit - 1) // limit)}
+    if limit and limit > 0:
+        products = await db.products.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+        pages = max(1, (total + limit - 1) // limit)
+    else:
+        # limit=0 -> return the whole category, no paging
+        products = await db.products.find(query, {"_id": 0}).to_list(length=None)
+        pages = 1
+    return {"products": products, "total": total, "page": page, "pages": pages}
 
 import io
 
@@ -771,22 +812,43 @@ async def admin_upload_product(
     file.content_type or "application/octet-stream",
 )
     logger.info(f"S3 URL = {image_url}")
+
+    thumb_url = make_thumbnail(
+        data,
+        filename,
+        file.content_type or "application/octet-stream",
+    )
+
     existing = await db.products.find_one({"product_id": product_id})
 
     if existing:
+        # Rewrite both arrays together so thumbnails[i] always
+        # matches images[i], even on products uploaded before
+        # thumbnails existed.
+        imgs = list(existing.get("images") or [])
+        thumbs = list(existing.get("thumbnails") or [])
+
+        while len(thumbs) < len(imgs):
+            thumbs.append(None)
+
+        imgs.append(image_url)
+        thumbs.append(thumb_url)
+
         await db.products.update_one(
-        {"product_id": product_id},
-        {
-            "$push": {"images": image_url},
-            "$set": {"category": category}
-        }
-    )
+            {"product_id": product_id},
+            {"$set": {
+                "images": imgs,
+                "thumbnails": thumbs,
+                "category": category,
+            }},
+        )
     else:
         await db.products.insert_one({
         "product_id": product_id,
         "category": category,
         "category_slug": category.lower().replace(" ", "-"),
         "images": [image_url],
+        "thumbnails": [thumb_url],
         "rating": 5,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
