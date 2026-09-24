@@ -512,10 +512,10 @@ const handleFileSelect = (e) => {
     return;
   }
 
-  const tooBig = files.find((f) => f.size > 25 * 1024 * 1024);
+  const tooBig = files.find((f) => f.size > 100 * 1024 * 1024);
 
   if (tooBig) {
-    toast.error(`"${tooBig.name}" is over 25MB`);
+    toast.error(`"${tooBig.name}" is over 100MB`);
     e.target.value = "";
     return;
   }
