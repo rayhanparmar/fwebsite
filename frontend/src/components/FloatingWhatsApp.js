@@ -22,7 +22,7 @@ export function getProductWhatsAppUrl(productId, category) {
 export default function FloatingWhatsApp() {
   return (
     <a
-      href={getWhatsAppUrl("Hi, I'm interested in your B2B jewellery manufacturing services. Please share more details.")}
+      href={getWhatsAppUrl("Hi")}
       target="_blank"
       rel="noopener noreferrer"
       data-testid="floating-whatsapp"

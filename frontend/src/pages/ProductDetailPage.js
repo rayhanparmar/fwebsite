@@ -222,15 +222,24 @@ const handleZoomMove = (e) => {
     }
   }}
 >
-  {/* Main Product Image */}
-  <img
-    src={resolveImg(product.images[activeImg])}
-    alt={product.product_id}
-    className="w-full h-full object-cover"
-  />
+  {/* Main Product Image or Video */}
+  {/\.(mp4|mov|webm|m4v)$/i.test(product.images[activeImg] || "") ? (
+    <video
+      src={resolveImg(product.images[activeImg])}
+      controls
+      playsInline
+      className="w-full h-full object-contain bg-black"
+    />
+  ) : (
+    <img
+      src={resolveImg(product.images[activeImg])}
+      alt={product.product_id}
+      className="w-full h-full object-cover"
+    />
+  )}
 
   {/* Magnifying Lens */}
-  {showZoom && window.innerWidth >= 1024 && (
+  {showZoom && window.innerWidth >= 1024 && !/\.(mp4|mov|webm|m4v)$/i.test(product.images[activeImg] || "") && (
     <div
       className="absolute w-44 h-44 border-2 border-white shadow-2xl rounded-sm overflow-hidden pointer-events-none z-20"
       style={{
@@ -260,7 +269,11 @@ const handleZoomMove = (e) => {
                 <button key={i} onClick={() => setActiveImg(i)}
                   className={`w-16 h-16 sm:w-20 sm:h-20 border overflow-hidden transition-all shrink-0 ${activeImg === i ? "border-[#359E58] ring-1 ring-[#359E58]" : "border-[#E5E7EB]"}`}
                   data-testid={`product-thumbnail-${i}`}>
-                  <img src={resolveImg(img)} alt={`View ${i + 1}`} className="w-full h-full object-cover" />
+                  {/\.(mp4|mov|webm|m4v)$/i.test(img || "") ? (
+                    <video src={resolveImg(img)} muted playsInline className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={resolveImg(img)} alt={`View ${i + 1}`} className="w-full h-full object-cover" />
+                  )}
                 </button>
               ))}
             </div>

@@ -73,7 +73,17 @@ export default function CategoryProductsPage() {
               onKeyDown={(e) => { if (e.key === 'Enter') navigate(`/product/${product.product_id}`); }}>
               <div className="bg-white border border-transparent hover:border-[#6CC284]/30 transition-all duration-300 overflow-hidden">
                 <div className="aspect-square overflow-hidden bg-[#FAFAFA]">
-                  <img loading="lazy" decoding="async" src={product.thumbnails?.[0] || (product.images?.[0]?.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${product.images[0]}` : product.images?.[0])}
+                  <img loading="lazy" decoding="async" src={(() => {
+                    const t = (product.thumbnails || []).find(Boolean);
+                    if (t) return t;
+                    const img = (product.images || []).find(
+                      (u) => u && !/\.(mp4|mov|webm|m4v)$/i.test(u)
+                    );
+                    if (!img) return "";
+                    return img.startsWith("/api/")
+                      ? `${process.env.REACT_APP_BACKEND_URL}${img}`
+                      : img;
+                  })()}
                     alt={product.product_id}
                     className="w-full h-full object-cover" loading="lazy" />
                 </div>

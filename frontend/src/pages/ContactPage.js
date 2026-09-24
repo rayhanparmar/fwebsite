@@ -70,7 +70,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <a href={getWhatsAppUrl("Hi, I'm interested in your B2B jewellery services. I'd like to learn more.")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-10 bg-[#25D366] hover:bg-[#20BD5A] text-white px-6 py-3 text-sm font-medium transition-colors rounded-sm" data-testid="contact-whatsapp">
+            <a href={getWhatsAppUrl("Hi")} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-10 bg-[#25D366] hover:bg-[#20BD5A] text-white px-6 py-3 text-sm font-medium transition-colors rounded-sm" data-testid="contact-whatsapp">
               <MessageCircle className="w-5 h-5" strokeWidth={1.5} />Chat on WhatsApp
             </a>
           </div>

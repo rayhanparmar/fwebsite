@@ -529,7 +529,7 @@ const uploadProduct = async (e) => {
 
   if (!newProductId.trim()) { toast.error("Product ID is required"); return; }
   if (!newProductCategory) { toast.error("Please select a category"); return; }
-  if (selectedFiles.length === 0) { toast.error("Please select at least one image"); return; }
+  if (selectedFiles.length === 0) { toast.error("Please select at least one file"); return; }
 
   setUploading(true);
 
@@ -716,7 +716,7 @@ const uploadProduct = async (e) => {
 
   const uploadProductImage = async () => {
     if (!selectedProduct || selectedFiles.length === 0) {
-      toast.error("Please select at least one image");
+      toast.error("Please select at least one file");
       return;
     }
 
@@ -3332,10 +3332,10 @@ const automaticInsights = useMemo(() => {
                       {uploading ? "Uploading..." : "Click to select images"}
                     </p>
                     <p className="text-xs text-gray-400 font-body mt-1">
-                      Up to 5 at a time &middot; JPG, PNG, WebP (max 25MB each)
+                      Up to 5 at a time &middot; JPG, PNG, WebP, MP4, MOV (max 100MB each)
                     </p>
                     <input type="file" multiple className="hidden" onChange={handleFileSelect} disabled={uploading}
-                      accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff" data-testid="admin-product-file-input" />
+                      accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,.tiff,.mp4,.mov,.webm,.m4v" data-testid="admin-product-file-input" />
                   </label>
 
                   {selectedFiles.length > 0 && (
