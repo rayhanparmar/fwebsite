@@ -3383,11 +3383,21 @@ const automaticInsights = useMemo(() => {
   {(p.images || []).slice(0, 3).map((img, i) => (
     <div key={i} className="flex flex-col items-center gap-1">
       <div className="relative w-12 h-12 bg-[#FAFAFA] overflow-hidden border border-[#E5E7EB]">
-        <img
-          src={img.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img}
-          alt=""
-          className="w-full h-full object-cover"
-        />
+        {/\.(mp4|mov|webm|m4v)$/i.test(img || "") ? (
+          <video
+            src={img.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img}
+            muted
+            playsInline
+            preload="metadata"
+            className="w-full h-full object-cover bg-black"
+          />
+        ) : (
+          <img
+            src={img.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${img}` : img}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        )}
 
         {i === 0 && (
           <div className="absolute bottom-0 left-0 right-0 bg-[#359E58] text-white text-[8px] text-center py-0.5">
@@ -6319,7 +6329,7 @@ Close
         <div className="mb-5">
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/*"
             multiple
             id="product-image-upload"
             className="hidden"
@@ -6358,15 +6368,29 @@ Close
               className="border border-[#E5E7EB] bg-white p-2"
             >
               <div className="aspect-square overflow-hidden bg-[#FAFAFA]">
-                <img
-                  src={
-                    img.startsWith("/api/")
-                      ? `${process.env.REACT_APP_BACKEND_URL}${img}`
-                      : img
-                  }
-                  alt={`${selectedProduct.product_id} ${index + 1}`}
-                  className="w-full h-full object-cover"
-                />
+                {/\.(mp4|mov|webm|m4v)$/i.test(img || "") ? (
+                  <video
+                    src={
+                      img.startsWith("/api/")
+                        ? `${process.env.REACT_APP_BACKEND_URL}${img}`
+                        : img
+                    }
+                    controls
+                    muted
+                    playsInline
+                    className="w-full h-full object-contain bg-black"
+                  />
+                ) : (
+                  <img
+                    src={
+                      img.startsWith("/api/")
+                        ? `${process.env.REACT_APP_BACKEND_URL}${img}`
+                        : img
+                    }
+                    alt={`${selectedProduct.product_id} ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
 
               <div className="mt-2 space-y-2">
@@ -6404,7 +6428,7 @@ Close
 
 <input
   type="file"
-  accept="image/*"
+  accept="image/*,video/*"
   id={`replace-image-${index}`}
   className="hidden"
   onChange={(e) => {
