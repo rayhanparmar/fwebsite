@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image } from "lucide-react";
+import { Check, X, Plus, Trash2, Users, Package, MessageSquare, Palette, BarChart3, FileUp, Image, Search } from "lucide-react";
 import { PRODUCT_CUSTOMIZATION_CONFIG } from "../components/ProductCustomizationConfig";
 import { displayValue } from "@/lib/labels";
 import {
@@ -194,6 +194,16 @@ const [dateCustomerToDate, setDateCustomerToDate] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [productCategory, setProductCategory] = useState("");
   const [productPage, setProductPage] = useState(1);
+  const [productSearch, setProductSearch] = useState("");
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setProductSearchQuery(productSearch.trim());
+      setProductPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [productSearch]);
   const [productTotal, setProductTotal] = useState(0);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProductId, setNewProductId] = useState("");
@@ -238,9 +248,12 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     );
   };
   const loadProducts = useCallback(() => {
-    const q = productCategory ? `?category=${encodeURIComponent(productCategory)}&page=${productPage}&limit=30` : `?page=${productPage}&limit=30`;
+    const params = new URLSearchParams({ page: String(productPage), limit: "30" });
+    if (productCategory) params.set("category", productCategory);
+    if (productSearchQuery) params.set("search", productSearchQuery);
+    const q = `?${params.toString()}`;
     api.get(`/admin/products${q}`).then(r => { setProducts(r.data.products); setProductTotal(r.data.total); setProductsLoaded(true); }).catch(() => {});
-  }, [api, productCategory, productPage]);
+  }, [api, productCategory, productPage, productSearchQuery]);
   const loadEnquiries = useCallback(() => { api.get("/admin/enquiries").then(r => setEnquiries(r.data.enquiries)).catch(() => {}); }, [api]);
   const loadCustomisations = useCallback(() => { api.get("/admin/customisations").then(r => setCustomisations(r.data.customisations)).catch(() => {}); }, [api]);
   const loadWhatsappOrders = useCallback(() => {
@@ -415,7 +428,7 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   }, [activeTab]);
   useEffect(() => { if (retailers.length > 0 || retailerFilter !== "all") loadRetailers(); }, [retailerFilter]);
   // Auto-load products when category or page changes
-  useEffect(() => { if (productsLoaded) loadProducts(); }, [productCategory, productPage]);
+  useEffect(() => { if (productsLoaded) loadProducts(); }, [productCategory, productPage, productSearchQuery]);
 
   useEffect(() => {
     loadWhatsappAnalysis();
@@ -3312,7 +3325,27 @@ const automaticInsights = useMemo(() => {
               <Button onClick={() => setShowAddProduct(!showAddProduct)} className="bg-[#359E58] hover:bg-[#2e884c] text-white gap-1" data-testid="admin-add-product-btn">
                 <Plus className="w-4 h-4" />Add Product
               </Button>
-              <span className="text-sm text-[#4B5563] font-body ml-auto">{productTotal} products{productCategory ? ` in ${productCategory}` : ""}</span>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+                <Input
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="Search product ID"
+                  className="pl-9 pr-8"
+                  data-testid="admin-product-search"
+                />
+                {productSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setProductSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#0A0A0A]"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <span className="text-sm text-[#4B5563] font-body ml-auto">{productTotal} products{productCategory ? ` in ${productCategory}` : ""}{productSearchQuery ? ` matching "${productSearchQuery}"` : ""}</span>
             </div>
 
             {/* Add Product Form with File Upload */}

@@ -791,9 +791,12 @@ async def admin_delete_retailer(request: Request, user_id: str):
     }
 
 @api_router.get("/admin/products")
-async def admin_get_products(request: Request, category: Optional[str] = None, page: int = 1, limit: int = 30):
+async def admin_get_products(request: Request, category: Optional[str] = None, page: int = 1, limit: int = 30, search: Optional[str] = None):
     await get_admin_user(request)
     query = {"category": category} if category else {}
+    if search and search.strip():
+        import re
+        query["product_id"] = {"$regex": re.escape(search.strip()), "$options": "i"}
     skip = (page - 1) * limit
     total = await db.products.count_documents(query)
     if limit and limit > 0:
