@@ -24,10 +24,10 @@ export default function Navbar() {
 
   return (
     <nav data-testid="navbar" className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-100 z-50">
-      <div className="w-full px-4 md:px-8 h-20 grid grid-cols-[minmax(430px,1fr)_auto_minmax(220px,1fr)] items-center gap-4">
+      <div className="w-full px-4 md:px-8 h-20 flex items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(430px,1fr)_auto_minmax(220px,1fr)] lg:gap-4">
       <Link
   to="/"
-  className="flex items-center gap-1 sm:gap-4 min-w-0 shrink-0"
+  className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 lg:flex-none lg:shrink-0"
   data-testid="nav-logo"
 >
 <img
@@ -46,9 +46,9 @@ xl:text-[15px]
 2xl:text-[15px]
 font-semibold
 text-[#0A0A0A]
-whitespace-nowrap
-leading-none
-shrink-0
+whitespace-normal lg:whitespace-nowrap
+leading-tight lg:leading-none
+min-w-0 lg:shrink-0
 "
 >
     Rooh By Shree Mother Gold And Diamond Jewellery
@@ -102,7 +102,7 @@ shrink-0
 
         <button
   onClick={() => setOpen(!open)}
-  className="lg:hidden ml-auto p-2"
+  className="lg:hidden ml-auto p-2 shrink-0"
   data-testid="nav-mobile-toggle"
 >
           {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
