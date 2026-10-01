@@ -1345,6 +1345,34 @@ async def admin_get_customisations(request: Request):
     }
 
 
+@api_router.delete("/admin/enquiries/{enquiry_id}")
+async def admin_delete_enquiry(
+    enquiry_id: str,
+    request: Request
+):
+    await get_admin_user(request)
+
+    enquiry = await db.enquiries.find_one(
+        {"enquiry_id": enquiry_id}
+    )
+
+    if not enquiry:
+        raise HTTPException(
+            status_code=404,
+            detail="Enquiry not found"
+        )
+
+    await db.enquiries.delete_one(
+        {"enquiry_id": enquiry_id}
+    )
+
+    logger.info(f"Enquiry deleted: {enquiry_id}")
+
+    return {
+        "message": "Enquiry deleted successfully"
+    }
+
+
 @api_router.delete("/admin/customisations/{custom_id}")
 async def admin_delete_customisation(
     custom_id: str,

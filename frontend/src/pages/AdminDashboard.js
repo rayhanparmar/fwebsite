@@ -474,6 +474,26 @@ const [categoryImageUploading, setCategoryImageUploading] = useState(false);
     }
   };
 
+  const deleteEnquiry = async (enquiryId) => {
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to permanently delete this enquiry?\n\nThis action cannot be undone."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/admin/enquiries/${enquiryId}`);
+      toast.success("Enquiry deleted successfully");
+      loadEnquiries();
+      loadStats();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || "Failed to delete enquiry"
+      );
+    }
+  };
+
   const deleteWhatsappOrder = async (orderId) => {
 
     const confirmDelete = window.confirm(
@@ -3586,7 +3606,15 @@ const automaticInsights = useMemo(() => {
                       <p className="font-medium text-[#0A0A0A] font-body">{enq.enquiry_id}</p>
                       <p className="text-xs text-[#4B5563] font-body">{enq.user_name} | {enq.user_email} | {enq.user_phone}</p>
                     </div>
-                    <span className="text-xs bg-yellow-50 text-yellow-700 px-2 py-0.5 font-body shrink-0">{enq.status}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteEnquiry(enq.enquiry_id);
+                      }}
+                      className="text-xs border border-red-300 text-red-600 hover:bg-red-600 hover:text-white px-3 py-1 font-body shrink-0 rounded-sm transition-colors"
+                    >
+                      Delete
+                    </button>
                   </div>
                   <div className="space-y-2">
                     {enq.items?.map((item, i) => (
