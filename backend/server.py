@@ -102,6 +102,21 @@ def make_thumbnail(data, filename, content_type, max_size=800):
         logger.warning(f"Thumbnail failed for {filename}: {exc}")
         return None
 
+
+def aligned_thumbnails(images, thumbnails):
+    """Return a thumbnails list matching `images` index-for-index.
+
+    Thumbnail URLs are derived from their image URL
+    (<name>.<ext> -> <name>_thumb.webp), so pairing by name stays
+    correct even after images are reordered, deleted or replaced.
+    """
+    available = {t for t in (thumbnails or []) if t}
+    result = []
+    for img in images:
+        expected = (img or "").rsplit(".", 1)[0] + "_thumb.webp"
+        result.append(expected if expected in available else None)
+    return result
+
 # MongoDB
 mongo_url = os.environ['MONGO_URL']
 # client = AsyncIOMotorClient(mongo_url)
@@ -957,9 +972,11 @@ async def admin_set_product_front_image(
     images.remove(image_url)
     images.insert(0, image_url)
 
+    thumbs = aligned_thumbnails(images, product.get("thumbnails"))
+
     await db.products.update_one(
         {"product_id": product_id},
-        {"$set": {"images": images}}
+        {"$set": {"images": images, "thumbnails": thumbs}}
     )
 
     return {
@@ -992,9 +1009,11 @@ async def admin_delete_product_image(
 
     images.remove(image_url)
 
+    thumbs = aligned_thumbnails(images, product.get("thumbnails"))
+
     await db.products.update_one(
         {"product_id": product_id},
-        {"$set": {"images": images}}
+        {"$set": {"images": images, "thumbnails": thumbs}}
     )
 
     return {
@@ -1046,12 +1065,23 @@ async def admin_replace_product_image(
     # Replace old image with new image
     images[image_index] = image_url
 
+    new_thumb = make_thumbnail(
+        data,
+        filename,
+        file.content_type or "application/octet-stream",
+    )
+    thumbs = aligned_thumbnails(
+        images,
+        list(product.get("thumbnails") or []) + [new_thumb],
+    )
+
     # Save updated image list to MongoDB
     await db.products.update_one(
         {"product_id": product_id},
         {
             "$set": {
                 "images": images,
+                "thumbnails": thumbs,
                 "category": category
             }
         }

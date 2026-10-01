@@ -118,12 +118,14 @@ export default function CategoryProductsPage() {
               <div className="bg-white border border-transparent hover:border-[#6CC284]/30 transition-all duration-300 overflow-hidden">
                 <div className="aspect-square overflow-hidden bg-[#FAFAFA]">
                   <img loading="lazy" decoding="async" src={(() => {
-                    const t = (product.thumbnails || []).find(Boolean);
-                    if (t) return t;
-                    const img = (product.images || []).find(
+                    const imgs = product.images || [];
+                    const i = imgs.findIndex(
                       (u) => u && !/\.(mp4|mov|webm|m4v)$/i.test(u)
                     );
-                    if (!img) return "";
+                    if (i === -1) return "";
+                    const t = (product.thumbnails || [])[i];
+                    if (t) return t;
+                    const img = imgs[i];
                     return img.startsWith("/api/")
                       ? `${process.env.REACT_APP_BACKEND_URL}${img}`
                       : img;
