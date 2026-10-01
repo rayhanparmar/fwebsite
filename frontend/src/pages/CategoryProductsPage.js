@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Star, ArrowLeft } from "lucide-react";
+import { Star, ArrowLeft, Search, X } from "lucide-react";
 
 const CATEGORIES = [
   { name: "Bali", slug: "bali" },
@@ -26,10 +26,12 @@ const CATEGORIES = [
 
 export default function CategoryProductsPage() {
   const { slug } = useParams();
-  const { api } = useAuth();
+  const { api, user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const category = CATEGORIES.find(c => c.slug === slug);
 
   useEffect(() => {
@@ -39,6 +41,15 @@ export default function CategoryProductsPage() {
       .catch(() => toast.error("Failed to load products"))
       .finally(() => setLoading(false));
   }, [slug, category, api]);
+
+  useEffect(() => {
+    setSearch("");
+  }, [slug]);
+
+  const query = search.trim().toLowerCase();
+  const visibleProducts = isAdmin && query
+    ? products.filter((p) => (p.product_id || "").toLowerCase().includes(query))
+    : products;
 
   if (!category) {
     return <div className="min-h-[60vh] flex items-center justify-center"><p>Category not found</p></div>;
@@ -64,8 +75,41 @@ export default function CategoryProductsPage() {
           {/* <p className="text-[#4B5563] font-body">{products.length} products available</p> */}
         </div>
 
+        {isAdmin && (
+          <div className="mb-10">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" strokeWidth={1.5} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by product ID"
+                className="w-full pl-10 pr-10 py-2.5 border border-[#E5E7EB] focus:border-[#359E58] focus:outline-none text-sm font-body bg-white"
+                data-testid="admin-category-search"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#0A0A0A]"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.5} />
+                </button>
+              )}
+            </div>
+            {query && (
+              <p className="text-xs text-[#4B5563] font-body mt-2">
+                {visibleProducts.length === 0
+                  ? `No products match "${search.trim()}"`
+                  : `${visibleProducts.length} of ${products.length} products`}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-8">
-          {products.map((product) => (
+          {visibleProducts.map((product) => (
             <div key={product.product_id}
               onClick={() => navigate(`/product/${product.product_id}`)}
               className="group product-card cursor-pointer" data-testid={`product-card-${product.product_id}`}
